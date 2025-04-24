@@ -1,0 +1,37 @@
+# ========== Go Backend ==========
+/backend/.env
+/backend/bin/
+/backend/vendor/
+*.exe
+*.out
+*.test
+
+# ไฟล์ชั่วคราวของ Go tools
+*.log
+*.tmp
+*.swp
+
+# ========== Node / Frontend ==========
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env
+/frontend/.DS_Store
+/frontend/.vite
+
+# ========== Root Level ==========
+node_modules/
+.env
+*.env.*
+.DS_Store
+
+# ========== Editor / OS files ==========
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+Thumbs.db
+
+# ========== Docker artifacts ==========
+/*.pid
+/docker/data/

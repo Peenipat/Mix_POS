@@ -8,6 +8,7 @@ type StoreRole string
 const (
 	RoleSuperAdmin  Role = "SUPER_ADMIN" // admin กลางที่จะค่อยดูแลระบบทั้งหมด
 	RoleBranchAdmin Role = "BRANCH_ADMIN" // admin แต่ละสาขา แต่ละร้านค้า
+	RoleUser Role = "USER" // คนทั่วไปที่สมัครเข้ามาเพื่อใช้บริการ
 )
 
 const (
@@ -27,7 +28,7 @@ type User struct {
 	Email         string     `gorm:"uniqueIndex"`
 	Password  	  string
 	Role          Role       `gorm:"type:VARCHAR(20);not null"`     // SUPER_ADMIN, BRANCH_ADMIN
-	StoreRole     StoreRole  `gorm:"type:VARCHAR(30);default:'EMPLOYEE'"` // OWNER, MANAGER, etc.
-	StoreID       *uint      // null = super admin
-	Store         *Store
+// 	StoreRole     StoreRole  `gorm:"type:VARCHAR(30);default:'EMPLOYEE'"` // OWNER, MANAGER, etc.
+// 	StoreID       *uint      // null = super admin
+// 	Store         *Store
 }

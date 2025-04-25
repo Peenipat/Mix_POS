@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"os"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"myapp/models"
 )
 func main(){
 	app := fiber.New()
@@ -18,6 +19,7 @@ func main(){
 	}))
 	
     database.ConnectDB()
+	database.DB.AutoMigrate(&models.User{})
 	routes.SetupAuthRoutes(app)
 	
 

@@ -1,5 +1,5 @@
 package models
 
-type Store struct{
+// type Store struct{
 
-}
+// }

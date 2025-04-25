@@ -9,6 +9,7 @@ const (
 	RoleSuperAdmin  Role = "SUPER_ADMIN" // admin กลางที่จะค่อยดูแลระบบทั้งหมด
 	RoleBranchAdmin Role = "BRANCH_ADMIN" // admin แต่ละสาขา แต่ละร้านค้า
 	RoleUser Role = "USER" // คนทั่วไปที่สมัครเข้ามาเพื่อใช้บริการ
+	RoleStaff Role = "STAFF"
 )
 
 const (

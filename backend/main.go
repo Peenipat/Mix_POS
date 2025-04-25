@@ -2,6 +2,7 @@ package main
 import (
     "github.com/gofiber/fiber/v2"
     "myapp/routes"
+	"myapp/routes/admin"
     "myapp/database"
 	"github.com/joho/godotenv"
 	"os"
@@ -21,6 +22,7 @@ func main(){
     database.ConnectDB()
 	database.DB.AutoMigrate(&models.User{})
 	routes.SetupAuthRoutes(app)
+	admin.SetupAdminRoutes(app)
 	
 
 	if os.Getenv("ENV") != "production" {

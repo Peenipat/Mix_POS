@@ -8,7 +8,7 @@ import (
 )
 
 func Login(c *fiber.Ctx) error {
-	var input dto.LoginRequest
+	var input authDto.LoginRequest
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}

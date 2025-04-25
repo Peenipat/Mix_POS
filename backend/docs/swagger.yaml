@@ -1,0 +1,203 @@
+basePath: /
+definitions:
+  authDto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  authDto.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/authDto.UserInfoResponse'
+    type: object
+  authDto.RegisterInput:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  authDto.UserInfoResponse:
+    properties:
+      email:
+        example: admin@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      role:
+        example: SUPER_ADMIN
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  models.Role:
+    enum:
+    - SUPER_ADMIN
+    - BRANCH_ADMIN
+    - USER
+    - STAFF
+    type: string
+    x-enum-comments:
+      RoleBranchAdmin: admin แต่ละสาขา แต่ละร้านค้า
+      RoleSuperAdmin: admin กลางที่จะค่อยดูแลระบบทั้งหมด
+      RoleUser: คนทั่วไปที่สมัครเข้ามาเพื่อใช้บริการ
+    x-enum-varnames:
+    - RoleSuperAdmin
+    - RoleBranchAdmin
+    - RoleUser
+    - RoleStaff
+  models.User:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      email:
+        type: string
+      id:
+        example: 1
+        type: integer
+      password:
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/models.Role'
+        description: SUPER_ADMIN, BRANCH_ADMIN
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  userDto.CreateUserInput:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - role
+    - username
+    type: object
+host: localhost:3001
+info:
+  contact: {}
+  title: Docs  api
+paths:
+  /admin/create_users:
+    post:
+      consumes:
+      - application/json
+      description: ใช้สำหรับ SUPER_ADMIN สร้าง User role อื่น ๆ แต่ไม่สามารถใช้สร้าง
+        SUPER_ADMIN ได้
+      parameters:
+      - description: ข้อมูลผู้ใช้งาน
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/userDto.CreateUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างผู้ใช้โดย Super Admin
+      tags:
+      - User
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Auth login เพื่อรับ JWT Token
+      parameters:
+      - description: ข้อมูลเข้าสู่ระบบ
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authDto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authDto.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: ลงทะเบียนเพื่อ สร้าง Account โดย User เป็นคนสร้างเอง
+      parameters:
+      - description: ข้อมูลผู้ใช้
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authDto.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ลงทะเบียนสำเร็จ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: สร้าง Account Role USER
+      tags:
+      - Auth
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

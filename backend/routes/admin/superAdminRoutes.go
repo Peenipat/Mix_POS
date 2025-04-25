@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"myapp/controllers"
 	"myapp/middlewares"
+	
 )
 
 func SetupAdminRoutes(app *fiber.App) {

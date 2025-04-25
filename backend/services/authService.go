@@ -15,7 +15,7 @@ import (
 	
 )
 
-func Login(input authDto.LoginRequest) (*authDto.AuthResponse, error) {
+func Login(input authDto.LoginRequest) (*authDto.LoginResponse, error) {
 	var user models.User
 	database.DB.Where("email = ?", input.Email).First(&user)
 
@@ -39,14 +39,9 @@ func Login(input authDto.LoginRequest) (*authDto.AuthResponse, error) {
 		return nil, errors.New("could not generate token")
 	}
 
-	return &authDto.AuthResponse{
+	return &authDto.LoginResponse{
 		Token: t,
-		User: struct {
-			ID       uint   `json:"id"`
-			Username string `json:"username"`
-			Email    string `json:"email"`
-			Role     string `json:"role"`
-		}{
+		User: authDto.UserInfoResponse{
 			ID:       user.ID,
 			Username: user.Username,
 			Email:    user.Email,

@@ -1,3 +1,4 @@
+tempate_docsAPI.txt
 # ========== Go Backend ==========
 /backend/.env
 /backend/bin/
@@ -10,6 +11,7 @@
 *.log
 *.tmp
 *.swp
+
 
 # ========== Node / Frontend ==========
 /frontend/node_modules/

@@ -5,6 +5,7 @@ import (
 	"myapp/dto/auth"
 	"myapp/dto/user"
 	"myapp/services"
+	"strconv"
 )
 
 // @Summary        สร้าง Account Role USER
@@ -52,5 +53,64 @@ func CreateUserFromAdmin(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "User created successfully"})
+}
+
+// ChangeUserRole godoc
+// @Summary      เปลี่ยน Role ของผู้ใช้
+// @Description  สำหรับ Super Admin เพื่อเปลี่ยน Role ของผู้ใช้
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Param        body body userDto.ChangeRoleInput true "ข้อมูลผู้ใช้งาน"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} map[string]string
+// @Router       /admin/change_role [put]
+// @Security     ApiKeyAuth
+func ChangeUserRole(c *fiber.Ctx) error {
+	var input userDto.ChangeRoleInput
+
+	// รับข้อมูลจาก body
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "invalid input",
+		})
+	}
+
+	// เรียกใช้ Service
+	if err := services.ChangeRoleFromAdmin(input); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "user role changed successfully",
+	})
+}
+
+// GetAllUsers godoc
+// @Summary ดึงข้อมูลผู้ใช้งานทั้งหมด
+// @Description สำหรับ Super Admin ดึง Users ทั้งหมด พร้อม Pagination
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param page query int false "หน้าที่ต้องการ (default 1)"
+// @Param limit query int false "จำนวนรายการต่อหน้า (default 10)"
+// @Success 200 {array} userDto.UserResponse
+// @Failure 500 {object} map[string]string
+// @Router /admin/users [get]
+// @Security ApiKeyAuth
+func GetAllUsers(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+
+	offset := (page - 1) * limit
+
+	users, err := services.GetAllUsers(limit, offset)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch users"})
+	}
+
+	return c.Status(200).JSON(users)
 }
 

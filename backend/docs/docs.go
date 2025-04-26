@@ -15,14 +15,14 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/create_users": {
-            "post": {
+        "/admin/change_role": {
+            "put": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "ใช้สำหรับ SUPER_ADMIN สร้าง User role อื่น ๆ แต่ไม่สามารถใช้สร้าง SUPER_ADMIN ได้",
+                "description": "สำหรับ Super Admin เพื่อเปลี่ยน Role ของผู้ใช้",
                 "consumes": [
                     "application/json"
                 ],
@@ -30,9 +30,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "User"
+                    "Admin"
                 ],
-                "summary": "สร้างผู้ใช้โดย Super Admin",
+                "summary": "เปลี่ยน Role ของผู้ใช้",
                 "parameters": [
                     {
                         "description": "ข้อมูลผู้ใช้งาน",
@@ -40,7 +40,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/userDto.CreateUserInput"
+                            "$ref": "#/definitions/userDto.ChangeRoleInput"
                         }
                     }
                 ],
@@ -48,7 +48,10 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
@@ -63,9 +66,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login": {
-            "post": {
-                "description": "Auth login เพื่อรับ JWT Token",
+        "/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "สำหรับ Super Admin ดึง Users ทั้งหมด พร้อม Pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -73,75 +81,35 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "Admin"
                 ],
-                "summary": "Login",
+                "summary": "ดึงข้อมูลผู้ใช้งานทั้งหมด",
                 "parameters": [
                     {
-                        "description": "ข้อมูลเข้าสู่ระบบ",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authDto.LoginRequest"
-                        }
+                        "type": "integer",
+                        "description": "หน้าที่ต้องการ (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "จำนวนรายการต่อหน้า (default 10)",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authDto.LoginResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/register": {
-            "post": {
-                "description": "ลงทะเบียนเพื่อ สร้าง Account โดย User เป็นคนสร้างเอง",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "สร้าง Account Role USER",
-                "parameters": [
-                    {
-                        "description": "ข้อมูลผู้ใช้",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authDto.RegisterInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "ลงทะเบียนสำเร็จ",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/userDto.UserResponse"
                             }
                         }
                     },
-                    "400": {
-                        "description": "ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -154,143 +122,29 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "authDto.LoginRequest": {
+        "userDto.ChangeRoleInput": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "id",
+                "role"
             ],
             "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "authDto.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/authDto.UserInfoResponse"
-                }
-            }
-        },
-        "authDto.RegisterInput": {
-            "type": "object",
-            "required": [
-                "email",
-                "password",
-                "username"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 6
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "authDto.UserInfoResponse": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "admin@example.com"
-                },
                 "id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
                 },
                 "role": {
-                    "type": "string",
-                    "example": "SUPER_ADMIN"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "admin"
+                    "type": "string"
                 }
             }
         },
-        "models.Role": {
-            "type": "string",
-            "enum": [
-                "SUPER_ADMIN",
-                "BRANCH_ADMIN",
-                "USER",
-                "STAFF"
-            ],
-            "x-enum-comments": {
-                "RoleBranchAdmin": "admin แต่ละสาขา แต่ละร้านค้า",
-                "RoleSuperAdmin": "admin กลางที่จะค่อยดูแลระบบทั้งหมด",
-                "RoleUser": "คนทั่วไปที่สมัครเข้ามาเพื่อใช้บริการ"
-            },
-            "x-enum-varnames": [
-                "RoleSuperAdmin",
-                "RoleBranchAdmin",
-                "RoleUser",
-                "RoleStaff"
-            ]
-        },
-        "models.User": {
+        "userDto.UserResponse": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "password": {
-                    "type": "string"
-                },
-                "role": {
-                    "description": "SUPER_ADMIN, BRANCH_ADMIN",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Role"
-                        }
-                    ]
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "userDto.CreateUserInput": {
-            "type": "object",
-            "required": [
-                "email",
-                "password",
-                "role",
-                "username"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 6
+                    "type": "integer"
                 },
                 "role": {
                     "type": "string"
@@ -299,13 +153,6 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }`
@@ -313,10 +160,10 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "",
-	Host:             "localhost:3001",
-	BasePath:         "/",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Docs  api",
+	Title:            "",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

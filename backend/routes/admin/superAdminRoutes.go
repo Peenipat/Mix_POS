@@ -10,4 +10,7 @@ import (
 func SetupAdminRoutes(app *fiber.App) {
 	adminGroup := app.Group("/admin", middlewares.RequireAuth(), middlewares.RequireSuperAdmin())
 	adminGroup.Post("/create_users", controllers.CreateUserFromAdmin)
+	adminGroup.Put("/change_role", controllers.ChangeUserRole)
+	adminGroup.Get("/users",controllers.GetAllUsers)
+	
 }

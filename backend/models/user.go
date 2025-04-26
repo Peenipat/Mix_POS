@@ -36,3 +36,4 @@ type User struct {
 // 	StoreID       *uint      // null = super admin
 // 	Store         *Store
 }
+

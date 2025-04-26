@@ -118,14 +118,16 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/userDto.CreateUserInput'
+          $ref: '#/definitions/userDto.ChangeRoleInput'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            additionalProperties:
+              type: string
+            type: object
         "400":
           description: Bad Request
           schema:
@@ -134,70 +136,41 @@ paths:
             type: object
       security:
       - ApiKeyAuth: []
-      summary: สร้างผู้ใช้โดย Super Admin
+      summary: เปลี่ยน Role ของผู้ใช้
       tags:
-      - User
-  /auth/login:
-    post:
+      - Admin
+  /admin/users:
+    get:
       consumes:
       - application/json
-      description: Auth login เพื่อรับ JWT Token
+      description: สำหรับ Super Admin ดึง Users ทั้งหมด พร้อม Pagination
       parameters:
-      - description: ข้อมูลเข้าสู่ระบบ
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/authDto.LoginRequest'
+      - description: หน้าที่ต้องการ (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: จำนวนรายการต่อหน้า (default 10)
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authDto.LoginResponse'
-        "401":
-          description: Unauthorized
+            items:
+              $ref: '#/definitions/userDto.UserResponse'
+            type: array
+        "500":
+          description: Internal Server Error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Login
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูลผู้ใช้งานทั้งหมด
       tags:
-      - Auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: ลงทะเบียนเพื่อ สร้าง Account โดย User เป็นคนสร้างเอง
-      parameters:
-      - description: ข้อมูลผู้ใช้
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/authDto.RegisterInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: ลงทะเบียนสำเร็จ
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: สร้าง Account Role USER
-      tags:
-      - Auth
-securityDefinitions:
-  ApiKeyAuth:
-    in: header
-    name: Authorization
-    type: apiKey
+      - Admin
 swagger: "2.0"

@@ -3,7 +3,9 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./page/Login";
 import SuperAdminDashboard from "./page/admin/SuperAdminDashboard"
 import BranchAdminDashboard from "./page/admin/BranchAdminDashboard"
+import ShowUsers from "./page/admin/ShowUsers";
 import StaffDashboard from "./page/staff/StaffDashboard";
+import SuperAdminLayout from "./layouts/SuperAdminLayout";
 // import Dashboard from "./pages/Dashboard";
 // import AdminDashboard from "./pages/AdminDashboard";
 // import BranchDashboard from "./pages/BranchDashboard";
@@ -16,12 +18,12 @@ import RequireRole from "./components/RequireRole";
 export default function App() {
   return (
     <Routes>
-      {/* ✅ Public Route */}
+      {/* Public Route */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       {/* <Route path="/unauthorized" element={<Unauthorized />} /> */}
 
-      {/* ✅ ต้อง login ก่อนเท่านั้น
+      {/*ต้อง login ก่อนเท่านั้น
       <Route
         path="/dashboard"
         element={
@@ -31,15 +33,18 @@ export default function App() {
         }
       /> */}
 
-      {/* ต้องเป็น SUPER_ADMIN */}
+
       <Route
-        path="/admin/dashboard"
+        path="/admin"
         element={
           <RequireRole roles={["SUPER_ADMIN"]}>
-            <SuperAdminDashboard />
+            <SuperAdminLayout />
           </RequireRole>
         }
-      />
+      >
+        <Route path="dashboard" element={<SuperAdminDashboard />} />
+        <Route path="users" element={<ShowUsers />} />
+      </Route>
 
       {/* ต้องเป็น BRANCH_ADMIN */}
       <Route

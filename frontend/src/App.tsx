@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./page/Login";
 import SuperAdminDashboard from "./page/admin/SuperAdminDashboard"
 import BranchAdminDashboard from "./page/admin/BranchAdminDashboard"
-import ShowUsers from "./page/admin/ShowUsers";
+import ManageUsers from "./page/admin/ManageUsers";
 import StaffDashboard from "./page/staff/StaffDashboard";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 // import Dashboard from "./pages/Dashboard";
@@ -43,7 +43,7 @@ export default function App() {
         }
       >
         <Route path="dashboard" element={<SuperAdminDashboard />} />
-        <Route path="users" element={<ShowUsers />} />
+        <Route path="users" element={<ManageUsers />} />
       </Route>
 
       {/* ต้องเป็น BRANCH_ADMIN */}

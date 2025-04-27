@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
+import { UserResponseSchema } from "@/schemas/userSchema";
+import EditUserModal from "../admin/components/EditUserModel";
+import { z } from "zod"
 
-interface User {
+export interface User {
   id: number;
   username: string;
   email: string;
   role: string;
-  createdAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export default function ManageUsers() {
+  const usersResponseSchema = z.array(UserResponseSchema);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -22,9 +30,17 @@ export default function ManageUsers() {
             Authorization: `Bearer ${token}`,
           },
         });
-        setUsers(res.data);
+        const parsed = usersResponseSchema.safeParse(res.data);
+
+        if (!parsed.success) {
+          console.error("Invalid API Response:", parsed.error);
+          setUsers([]);
+          return
+        }
+        setUsers(parsed.data);
       } catch (err) {
-        console.error(err);
+        setUsers([]);
+        console.error("Fetch users error:", err);
       } finally {
         setLoading(false);
       }
@@ -33,7 +49,17 @@ export default function ManageUsers() {
     fetchUsers();
   }, []);
 
-  if (loading) return <div className="text-center p-10">Loading...</div>;
+  const handleEdit = (user: User) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
+  
+  const handleSave = (updatedUser: User) => {
+    setUsers((prev) => prev.map(u => (u.id === updatedUser.id ? updatedUser : u)));
+    // TODO: ยิง axios.put("/admin/users/:id") ไป save ฝั่ง backend จริง ๆ
+  };
+
+  if (loading) return <div className="text-center">Loading...</div>
 
   return (
     <div className="overflow-x-auto p-4">
@@ -43,33 +69,54 @@ export default function ManageUsers() {
         {/* head */}
         <thead className="bg-gray-200 text-gray-700">
           <tr>
-            <th>#</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Created At</th>
-            <th>Actions</th>
+            <th className="text-center">#</th>
+            <th className="text-center">Username</th>
+            <th className="text-center">Email</th>
+            <th className="text-center">Role</th>
+            <th className="text-center">Created At</th>
+            <th className="text-center">Updated At</th>
+            <th className="text-center">Deleted At</th>
+            <th className="text-center">Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          {users.map((user, index) => (
+          {users.map((user,index) => (
             <tr key={user.id}>
-              <th>{index + 1}</th>
-              <td>{user.username}</td>
-              <td>{user.email}</td>
-              <td>
-                <span className="badge badge-primary">{user.role}</span>
+              <td className="text-center" >{index + 1}</td>
+              <td className="text-center" >{user.username}</td>
+              <td >{user.email}</td>
+              <td className="text-center">{user.role}</td>
+              <td className="text-center">
+                {user.createdAt
+                  ? new Date(user.createdAt).toLocaleDateString('th-TH')
+                  : "-"}
               </td>
-              <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-              <td>
-                <button className="btn btn-xs btn-warning mr-2">Edit</button>
-                <button className="btn btn-xs btn-error">Delete</button>
+              <td className="text-center">
+                {user.updatedAt
+                  ? new Date(user.updatedAt).toLocaleDateString('th-TH')
+                  : "-"}
               </td>
+              <td className="text-center">
+                {user.deletedAt
+                  ? new Date(user.deletedAt).toLocaleDateString('th-TH')
+                  : "-"}
+              </td>
+              <td className="flex justify-between text-center">
+                <button className="btn btn-warning"  onClick={() => handleEdit(user)}>Edit</button>
+                <button className="btn btn-error">Delete</button>
+                </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {isModalOpen && selectedUser && (
+        <EditUserModal
+          user={selectedUser}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 }

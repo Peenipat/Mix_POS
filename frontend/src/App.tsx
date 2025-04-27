@@ -6,10 +6,8 @@ import BranchAdminDashboard from "./page/admin/BranchAdminDashboard"
 import ManageUsers from "./page/admin/ManageUsers";
 import StaffDashboard from "./page/staff/StaffDashboard";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
+import Register from "./page/Register";
 // import Dashboard from "./pages/Dashboard";
-// import AdminDashboard from "./pages/AdminDashboard";
-// import BranchDashboard from "./pages/BranchDashboard";
-// import Unauthorized from "./pages/Unauthorized";
 import Home from "./page/Home";
 
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -21,6 +19,7 @@ export default function App() {
       {/* Public Route */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       {/* <Route path="/unauthorized" element={<Unauthorized />} /> */}
 
       {/*ต้อง login ก่อนเท่านั้น

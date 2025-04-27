@@ -84,6 +84,16 @@ definitions:
       username:
         type: string
     type: object
+  userDto.ChangeRoleInput:
+    properties:
+      id:
+        type: integer
+      role:
+        type: string
+    required:
+    - id
+    - role
+    type: object
   userDto.CreateUserInput:
     properties:
       email:
@@ -101,17 +111,27 @@ definitions:
     - role
     - username
     type: object
+  userDto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      role:
+        type: string
+      username:
+        type: string
+    type: object
 host: localhost:3001
 info:
   contact: {}
   title: Docs  api
 paths:
-  /admin/create_users:
-    post:
+  /admin/change_role:
+    put:
       consumes:
       - application/json
-      description: ใช้สำหรับ SUPER_ADMIN สร้าง User role อื่น ๆ แต่ไม่สามารถใช้สร้าง
-        SUPER_ADMIN ได้
+      description: สำหรับ Super Admin เพื่อเปลี่ยน Role ของผู้ใช้
       parameters:
       - description: ข้อมูลผู้ใช้งาน
         in: body
@@ -139,6 +159,37 @@ paths:
       summary: เปลี่ยน Role ของผู้ใช้
       tags:
       - Admin
+  /admin/create_users:
+    post:
+      consumes:
+      - application/json
+      description: ใช้สำหรับ SUPER_ADMIN สร้าง User role อื่น ๆ แต่ไม่สามารถใช้สร้าง
+        SUPER_ADMIN ได้
+      parameters:
+      - description: ข้อมูลผู้ใช้งาน
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/userDto.CreateUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างผู้ใช้โดย Super Admin
+      tags:
+      - User
   /admin/users:
     get:
       consumes:
@@ -173,4 +224,67 @@ paths:
       summary: ดึงข้อมูลผู้ใช้งานทั้งหมด
       tags:
       - Admin
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Auth login เพื่อรับ JWT Token
+      parameters:
+      - description: ข้อมูลเข้าสู่ระบบ
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authDto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authDto.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: ลงทะเบียนเพื่อ สร้าง Account โดย User เป็นคนสร้างเอง
+      parameters:
+      - description: ข้อมูลผู้ใช้
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authDto.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ลงทะเบียนสำเร็จ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: สร้าง Account Role USER
+      tags:
+      - Auth
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

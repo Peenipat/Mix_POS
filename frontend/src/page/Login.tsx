@@ -46,7 +46,7 @@ export default function Login() {
         setCharIndex(charIndex + 1);
 
         if (charIndex + 1 === currentMessage.length) {
-          setTimeout(() => setDeleting(true), 1500); 
+          setTimeout(() => setDeleting(true), 1500);
         }
       } else {
         setDisplayText(currentMessage.slice(0, charIndex - 1));
@@ -63,62 +63,61 @@ export default function Login() {
   }, [charIndex, deleting]);
   return (
     <div className="grid grid-cols-2 min-h-screen mx-auto">
-  {/* Left: Login Form */}
-  <div className="flex items-center justify-center bg-gray-100 px-12">
-    <div className="w-full max-w-md">
-      <h1 className="text-5xl font-bold mb-8 text-center text-gray-800">Login</h1>
+      <div className="flex items-center justify-center bg-gray-100 px-12">
+        <div className="w-full max-w-md">
+          <h1 className="text-5xl font-bold mb-8 text-center text-gray-800">Login</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <input
-          type="email"
-          placeholder="example@gmail.com"
-          className="input input-bordered w-full"
-          {...register("email")}
-        />
-        {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
-        )}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <input
+              type="email"
+              placeholder="example@gmail.com"
+              className="input input-bordered w-full"
+              {...register("email")}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="input input-bordered w-full"
-          {...register("password")}
-        />
-        {errors.password && (
-          <p className="text-sm text-red-500">{errors.password.message}</p>
-        )}
+            <input
+              type="password"
+              placeholder="Password"
+              className="input input-bordered w-full"
+              {...register("password")}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
+            )}
 
-        <div className="grid grid-cols-2 gap-4 pt-2">
-          <button className="btn btn-success w-full rounded-lg" type="submit">
-            Login
-          </button>
-          <button
-            className="btn btn-warning w-full rounded-lg"
-            type="button"
-            onClick={() => navigate("/register")}
-          >
-            Register
-          </button>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <button className="btn btn-success w-full rounded-lg" type="submit">
+                Login
+              </button>
+              <button
+                className="btn btn-warning w-full rounded-lg"
+                type="button"
+                onClick={() => navigate("/register")}
+              >
+                Register
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
-  </div>
+      </div>
 
-  {/* Right: Image + Mix POS */}
-  <div className="relative overflow-hidden">
-    <img
-      src="./login_img.jpg"
-      alt="Login"
-      className="w-full h-full object-cover"
-    />
-    <div className="absolute bottom-0 left-0 w-full flex justify-center">
-      <div className="bg-white/30 backdrop-blur-md w-full  p-3 shadow-inner">
-        <h2 className="text-xl font-semibold text-black">{displayText}</h2>
+      {/* Right: Image + Mix POS */}
+      <div className="relative overflow-hidden">
+        <img
+          src="./login_img.jpg"
+          alt="Login"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute bottom-0 left-0 w-full flex justify-center">
+          <div className="bg-white/30 backdrop-blur-md w-full  p-3 shadow-inner">
+            <h2 className="text-xl font-semibold text-black">{displayText}</h2>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
   );
 }

@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // ✅ alias ที่ทำให้ @ ใช้แทน src ได้
+      "@": path.resolve(__dirname, "./src"), // alias ที่ทำให้ @ ใช้แทน src ได้
     },
   },
 })

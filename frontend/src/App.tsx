@@ -7,10 +7,11 @@ import ManageUsers from "./page/admin/ManageUsers";
 import StaffDashboard from "./page/staff/StaffDashboard";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import Register from "./page/Register";
+import Dashboard from "./page/user/Dashboard";
 // import Dashboard from "./pages/Dashboard";
 import Home from "./page/Home";
 
-// import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import RequireRole from "./components/RequireRole";
 
 export default function App() {
@@ -22,7 +23,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       {/* <Route path="/unauthorized" element={<Unauthorized />} /> */}
 
-      {/*ต้อง login ก่อนเท่านั้น
+      ต้อง login ก่อนเท่านั้น
       <Route
         path="/dashboard"
         element={
@@ -30,7 +31,7 @@ export default function App() {
             <Dashboard />
           </ProtectedRoute>
         }
-      /> */}
+      />
 
 
       <Route

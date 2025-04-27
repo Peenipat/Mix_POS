@@ -23,8 +23,9 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     try {
       const res = await axios.post("/auth/login", data);
-      const { token, user } = res.data;
-      localStorage.setItem("token", token);
+      const { user } = res.data;
+      console.log("Token ที่ได้", res.data.token);
+      localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", user.role);
 
       if (user.role === "SUPER_ADMIN") navigate("/admin/dashboard");
@@ -33,6 +34,7 @@ export default function Login() {
       else navigate("/dashboard");
     } catch (err) {
       alert("Login failed");
+      console.log(err)
     }
   };
 

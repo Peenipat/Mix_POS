@@ -14,7 +14,7 @@ export default function Register() {
         try {
             axios.post("/auth/register", data)
             reset()
-            navigate("/")
+            navigate("/dashboard")
         } catch (error) {
             console.error(error);
             alert("Register failed");

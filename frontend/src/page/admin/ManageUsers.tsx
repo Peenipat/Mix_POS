@@ -24,12 +24,7 @@ export default function ManageUsers() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get("/admin/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await axios.get("/admin/users")
         const parsed = usersResponseSchema.safeParse(res.data);
 
         if (!parsed.success) {
@@ -53,7 +48,7 @@ export default function ManageUsers() {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
-  
+
   const handleSave = (updatedUser: User) => {
     setUsers((prev) => prev.map(u => (u.id === updatedUser.id ? updatedUser : u)));
     // TODO: ยิง axios.put("/admin/users/:id") ไป save ฝั่ง backend จริง ๆ

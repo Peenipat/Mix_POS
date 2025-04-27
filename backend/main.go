@@ -15,6 +15,8 @@ import (
     "github.com/gofiber/fiber/v2/middleware/helmet"
     "github.com/gofiber/fiber/v2/middleware/compress"
     "github.com/gofiber/fiber/v2/middleware/limiter"
+    "time"
+    //deploy
     "github.com/gofiber/fiber/v2/middleware/filesystem"
 	"net/http"
 
@@ -44,7 +46,6 @@ func main() {
     app.Use(recover.New())
     app.Use(helmet.New())
     app.Use(compress.New())
-    app.Use(limiter.New())
 
     // Connect Database
     database.ConnectDB()
@@ -56,6 +57,11 @@ func main() {
     // API Routes
     routes.SetupAuthRoutes(app)
     admin.SetupAdminRoutes(app)
+
+    app.Use(limiter.New(limiter.Config{
+        Max:        100,                  // เพิ่มจำนวน request ที่อนุญาต
+        Expiration: 30 * time.Second,     // ขยายเวลา reset
+    }))
 
     // Serve React Static Files (หลังสุด)
     app.Use("/", filesystem.New(filesystem.Config{

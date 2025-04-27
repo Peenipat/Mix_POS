@@ -1,11 +1,12 @@
 package controllers
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"myapp/dto/auth"
-	"myapp/dto/user"
+	authDto "myapp/dto/auth"
+	userDto "myapp/dto/user"
 	"myapp/services"
 	"strconv"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // @Summary        สร้าง Account Role USER
@@ -18,7 +19,7 @@ import (
 // @Failure        400 {object} map[string]string "ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว"
 // @Router         /auth/register [post]
 func CreateUserFromRegister(c *fiber.Ctx) error {
-	var input authDto.RegisterInput 
+	var input authDto.RegisterInput
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
@@ -114,3 +115,37 @@ func GetAllUsers(c *fiber.Ctx) error {
 	return c.Status(200).JSON(users)
 }
 
+// FilterUsersByRole godoc
+// @Summary      ดึงข้อมูลผู้ใช้งานโดยเลือกเฉพาะ role ที่ต้องการ
+// @Description  ใช้สำหรับ Super Admin เพื่อดึง Users เฉพาะ role ที่ระบุ เช่น STAFF, USER, BRANCH_ADMIN
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Param        role query string true "Role ที่ต้องการกรอง เช่น STAFF, USER, BRANCH_ADMIN, SUPER_ADMIN"
+// @Success      200 {array} userDto.UserResponse
+// @Failure      400 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /admin/user-by-role [get]
+// @Security     ApiKeyAuth
+func FilterUsersByRole(c *fiber.Ctx) error {
+	// ดึง role ของคนที่ login (จาก JWT Middleware ที่ c.Locals())
+	userRole := c.Locals("userRole")
+	if userRole != "SUPER_ADMIN" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "permission denied"})
+	}
+
+	// อ่าน query string ?role=STAFF
+	role := c.Query("role")
+	if role == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing role parameter"})
+	}
+
+	// เรียก service ไปหาข้อมูล
+	users, err := services.FilterUsersByRole(role)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(users)
+}

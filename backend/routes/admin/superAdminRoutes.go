@@ -12,5 +12,6 @@ func SetupAdminRoutes(app *fiber.App) {
 	adminGroup.Post("/create_users", controllers.CreateUserFromAdmin)
 	adminGroup.Put("/change_role", controllers.ChangeUserRole)
 	adminGroup.Get("/users",controllers.GetAllUsers)
+	adminGroup.Get("/user-by-role",controllers.FilterUsersByRole)
 	
 }

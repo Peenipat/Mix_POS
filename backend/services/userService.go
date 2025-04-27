@@ -155,5 +155,45 @@ func GetAllUsers(limit int , offset int)([]userDto.UserResponse, error){
 	return result, nil
 }
 
+func FilterUsersByRole(role string) ([]userDto.UserResponse, error) {
+	// Validate role ก่อน
+	validRoles := []models.Role{
+		models.RoleSuperAdmin,
+		models.RoleBranchAdmin,
+		models.RoleStaff,
+		models.RoleUser,
+	}
+
+	isValid := false
+	for _, r := range validRoles {
+		if models.Role(role) == r {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
+		return nil, errors.New("invalid role")
+	}
+
+	// ดึง users
+	var users []models.User
+	if err := database.DB.Where("role = ?", role).Find(&users).Error; err != nil {
+		return nil, errors.New("failed to fetch users")
+	}
+
+	// Map เป็น UserResponse
+	var result []userDto.UserResponse
+	for _, u := range users {
+		result = append(result, userDto.UserResponse{
+			ID:       u.ID,
+			Username: u.Username,
+			Email:    u.Email,
+			Role:     string(u.Role),
+		})
+	}
+
+	return result, nil
+}
+
 
 

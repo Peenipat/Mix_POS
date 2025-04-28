@@ -1,12 +1,11 @@
+// main.go
 package main
 
 import (
+    "log"
     "os"
-
-    "myapp/database"
-    "myapp/models"
-    "myapp/routes"
-    "myapp/routes/admin"
+    "time"
+    "net/http"
 
     "github.com/gofiber/fiber/v2"
     "github.com/gofiber/fiber/v2/middleware/logger"
@@ -15,65 +14,65 @@ import (
     "github.com/gofiber/fiber/v2/middleware/helmet"
     "github.com/gofiber/fiber/v2/middleware/compress"
     "github.com/gofiber/fiber/v2/middleware/limiter"
-    "time"
-    //deploy
     "github.com/gofiber/fiber/v2/middleware/filesystem"
-	"net/http"
-
-    _ "myapp/docs" // Swagger docs
     fiberSwagger "github.com/swaggo/fiber-swagger"
-)
 
-// @title         Docs API
-// @host          localhost:3001
-// @BasePath      /
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
+    "myapp/controllers"
+    "myapp/database"
+    "myapp/models"
+    "myapp/routes"
+    "myapp/routes/admin"
+    "myapp/services"
+)
 
 func main() {
     app := fiber.New()
 
-    // Middleware
+    // Global middleware
     app.Use(logger.New())
     app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173", 
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowCredentials: true,
-	}))
-	
+        AllowOrigins:     "http://localhost:5173",
+        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+        AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+        AllowCredentials: true,
+    }))
     app.Use(recover.New())
     app.Use(helmet.New())
     app.Use(compress.New())
 
-    // Connect Database
+    // Connect & migrate
     database.ConnectDB()
-    database.DB.AutoMigrate(&models.User{}, &models.AuditLog{})
+    database.DB.AutoMigrate(&models.User{}, &models.SystemLog{})
 
-    // Swagger Docs
+    // Services & Controllers initialization
+    logSvc := services.NewSystemLogService(database.DB)
+    controllers.InitSystemLogHandler(logSvc)
+
+    authSvc := services.NewAuthService(database.DB, logSvc)
+    controllers.InitAuthHandler(authSvc, logSvc)
+
+    // Swagger
     app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-    // API Routes
+    // Routes
     routes.SetupAuthRoutes(app)
     admin.SetupAdminRoutes(app)
 
+    // Rate limiter & static
     app.Use(limiter.New(limiter.Config{
-        Max:        100,                  // เพิ่มจำนวน request ที่อนุญาต
-        Expiration: 30 * time.Second,     // ขยายเวลา reset
+        Max:        100,
+        Expiration: 30 * time.Second,
+    }))
+    app.Use("/", filesystem.New(filesystem.Config{
+        Root:   http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"),
+        Browse: false,
+        Index:  "index.html",
     }))
 
-    // Serve React Static Files (หลังสุด)
-    app.Use("/", filesystem.New(filesystem.Config{
-		Root:       http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"), // ใช้ net/http เลย
-		Browse:     false,
-		Index:      "index.html",
-	}))
-
-    // Listen
+    // Start
     port := os.Getenv("PORT")
     if port == "" {
         port = "3001"
     }
-    app.Listen(":" + port)
+    log.Fatal(app.Listen(":" + port))
 }

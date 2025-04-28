@@ -84,8 +84,7 @@ func CreateUserFromAdmin(input userDto.CreateUserInput) error {
 
 func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var user models.User
-		oldRole := string(user.Role) 
+		var user models.User 
 
 		// หา user
 		if err := tx.First(&user, input.ID).Error; err != nil {
@@ -120,17 +119,6 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 			return errors.New("failed to update user role")
 		}
 
-		// Insert audit log
-		auditLog := models.AuditLog{
-			Action:   "ChangeRole",
-			ID:   input.ID,
-			OldValue: oldRole, // เก็บค่าเก่าไว้ก่อนเปลี่ยน
-			NewValue: input.Role,
-		}
-		if err := tx.Create(&auditLog).Error; err != nil {
-			return errors.New("failed to create audit log")
-		}
-
 		// ถ้าทำถึงตรงนี้ทุกอย่างผ่าน → tx จะ Commit ให้อัตโนมัติ
 		return nil
 	})
@@ -139,7 +127,7 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 func GetAllUsers(limit int , offset int)([]userDto.UserResponse, error){
 	var users []models.User
 	//ค้นหา user เช็ค limit และกำหนด offset 
-	if err := database.DB.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil,err
 	}
 

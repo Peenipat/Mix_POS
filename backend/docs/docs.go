@@ -114,7 +114,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/filter-users": {
+        "/admin/user-by-role": {
             "get": {
                 "security": [
                     {
@@ -517,10 +517,10 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "",
-	Host:             "localhost:3001",
-	BasePath:         "/",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Docs API",
+	Title:            "",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

@@ -1,7 +1,6 @@
 package models
 
 import (
-	"net"
 	"time"
 
 	"gorm.io/datatypes"
@@ -20,7 +19,7 @@ type SystemLog struct {
 	Resource      string         `gorm:"type:varchar(50);column:resource;not null"`
 	Status        string         `gorm:"type:varchar(20);column:status;not null"`
 
-	IPAddress     *net.IP        `gorm:"type:inet;column:ip_address"`
+	IPAddress 	  *string 		 `gorm:"type:inet;column:ip_address"`
 
 	HTTPMethod    string         `gorm:"type:varchar(10);column:http_method;default:'GET';not null"`
 	Endpoint      string         `gorm:"type:varchar(255);column:endpoint;not null"`

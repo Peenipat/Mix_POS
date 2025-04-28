@@ -1,11 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "Docs API",
         "contact": {}
     },
-    "host": "localhost:3001",
-    "basePath": "/",
     "paths": {
         "/admin/change_role": {
             "put": {
@@ -106,7 +103,7 @@
                 }
             }
         },
-        "/admin/filter-users": {
+        "/admin/user-by-role": {
             "get": {
                 "security": [
                     {

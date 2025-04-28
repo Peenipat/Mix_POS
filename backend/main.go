@@ -1,6 +1,7 @@
-// main.go
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 package main
-
 import (
     "log"
     "os"
@@ -17,6 +18,7 @@ import (
     "github.com/gofiber/fiber/v2/middleware/filesystem"
     fiberSwagger "github.com/swaggo/fiber-swagger"
 
+    _ "myapp/docs"              // import generated docs
     "myapp/controllers"
     "myapp/database"
     "myapp/models"
@@ -31,7 +33,7 @@ func main() {
     // Global middleware
     app.Use(logger.New())
     app.Use(cors.New(cors.Config{
-        AllowOrigins:     "http://localhost:5173",
+        AllowOrigins:     "http://localhost:5173,http://127.0.0.1:3001",
         AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
         AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
         AllowCredentials: true,
@@ -44,19 +46,18 @@ func main() {
     database.ConnectDB()
     database.DB.AutoMigrate(&models.User{}, &models.SystemLog{})
 
-    // Services & Controllers initialization
+    // Initialize Services & Controllers
     logSvc := services.NewSystemLogService(database.DB)
     controllers.InitSystemLogHandler(logSvc)
 
     authSvc := services.NewAuthService(database.DB, logSvc)
     controllers.InitAuthHandler(authSvc, logSvc)
 
-    // Swagger
-    app.Get("/swagger/*", fiberSwagger.WrapHandler)
-
     // Routes
     routes.SetupAuthRoutes(app)
     admin.SetupAdminRoutes(app)
+
+    app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
     // Rate limiter & static
     app.Use(limiter.New(limiter.Config{
@@ -69,7 +70,7 @@ func main() {
         Index:  "index.html",
     }))
 
-    // Start
+    // Start server
     port := os.Getenv("PORT")
     if port == "" {
         port = "3001"

@@ -13,15 +13,15 @@ type SystemLog = {
   IPAddress?: string
   HTTPMethod: string
   Endpoint: string
-  StatusCode?:string
-  XForwardedFor?:string
-  UserAgent?:string
-  Referer?:string
-  Origin?:string
-  ClientApp?:string
-  BranchID?:string
-  Details?: Record<string, any>   
-  Metadata?: Record<string, any> 
+  // StatusCode?:string
+  // XForwardedFor?:string
+  // UserAgent?:string
+  // Referer?:string
+  // Origin?:string
+  // ClientApp?:string
+  // BranchID?:string
+  // Details?: Record<string, any>   
+  // Metadata?: Record<string, any> 
 }
 
 const columns: Column<SystemLog>[] = [
@@ -35,15 +35,15 @@ const columns: Column<SystemLog>[] = [
   { header: 'IP Address', accessor: 'IPAddress' },
   { header: 'Method', accessor: 'HTTPMethod' },
   { header: 'Endpoint', accessor: 'Endpoint' },
-  { header: 'StatusCode', accessor: 'StatusCode' },
-  { header: 'XForwardedFor', accessor: 'XForwardedFor' },
-  { header: 'UserAgent', accessor: 'UserAgent' },
-  { header: 'Referer', accessor: 'Referer' },
-  { header: 'Origin', accessor: 'Origin' },
-  { header: 'ClientApp', accessor: 'ClientApp' },
-  { header: 'BranchID', accessor: 'BranchID' },
-  { header: 'Details', accessor: 'Details' },
-  { header: 'Metadata', accessor: 'Metadata' },
+  // { header: 'StatusCode', accessor: 'StatusCode' },
+  // { header: 'XForwardedFor', accessor: 'XForwardedFor' },
+  // { header: 'UserAgent', accessor: 'UserAgent' },
+  // { header: 'Referer', accessor: 'Referer' },
+  // { header: 'Origin', accessor: 'Origin' },
+  // { header: 'ClientApp', accessor: 'ClientApp' },
+  // { header: 'BranchID', accessor: 'BranchID' },
+  // { header: 'Details', accessor: 'Details' },
+  // { header: 'Metadata', accessor: 'Metadata' },
 ]
 
 export default function LogTablePage() {

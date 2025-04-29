@@ -10,6 +10,7 @@ export default function SuperAdminLayout() {
         <ul className="space-y-4">
           <li><a href="/admin/dashboard" className="hover:underline">Dashboard</a></li>
           <li><a href="/admin/users" className="hover:underline">Manage users</a></li>
+          <li><a href="/admin/log" className="hover:underline">System log</a></li>
         </ul>
         <LogoutButton />
       </aside>

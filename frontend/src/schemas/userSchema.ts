@@ -10,6 +10,13 @@ export const UserResponseSchema = z.object({
   deletedAt: z.string().datetime({ message: "Invalid deletedAt format "}).nullable().optional(),
 });
 
+export const loginResponseSchema = z.object({
+  token: z.string(),
+  user: UserResponseSchema
+})
+
+export type loginResponse = z.infer<typeof loginResponseSchema>
+
 export const EditUserFromAdmin = z.object({
     username: z.string().min(1, {message: "Username is required"}),
     email: z.string().email({ message: "Invalid email address"}),

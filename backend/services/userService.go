@@ -84,8 +84,7 @@ func CreateUserFromAdmin(input userDto.CreateUserInput) error {
 
 func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var user models.User
-		oldRole := string(user.Role) 
+		var user models.User 
 
 		// หา user
 		if err := tx.First(&user, input.ID).Error; err != nil {
@@ -120,17 +119,6 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 			return errors.New("failed to update user role")
 		}
 
-		// Insert audit log
-		auditLog := models.AuditLog{
-			Action:   "ChangeRole",
-			ID:   input.ID,
-			OldValue: oldRole, // เก็บค่าเก่าไว้ก่อนเปลี่ยน
-			NewValue: input.Role,
-		}
-		if err := tx.Create(&auditLog).Error; err != nil {
-			return errors.New("failed to create audit log")
-		}
-
 		// ถ้าทำถึงตรงนี้ทุกอย่างผ่าน → tx จะ Commit ให้อัตโนมัติ
 		return nil
 	})
@@ -139,7 +127,7 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 func GetAllUsers(limit int , offset int)([]userDto.UserResponse, error){
 	var users []models.User
 	//ค้นหา user เช็ค limit และกำหนด offset 
-	if err := database.DB.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil,err
 	}
 
@@ -151,6 +139,46 @@ func GetAllUsers(limit int , offset int)([]userDto.UserResponse, error){
 			Role:     string(u.Role),
 		}
 	})
+
+	return result, nil
+}
+
+func FilterUsersByRole(role string) ([]userDto.UserResponse, error) {
+	// Validate role ก่อน
+	validRoles := []models.Role{
+		models.RoleSuperAdmin,
+		models.RoleBranchAdmin,
+		models.RoleStaff,
+		models.RoleUser,
+	}
+
+	isValid := false
+	for _, r := range validRoles {
+		if models.Role(role) == r {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
+		return nil, errors.New("invalid role")
+	}
+
+	// ดึง users
+	var users []models.User
+	if err := database.DB.Where("role = ?", role).Find(&users).Error; err != nil {
+		return nil, errors.New("failed to fetch users")
+	}
+
+	// Map เป็น UserResponse
+	var result []userDto.UserResponse
+	for _, u := range users {
+		result = append(result, userDto.UserResponse{
+			ID:       u.ID,
+			Username: u.Username,
+			Email:    u.Email,
+			Role:     string(u.Role),
+		})
+	}
 
 	return result, nil
 }

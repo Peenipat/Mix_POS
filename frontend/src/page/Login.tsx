@@ -2,41 +2,51 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginForm } from "../schemas/authSchema";
 import { useNavigate } from "react-router-dom"
-import axios from "../lib/axios";
 import { useEffect, useState } from "react";
+import { useAppDispatch, useAppSelector } from '../store/hook';
+import { loginUser, clearError } from '@/store/authSlice';
 
 export default function Login() {
   const [displayText, setDisplayText] = useState("");
   const [messageIndex, setMessageIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [deleting, setDeleting] = useState(false);
+  const dispatch = useAppDispatch();
   const messages = [
     "Lorem ipsum dolor sit amet  accusamus non! Error voluptatibus dignissimos magnam ",
     "Lorem  accusantium et, solutais deleniti harum ex non. Magni, earum. Cupiditate?",
     "Lorem ipsum dolor sit amet consectetur adipisicing elit.  Error voluptCupiditate?",
   ];
+  const { status, error, user, token } = useAppSelector(state => state.auth);
+
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
   const navigate = useNavigate();
 
-  const onSubmit = async (data: LoginForm) => {
-    try {
-      const res = await axios.post("/auth/login", data);
-      const { user } = res.data;
-      console.log("Token ที่ได้", res.data.token);
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", user.role);
-
-      if (user.role === "SUPER_ADMIN") navigate("/admin/dashboard");
-      else if (user.role === "BRANCH_ADMIN") navigate("/branch/dashboard");
-      else if (user.role === "STAFF") navigate("/staff/dashboard");
-      else navigate("/dashboard");
-    } catch (err) {
-      alert("Login failed");
-      console.log(err)
-    }
+  const onSubmit = (data: LoginForm) => {
+    dispatch(loginUser(data));
   };
+
+  // เมื่อ login สำเร็จ (status === 'succeeded') ให้เก็บ token+navigate
+  useEffect(() => {
+    if (status === 'succeeded' && user && token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', user.role);
+      if (user.role === 'SUPER_ADMIN') navigate('/admin/dashboard');
+      else if (user.role === 'BRANCH_ADMIN') navigate('/branch/dashboard');
+      else if (user.role === 'STAFF') navigate('/staff/dashboard');
+      else navigate('/dashboard');
+    }
+  }, [status, user, token, navigate]);
+
+  // ถ้ามี error ให้ alert หรือแสดง UI
+  useEffect(() => {
+    if (status === 'failed' && error) {
+      alert(error);
+      dispatch(clearError());
+    }
+  }, [status, error, dispatch]);
 
   useEffect(() => {
     const currentMessage = messages[messageIndex];
@@ -91,8 +101,8 @@ export default function Login() {
             )}
 
             <div className="grid grid-cols-2 gap-4 pt-2">
-              <button className="btn btn-success w-full rounded-lg" type="submit">
-                Login
+              <button className="btn btn-success w-full rounded-lg" type="submit" disabled={status === 'loading'}>
+              {status === 'loading' ? 'Logging in…' : 'Login'}
               </button>
               <button
                 className="btn btn-warning w-full rounded-lg"

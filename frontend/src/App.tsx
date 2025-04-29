@@ -8,6 +8,7 @@ import StaffDashboard from "./page/staff/StaffDashboard";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import Register from "./page/Register";
 import Dashboard from "./page/user/Dashboard";
+import LogTablePage from "./page/admin/super_admin/Log";
 // import Dashboard from "./pages/Dashboard";
 import Home from "./page/Home";
 
@@ -44,6 +45,7 @@ export default function App() {
       >
         <Route path="dashboard" element={<SuperAdminDashboard />} />
         <Route path="users" element={<ManageUsers />} />
+        <Route path="log" element={<LogTablePage/>}/>
       </Route>
 
       {/* ต้องเป็น BRANCH_ADMIN */}

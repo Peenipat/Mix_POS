@@ -13,9 +13,9 @@ export interface User {
   updatedAt?: string;
   deletedAt?: string | null;
 }
-
+const usersResponseSchema = z.array(UserResponseSchema);
 export default function ManageUsers() {
-  const usersResponseSchema = z.array(UserResponseSchema);
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -24,12 +24,7 @@ export default function ManageUsers() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get("/admin/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await axios.get("/admin/users")
         const parsed = usersResponseSchema.safeParse(res.data);
 
         if (!parsed.success) {

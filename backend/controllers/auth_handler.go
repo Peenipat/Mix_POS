@@ -1,14 +1,16 @@
 package controllers
 
 import (
-    "context"
-    "encoding/json"
-    "time"
+	"context"
+	"encoding/json"
+	"time"
 
-    "github.com/gofiber/fiber/v2"
-    authDto "myapp/dto/auth"
-    "myapp/models"
-    "myapp/services"
+	"myapp/database"
+	authDto "myapp/dto/auth"
+	"myapp/models"
+	"myapp/services"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 var (
@@ -60,6 +62,50 @@ func LoginHandler(c *fiber.Ctx) error {
     entry.UserRole = &role
     logSvc.Create(c.Context(), entry)
 
+    // สร้าง cookie 
+    c.Cookie(&fiber.Cookie{
+        Name:     "token",
+        Value:    resp.Token, // <-- ใช้ resp.Token (ที่ service login สร้างไว้แล้ว)
+        Expires:  time.Now().Add(72 * time.Hour),
+        HTTPOnly: true, // อ่าน cookies จาก client
+        Secure:   false,    // ต้องใช้ https ตอน production
+        SameSite: "Lax",   
+    })
+
     // 4) Return response
-    return c.JSON(resp)
+    return c.JSON(fiber.Map{
+        "user": resp.User,
+    })
 }
+
+func GetMe(c *fiber.Ctx) error {
+	userID := c.Locals("user_id")
+	role := c.Locals("role")
+
+	if userID == nil || role == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	var user models.User
+
+	// 🔥 ดึงข้อมูลจาก database ตาม user_id ที่มาจาก token
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"user": map[string]interface{}{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"role":     user.Role,
+		},
+	})
+}
+
+
+

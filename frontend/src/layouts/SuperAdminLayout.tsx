@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import LogoutButton from "@/components/LogoutButton";
+import { Link } from "react-router-dom";
 
 export default function SuperAdminLayout() {
   return (
@@ -8,16 +9,16 @@ export default function SuperAdminLayout() {
       <aside className="w-64 bg-gray-800 text-white p-4">
         <h2 className="text-2xl font-bold mb-8">Admin Panel</h2>
         <ul className="space-y-4">
-          <li><a href="/admin/dashboard" className="hover:underline">Dashboard</a></li>
-          <li><a href="/admin/users" className="hover:underline">Manage users</a></li>
-          <li><a href="/admin/log" className="hover:underline">System log</a></li>
+          <li><Link to="dashboard" className="hover:underline">Dashboard</Link></li>
+          <li><Link to="users" className="hover:underline">Manage users</Link></li>
+          <li><Link to="log" className="hover:underline">System log</Link></li>
         </ul>
         <LogoutButton />
       </aside>
-      
+
       {/* Main Content */}
       <div className="flex-1 p-6 bg-gray-100">
-        <Outlet /> 
+        <Outlet />
       </div>
     </div>
   );

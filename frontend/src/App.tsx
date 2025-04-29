@@ -35,17 +35,15 @@ export default function App() {
       />
 
 
-      <Route
-        path="/admin"
-        element={
-          <RequireRole roles={["SUPER_ADMIN"]}>
-            <SuperAdminLayout />
-          </RequireRole>
-        }
-      >
+      <Route path="/admin" element={
+        <RequireRole roles={["SUPER_ADMIN"]}>
+          <SuperAdminLayout />
+        </RequireRole>
+      }>
+        <Route index element={<SuperAdminDashboard />} />
         <Route path="dashboard" element={<SuperAdminDashboard />} />
         <Route path="users" element={<ManageUsers />} />
-        <Route path="log" element={<LogTablePage/>}/>
+        <Route path="log" element={<LogTablePage />} />
       </Route>
 
       {/* ต้องเป็น BRANCH_ADMIN */}

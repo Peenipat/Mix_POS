@@ -2,79 +2,54 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginForm } from "../schemas/authSchema";
 import { useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react";
+import { useEffect} from "react";
 import { useAppDispatch, useAppSelector } from '../store/hook';
 import { loginUser, clearError } from '@/store/authSlice';
-
+import { useTypewriter } from '../components/useTypewriter';
+import { navigateByRole } from "@/utils/navigation";
 export default function Login() {
-  const [displayText, setDisplayText] = useState("");
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
-  const [deleting, setDeleting] = useState(false);
   const dispatch = useAppDispatch();
+  // content ของ animation ตัวอักษร
   const messages = [
     "Lorem ipsum dolor sit amet  accusamus non! Error voluptatibus dignissimos magnam ",
     "Lorem  accusantium et, solutais deleniti harum ex non. Magni, earum. Cupiditate?",
     "Lorem ipsum dolor sit amet consectetur adipisicing elit.  Error voluptCupiditate?",
   ];
-  const { status, error, user, token } = useAppSelector(state => state.auth);
-
+  // ดึงสถานะมาจาก Redux
+  const { status, error, user } = useAppSelector(state => state.auth);
+  // ตัวจัดการ check ข้อมูลที่เข้ามาใน form
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
   const navigate = useNavigate();
 
   const onSubmit = (data: LoginForm) => {
-    dispatch(loginUser(data));
+    dispatch(loginUser(data)); //ส่งข้อมูล login ไปยัง Redux (loginUser thunk)
   };
 
   // เมื่อ login สำเร็จ (status === 'succeeded') ให้เก็บ token+navigate
   useEffect(() => {
-    if (status === 'succeeded' && user && token) {
-      localStorage.setItem('token', token);
-      localStorage.setItem('role', user.role);
-      if (user.role === 'SUPER_ADMIN') navigate('/admin/dashboard');
-      else if (user.role === 'BRANCH_ADMIN') navigate('/branch/dashboard');
-      else if (user.role === 'STAFF') navigate('/staff/dashboard');
-      else navigate('/dashboard');
+    if (status === 'succeeded' && user){
+      console.log("🚀 user after login: ", user);
+      navigateByRole(user.role, navigate);
+      setTimeout(() => {
+        navigateByRole(user.role, navigate);
+      }, 200);
     }
-  }, [status, user, token, navigate]);
+  }, [status, user, navigate]);
 
   // ถ้ามี error ให้ alert หรือแสดง UI
   useEffect(() => {
     if (status === 'failed' && error) {
       alert(error);
-      dispatch(clearError());
+      dispatch(clearError()); //เคลียร์ error ใน Redux หลังแสดงเสร็จ
     }
   }, [status, error, dispatch]);
 
-  useEffect(() => {
-    const currentMessage = messages[messageIndex];
-    const delay = deleting ? 40 : 70;
-
-    const timeout = setTimeout(() => {
-      if (!deleting) {
-        setDisplayText(currentMessage.slice(0, charIndex + 1));
-        setCharIndex(charIndex + 1);
-
-        if (charIndex + 1 === currentMessage.length) {
-          setTimeout(() => setDeleting(true), 1500);
-        }
-      } else {
-        setDisplayText(currentMessage.slice(0, charIndex - 1));
-        setCharIndex(charIndex - 1);
-
-        if (charIndex === 0) {
-          setDeleting(false);
-          setMessageIndex((messageIndex + 1) % messages.length); // วนลูปข้อความ
-        }
-      }
-    }, delay);
-
-    return () => clearTimeout(timeout);
-  }, [charIndex, deleting]);
+  const displayText = useTypewriter(messages) // เรียกใช้ function พิมพ์ตัวอักษร
   return (
     <div className="grid grid-cols-2 min-h-screen mx-auto">
+      {/* ฝั่งซ้าย Login Form*/ }
       <div className="flex items-center justify-center bg-gray-100 px-12">
         <div className="w-full max-w-md">
           <h1 className="text-5xl font-bold mb-8 text-center text-gray-800">Login</h1>
@@ -116,7 +91,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right: Image + Mix POS */}
+      {/* ฝั่งขวา Image + ตัวอักษร */}
       <div className="relative overflow-hidden">
         <img
           src="./login_img.jpg"

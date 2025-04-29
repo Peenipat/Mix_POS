@@ -4,6 +4,7 @@ import { UserResponseSchema } from "@/schemas/userSchema";
 import EditUserModal from "../admin/components/EditUserModel";
 import { z } from "zod"
 
+// interface กำหนดโครงสร้างข้อมูล user
 export interface User {
   id: number;
   username: string;
@@ -15,45 +16,49 @@ export interface User {
 }
 
 export default function ManageUsers() {
-  const usersResponseSchema = z.array(UserResponseSchema);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const usersResponseSchema = z.array(UserResponseSchema); // schema สำหรับ validate array ของ users  ที่ตอบกลับมาจาก Database
+  const [users, setUsers] = useState<User[]>([]); // เก็บข้อมูล user ทั้งหมดที่ดึงจาก backend
+  const [loading, setLoading] = useState(true); // สถานะโหลดหน้า
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);  // user ที่ถูกเลือกเพื่อแก้ไข
+  const [isModalOpen, setIsModalOpen] = useState(false); // สถานะเปิด modal แก้ไข
 
+  // ดึงข้อมูล users ตอนเปิด
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const res = await axios.get("/admin/users")
-        const parsed = usersResponseSchema.safeParse(res.data);
+        const parsed = usersResponseSchema.safeParse(res.data); // validate response ของ user ว่าถูกต้องตาม schema ไหม
 
         if (!parsed.success) {
           console.error("Invalid API Response:", parsed.error);
-          setUsers([]);
+          setUsers([]); //ไม่ผ่านให้ส่ง array เปล่า
           return
         }
-        setUsers(parsed.data);
+        setUsers(parsed.data); // ผ่าน set user เข้า useState
       } catch (err) {
         setUsers([]);
         console.error("Fetch users error:", err);
       } finally {
-        setLoading(false);
+        setLoading(false); // หยุดโหลดไม่ว่าจะสำเร็จหรือล้มเหลว
       }
     };
 
     fetchUsers();
-  }, []);
+  }, []); 
 
+  // ฟังก์ชันเปิด modal พร้อมส่ง user ที่ต้องการแก้ไข
   const handleEdit = (user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
 
+    // ฟังก์ชัน save user หลังจากแก้ไขจาก modal
   const handleSave = (updatedUser: User) => {
     setUsers((prev) => prev.map(u => (u.id === updatedUser.id ? updatedUser : u)));
-    // TODO: ยิง axios.put("/admin/users/:id") ไป save ฝั่ง backend จริง ๆ
+    //
   };
 
+    // กรณีโหลดข้อมูลยังไม่เสร็จ
   if (loading) return <div className="text-center">Loading...</div>
 
   return (

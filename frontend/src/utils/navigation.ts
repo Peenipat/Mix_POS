@@ -1,0 +1,22 @@
+import { NavigateFunction } from "react-router-dom";
+
+export function navigateByRole(role: string | undefined, navigate: NavigateFunction) {
+    if (!role) {
+        navigate("/dashboard");
+        return;
+    }
+
+    switch (role) {
+        case 'SUPER_ADMIN':
+            navigate('/admin/dashboard');
+            break;
+        case 'BRANCH_ADMIN':
+            navigate('/branch/dashboard');
+            break;
+        case 'STAFF':
+            navigate('/staff/dashboard');
+            break;
+        default:
+            navigate('/dashboard');
+    }
+}

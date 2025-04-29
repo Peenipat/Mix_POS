@@ -11,7 +11,6 @@ export const UserResponseSchema = z.object({
 });
 
 export const loginResponseSchema = z.object({
-  token: z.string(),
   user: UserResponseSchema
 })
 

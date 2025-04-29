@@ -1,24 +1,20 @@
 package middlewares
-
 import (
 	"os"
-	"strings"
-	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/gofiber/fiber/v2"
 )
 
 func RequireAuth() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// ดึง Authorization header
-		authHeader := c.Get("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		// อ่าน token จาก Cookie
+		tokenStr := c.Cookies("token")
+		if tokenStr == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Missing or invalid authorization header",
+				"error": "Missing or invalid token",
 			})
 		}
 
-		// แยก token
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		secret := os.Getenv("JWT_SECRET")
 
 		// Parse token
@@ -31,9 +27,9 @@ func RequireAuth() fiber.Handler {
 			})
 		}
 
-		// ดึง claim มาแปะลง context
+		// ดึง claims มาเก็บใน context
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			userID := uint(claims["user_id"].(float64)) 
+			userID := uint(claims["user_id"].(float64))
 			role := claims["role"].(string)
 
 			c.Locals("user_id", userID)

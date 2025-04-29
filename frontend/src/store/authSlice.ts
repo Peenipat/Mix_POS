@@ -5,14 +5,12 @@ import type { loginResponse } from '@/schemas/userSchema';
 
 interface AuthState {
   user: loginResponse['user'] | null
-  token: loginResponse['token'] | null
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
-  token: null,
   status: 'idle',
   error: null,
 };
@@ -38,7 +36,6 @@ const authSlice = createSlice({
   reducers: {
     logout(state) {
       state.user = null;
-      state.token = null;
       state.status = 'idle';
       state.error = null;
     },
@@ -55,7 +52,6 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.user = action.payload.user;
-        state.token = action.payload.token;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.status = 'failed';

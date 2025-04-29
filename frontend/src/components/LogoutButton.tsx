@@ -8,12 +8,13 @@ interface LogoutButtonProps {
 
 export default function LogoutButton({ className }: LogoutButtonProps) {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch()
+  const dispatch = useAppDispatch();
 
   const handleLogout = () => {
+    const confirmed = window.confirm("Are you sure you want to logout?"); 
+    if (!confirmed) return;
+
     dispatch(logout());
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
     navigate("/");
   };
 
@@ -23,3 +24,4 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
     </button>
   );
 }
+

@@ -9,11 +9,10 @@ import { store } from './store/index.ts'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Provider store={store}>
+    <BrowserRouter> {/* มีเพื่อให้ useNavigate, Routes, Link ใช้งานได้*/}
+      <Provider store={store}> {/* component เข้าถึง Redux store ได้  */}
         <App />
       </Provider>
     </BrowserRouter>
-
   </StrictMode >,
 )

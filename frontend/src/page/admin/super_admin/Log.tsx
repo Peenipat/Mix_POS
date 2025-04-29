@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DataTable, Column } from '../components/DataTable'
 import api from '@/lib/axios'
-
+//ประเภทข้อมูลใน log
 type SystemLog = {
   LogID: number
   CreatedAt: string
@@ -23,7 +23,7 @@ type SystemLog = {
   // Details?: Record<string, any>   
   // Metadata?: Record<string, any> 
 }
-
+// สร้าง column เพื่อจะแสดง
 const columns: Column<SystemLog>[] = [
   { header: 'Log ID', accessor: 'LogID' },
   { header: 'Time', accessor: 'CreatedAt' },
@@ -50,13 +50,14 @@ export default function LogTablePage() {
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [total, setTotal] = useState<number>(0)
   const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
+  const [error, setError] = useState<string | null>(null) // เก็บ error ตอน api ล่ม
+  //ทำงานครั้งแรก และครั้งเดียว
   useEffect(() => {
     api
       .get<{ logs: SystemLog[]; total: number }>('/admin/system_logs', {
-        params: { page: 1, limit: 10 },
+        params: { page: 1, limit: 10 }, // กำหนดพารามิเตอร์ page และ limit
       })
+      //สำเร็จ เก็บข้อมูลลง state
       .then((res) => {
         setLogs(res.data.logs)
         setTotal(res.data.total)
@@ -65,6 +66,7 @@ export default function LogTablePage() {
         setError(err.message)
       })
       .finally(() => {
+        // สิ้นสุด loading ไม่ว่าจะงานเสร็จหรือไม่เสร็จ
         setLoading(false)
       })
   }, [])
@@ -77,8 +79,8 @@ export default function LogTablePage() {
       <h1 className="text-2xl font-bold mb-2">System Logs</h1>
       <p className="mb-4">Total logs: {total}</p>
       <DataTable<SystemLog>
-        columns={columns}
-        data={logs}
+        columns={columns} // ส่งคอลัมน์ที่เตรียมไว้
+        data={logs} // ส่งข้อมูล logs
         onRowClick={(row) => console.log('Clicked log:', row)}
       />
     </div>

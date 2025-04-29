@@ -14,7 +14,7 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
     const confirmed = window.confirm("Are you sure you want to logout?"); 
     if (!confirmed) return;
 
-    dispatch(logout());
+    dispatch(logout()); // ส่ง action ไปให้ redux
     navigate("/");
   };
 

@@ -4,7 +4,7 @@ import { UserResponseSchema } from "@/schemas/userSchema";
 import EditUserModal from "../components/EditUserModel";
 import { z } from "zod"
 
-export interface User {
+export interface User {// กำหนด type ข้อมูลเพื่อรอรับ user จาก api 
   id: number;
   username: string;
   email: string;
@@ -13,6 +13,7 @@ export interface User {
   updatedAt?: string;
   deletedAt?: string | null;
 }
+//สำหรับตรวจ response ของ API /admin/users 
 const usersResponseSchema = z.array(UserResponseSchema);
 export default function ManageUsers() {
 
@@ -21,17 +22,20 @@ export default function ManageUsers() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  //ดึงข้อมูลผู้ใช้จาก backend ครั้งแรกและครั้งเดียว
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const res = await axios.get("/admin/users")
+         // ตรวจสอบโครงสร้างข้อมูลเป็นไปตามที่กำหรด
         const parsed = usersResponseSchema.safeParse(res.data);
 
         if (!parsed.success) {
           console.error("Invalid API Response:", parsed.error);
-          setUsers([]);
+          setUsers([]);// ไม่ตรง clear ทิ้ง
           return
         }
+        // ok บันทึกเข้า state
         setUsers(parsed.data);
       } catch (err) {
         setUsers([]);
@@ -44,14 +48,15 @@ export default function ManageUsers() {
     fetchUsers();
   }, []);
 
+  //ไว้เรียกการใช้งาน edit user เป็นการเปิด modal
   const handleEdit = (user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
   
+  // บันทึกข้อมูล
   const handleSave = (updatedUser: User) => {
     setUsers((prev) => prev.map(u => (u.id === updatedUser.id ? updatedUser : u)));
-    // TODO: ยิง axios.put("/admin/users/:id") ไป save ฝั่ง backend จริง ๆ
   };
 
   if (loading) return <div className="text-center">Loading...</div>

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"myapp/database"
 	authDto "myapp/dto/auth"
 	"myapp/models"
 	"myapp/services"
@@ -78,34 +77,6 @@ func LoginHandler(c *fiber.Ctx) error {
     })
 }
 
-func GetMe(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	role := c.Locals("role")
-
-	if userID == nil || role == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
-
-	var user models.User
-
-	// 🔥 ดึงข้อมูลจาก database ตาม user_id ที่มาจาก token
-	if err := database.DB.First(&user, userID).Error; err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "User not found",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"user": map[string]interface{}{
-			"id":       user.ID,
-			"username": user.Username,
-			"email":    user.Email,
-			"role":     user.Role,
-		},
-	})
-}
 
 
 

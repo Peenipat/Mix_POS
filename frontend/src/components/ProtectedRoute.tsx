@@ -3,9 +3,7 @@ import { ReactNode } from "react";
 import { useAppSelector } from "@/store/hook";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const user = useAppSelector(state => state.auth.user);
-
-  console.log("🧩 [ProtectedRoute] user =", user); // 🔥 เพิ่มตรงนี้ดู
+  const user = useAppSelector(state => state.auth.user); // ดึง user จาก redux
 
   if (!user) {
     return <Navigate to="/" replace />;

@@ -1,12 +1,12 @@
 // Generic types for columns and data
-export interface Column<T> {
-  header: string
-  accessor: keyof T
+export interface Column<T> { //กำหนดให้ column ให้รับข้อมูลได้ทุกประเภท
+  header: string // table name
+  accessor: keyof T // key
 }
 
 export interface DataTableProps<T> {
-  data: T[]
-  columns: Column<T>[]
+  data: T[] // array ข้อมูลที่แสดง
+  columns: Column<T>[] // กำหนด key และ haeder column
   onRowClick?: (row: T) => void
 }
 
@@ -30,7 +30,7 @@ export function DataTable<T extends Record<string, any>>({ data, columns, onRowC
               onClick={() => onRowClick && onRowClick(row)}
             >
               {columns.map((col) => {
-                const value = row[col.accessor]
+                const value = row[col.accessor]   // ค่า raw จากข้อมูล
                 let display: string
                 if (value === null || value === undefined) {
                   display = ''

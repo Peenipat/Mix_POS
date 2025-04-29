@@ -119,7 +119,6 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 			return errors.New("failed to update user role")
 		}
 
-		// ถ้าทำถึงตรงนี้ทุกอย่างผ่าน → tx จะ Commit ให้อัตโนมัติ
 		return nil
 	})
 }

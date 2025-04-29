@@ -25,6 +25,7 @@ type SystemLog struct {
 	Endpoint      string         `gorm:"type:varchar(255);column:endpoint;not null"`
 	StatusCode    *int           `gorm:"column:status_code"`
 
+	//ข้อมูล HTTP headers ที่เกี่ยวข้อง
 	XForwardedFor *string        `gorm:"type:varchar(100);column:x_forwarded_for"`
 	UserAgent     *string        `gorm:"type:text;column:user_agent"`
 	Referer       *string        `gorm:"type:text;column:referer"`

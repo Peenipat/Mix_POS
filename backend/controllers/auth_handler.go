@@ -12,10 +12,10 @@ import (
 )
 
 var (
-    authSvc *services.AuthService
-    logSvc  services.SystemLogService
+    authSvc *services.AuthService // ตัว logic login 
+    logSvc  services.SystemLogService //ตัวสำหรับ save log login
 )
-
+// init Dependency Injection
 func InitAuthHandler(a *services.AuthService, l services.SystemLogService) {
     authSvc = a
     logSvc = l
@@ -23,7 +23,7 @@ func InitAuthHandler(a *services.AuthService, l services.SystemLogService) {
 
 func LoginHandler(c *fiber.Ctx) error {
     // 1) Bind request
-    var req authDto.LoginRequest
+    var req authDto.LoginRequest // check type from input
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
     }
@@ -39,8 +39,8 @@ func LoginHandler(c *fiber.Ctx) error {
         Resource:   "Auth",
         Action:     "LOGIN",
     }
-    // Store IP as string
-    ip := c.IP()
+    // เก็บค่า Ip เป็น string
+    ip := c.IP() //ดึง ip จาก request
     entry.IPAddress = &ip
 
     if err != nil {

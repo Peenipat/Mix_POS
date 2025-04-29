@@ -40,7 +40,7 @@ func main() {
     }))
     app.Use(recover.New())
     app.Use(helmet.New())
-    app.Use(compress.New())
+    app.Use(compress.New()) //บีบอัด response เพื่อลดขนาด
 
     // Connect & migrate
     database.ConnectDB()
@@ -57,13 +57,15 @@ func main() {
     routes.SetupAuthRoutes(app)
     admin.SetupAdminRoutes(app)
 
+    // Route api docs
     app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-    // Rate limiter & static
+    // ลง middleware rate limiter หลัง route เพื่อจำกัดความถี่
     app.Use(limiter.New(limiter.Config{
         Max:        100,
         Expiration: 30 * time.Second,
     }))
+    // ลอง deploy front-end 
     app.Use("/", filesystem.New(filesystem.Config{
         Root:   http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"),
         Browse: false,

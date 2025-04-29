@@ -11,19 +11,19 @@ import (
 )
 
 // LogFilter defines parameters for querying system logs
-// - UserID: กรองตามผู้ใช้ (UUID)
-// - Action: กรองตามชื่อเหตุการณ์ เช่น "LOGIN_SUCCESS"
-// - Endpoint: กรองตาม API endpoint เช่น "/orders"
+// - UserID: กรองตามผู้ใช้
+// - Action: กรองตามชื่อเหตุการณ์ 
+// - Endpoint: กรองตาม API endpoint 
 // - From, To: กรองช่วงเวลาของ created_at
 // - Status: กรองตามสถานะ success/failure
-// - BranchID: กรองตามสาขา (UUID)
+// - BranchID: กรองตามสาขา 
 // - Page, Limit: pagination (เริ่ม page=1)
 type LogFilter struct {
 	UserID   *uuid.UUID  
 	Action   *string     
 	Endpoint *string     
-	From     *time.Time  
-	To       *time.Time  
+	From     *time.Time  // จากช่วงเวลา
+	To       *time.Time  //ถึงช่วงเวลา
 	Status   *string     
 	BranchID *uuid.UUID  
 	Page     int         
@@ -34,14 +34,12 @@ type LogFilter struct {
 // - Create: สร้าง log ใหม่
 // - Query: ค้นหา log ตามเงื่อนไข พร้อม pagination
 // - GetByID: ดึง log รายการเดียวตาม ID
-//
+//สร้าง interface สำหรับแต่ละ function
 type SystemLogService interface {
 	Create(ctx context.Context, entry *models.SystemLog) error
 	Query(ctx context.Context, filter LogFilter) ([]models.SystemLog, int64, error)
 	GetByID(ctx context.Context, id uint) (models.SystemLog, error)
 }
-
-// systemLogService is the default implementation of SystemLogService
 type systemLogService struct {
 	db *gorm.DB
 }
@@ -51,12 +49,12 @@ func NewSystemLogService(db *gorm.DB) SystemLogService {
 	return &systemLogService{db: db}
 }
 
-// Create inserts a new log entry into the database
+// สร้าง log และ save
 func (s *systemLogService) Create(ctx context.Context, entry *models.SystemLog) error {
 	return s.db.WithContext(ctx).Create(entry).Error
 }
 
-// Query retrieves logs based on the provided filter, with pagination
+// ดึง log ตามเงื่อนไข
 func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]models.SystemLog, int64, error) {
 	tx := s.db.WithContext(ctx).Model(&models.SystemLog{})
 
@@ -98,7 +96,7 @@ func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]model
 	}
 	offset := (filter.Page - 1) * filter.Limit
 
-	// Fetch logs ordered by latest first
+	// ดึงข้อมูลและเรียงจากอันที่สร้างล่าสุดไปหาเก่าที่สุด
 	var logs []models.SystemLog
 	err := tx.Order("created_at DESC").Offset(offset).Limit(filter.Limit).Find(&logs).Error
 	if err != nil {
@@ -108,7 +106,7 @@ func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]model
 	return logs, total, nil
 }
 
-// GetByID retrieves a single log entry by its primary key
+// ดึง log ตาม ID
 func (s *systemLogService) GetByID(ctx context.Context, id uint) (models.SystemLog, error) {
 	var entry models.SystemLog
 	err := s.db.WithContext(ctx).First(&entry, "log_id = ?", id).Error

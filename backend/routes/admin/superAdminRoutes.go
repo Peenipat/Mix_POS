@@ -13,6 +13,7 @@ func SetupAdminRoutes(app *fiber.App) {
 	adminGroup.Put("/change_role", controllers.ChangeUserRole)
 	adminGroup.Get("/users",controllers.GetAllUsers)
 	adminGroup.Get("/user-by-role",controllers.FilterUsersByRole)
+	
 	// adminGroup.Get("/system_logs", controllers.GetSystemLogs)
 	adminGroup.Post("/system_logs",           controllers.CreateLog)
     // ดึงรายการ log พร้อมกรอง และ pagination

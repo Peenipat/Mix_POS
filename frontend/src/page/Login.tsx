@@ -30,7 +30,6 @@ export default function Login() {
   // เมื่อ login สำเร็จ (status === 'succeeded') ให้เก็บ token+navigate
   useEffect(() => {
     if (status === 'succeeded' && user){
-      console.log("🚀 user after login: ", user);
       navigateByRole(user.role, navigate);
       setTimeout(() => {
         navigateByRole(user.role, navigate);

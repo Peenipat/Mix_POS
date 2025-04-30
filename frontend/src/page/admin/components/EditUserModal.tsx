@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User } from "../ManageUsers"
+import { User } from "../super_admin/ManageUsers"
 interface EditUserModalProps {
   user: User;
   onClose: () => void;

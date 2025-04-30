@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./page/Login";
 import SuperAdminDashboard from "./page/admin/SuperAdminDashboard"
 import BranchAdminDashboard from "./page/admin/BranchAdminDashboard"
-import ManageUsers from "./page/admin/ManageUsers";
+import ManageUsers from "./page/admin/super_admin/ManageUsers";
 import StaffDashboard from "./page/staff/StaffDashboard";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import Register from "./page/Register";

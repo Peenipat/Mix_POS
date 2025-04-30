@@ -6,7 +6,7 @@ import (
     "log"
     "os"
     "time"
-    "net/http"
+    // "net/http"
 
     "github.com/gofiber/fiber/v2"
     "github.com/gofiber/fiber/v2/middleware/logger"
@@ -15,7 +15,7 @@ import (
     "github.com/gofiber/fiber/v2/middleware/helmet"
     "github.com/gofiber/fiber/v2/middleware/compress"
     "github.com/gofiber/fiber/v2/middleware/limiter"
-    "github.com/gofiber/fiber/v2/middleware/filesystem"
+    // "github.com/gofiber/fiber/v2/middleware/filesystem"
     fiberSwagger "github.com/swaggo/fiber-swagger"
 
     _ "myapp/docs"              // import generated docs
@@ -66,11 +66,11 @@ func main() {
         Expiration: 30 * time.Second,
     }))
     // ลอง deploy front-end 
-    app.Use("/", filesystem.New(filesystem.Config{
-        Root:   http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"),
-        Browse: false,
-        Index:  "index.html",
-    }))
+    // app.Use("/", filesystem.New(filesystem.Config{
+    //     Root:   http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"),
+    //     Browse: false,
+    //     Index:  "index.html",
+    // }))
 
     // Start server
     port := os.Getenv("PORT")

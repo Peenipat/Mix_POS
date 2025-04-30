@@ -146,6 +146,5 @@ func FilterUsersByRole(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.JSON(users)
 }

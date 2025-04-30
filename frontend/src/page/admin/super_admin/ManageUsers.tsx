@@ -45,7 +45,7 @@ export default function ManageUsers() {
     };
 
     fetchUsers();
-  }, []); 
+  }, []);
 
   // ฟังก์ชันเปิด modal พร้อมส่ง user ที่ต้องการแก้ไข
   const handleEdit = (user: User) => {
@@ -53,36 +53,32 @@ export default function ManageUsers() {
     setIsModalOpen(true);
   };
 
-    // ฟังก์ชัน save user หลังจากแก้ไขจาก modal
-    const handleSave = async (updatedUser: User) => {
-      try {
-        console.log(updatedUser.id)
-        console.log(updatedUser.role)
-        await axios.put('/admin/change_role', {
-          id: updatedUser.id,
-          role:    updatedUser.role,
-        })
-        
-  
-        // อัปเดต state เมื่อสำเร็จ
-        setUsers(prev =>
-          prev.map(u => (u.id === updatedUser.id ? updatedUser : u))
-        )
-        toast.success('User updated successfully')
-        setIsModalOpen(false)  // ปิด modal แทน onClose()
-      } catch (err: any) {
-        console.error(err)
-        toast.error(err.response?.data?.error || 'Failed to update user')
-      }
+  // ฟังก์ชัน save user หลังจากแก้ไขจาก modal
+  const handleSave = async (updatedUser: User) => {
+    try {
+      await axios.put('/admin/change_role', {
+        id: updatedUser.id,
+        role: updatedUser.role,
+      })
+      // อัปเดต state เมื่อสำเร็จ
+      setUsers(prev =>
+        prev.map(u => (u.id === updatedUser.id ? updatedUser : u))
+      )
+      toast.success('User updated successfully')
+      setIsModalOpen(false)  // ปิด modal แทน onClose()
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err.response?.data?.error || 'Failed to update user')
     }
+  }
 
-    // กรณีโหลดข้อมูลยังไม่เสร็จ
+  // กรณีโหลดข้อมูลยังไม่เสร็จ
   if (loading) return <div className="text-center">Loading...</div>
 
   return (
     <div className="overflow-x-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Manage Users</h1>
-      <button className="btn btn-success">1232</button>
+      <button className="btn btn-success">Create user</button>
       <table className="table table-zebra w-full">
         {/* head */}
         <thead className="bg-gray-200 text-gray-700">
@@ -97,9 +93,8 @@ export default function ManageUsers() {
             <th className="text-center">Actions</th>
           </tr>
         </thead>
-
         <tbody>
-          {users.map((user,index) => (
+          {users.map((user, index) => (
             <tr key={user.id}>
               <td className="text-center" >{index + 1}</td>
               <td className="text-center" >{user.username}</td>
@@ -121,9 +116,9 @@ export default function ManageUsers() {
                   : "-"}
               </td>
               <td className="flex justify-between text-center">
-                <button className="btn btn-warning"  onClick={() => handleEdit(user)}>Edit</button>
+                <button className="btn btn-warning" onClick={() => handleEdit(user)}>Edit</button>
                 <button className="btn btn-error">Delete</button>
-                </td>
+              </td>
             </tr>
           ))}
         </tbody>

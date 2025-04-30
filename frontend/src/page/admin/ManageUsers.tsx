@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import { UserResponseSchema } from "@/schemas/userSchema";
-import EditUserModal from "../admin/components/EditUserModel";
+import EditUserModal from "./components/EditUserModal";
 import { z } from "zod"
 
 // interface กำหนดโครงสร้างข้อมูล user

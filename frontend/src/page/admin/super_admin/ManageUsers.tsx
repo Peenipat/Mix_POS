@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import { UserResponseSchema } from "@/schemas/userSchema";
-import EditUserModal from "../components/EditUserModel";
+import EditUserModal from "../components/EditUserModal";
 import { z } from "zod"
 
 export interface User {// กำหนด type ข้อมูลเพื่อรอรับ user จาก api 
@@ -64,6 +64,7 @@ export default function ManageUsers() {
   return (
     <div className="overflow-x-auto p-4">
       <h1 className="text-4xl font-bold mb-6">Manage Users</h1>
+      
 
       <table className="table table-zebra w-full">
         {/* head */}

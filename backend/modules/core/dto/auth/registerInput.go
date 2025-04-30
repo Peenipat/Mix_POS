@@ -1,4 +1,4 @@
-package authDto
+package Core_authDto
 
 type RegisterInput struct {
 	Username string `json:"username" validate:"required"`

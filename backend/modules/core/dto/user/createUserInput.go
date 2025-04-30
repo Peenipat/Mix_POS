@@ -1,4 +1,4 @@
-package userDto
+package Core_userDto
 
 type CreateUserInput struct {
 	Username  string `json:"username" validate:"required"`

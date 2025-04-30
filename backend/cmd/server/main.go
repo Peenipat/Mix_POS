@@ -19,12 +19,12 @@ import (
     fiberSwagger "github.com/swaggo/fiber-swagger"
 
     _ "myapp/docs"              // import generated docs
-    "myapp/controllers"
+    Core_controllers "myapp/modules/core/controllers"
     "myapp/database"
     "myapp/models"
     "myapp/routes"
     "myapp/routes/admin"
-    "myapp/services"
+    "myapp/modules/core/services"
 )
 
 func main() {
@@ -48,10 +48,10 @@ func main() {
 
     // Initialize Services & Controllers
     logSvc := services.NewSystemLogService(database.DB)
-    controllers.InitSystemLogHandler(logSvc)
+    Core_controllers.InitSystemLogHandler(logSvc)
 
     authSvc := services.NewAuthService(database.DB, logSvc)
-    controllers.InitAuthHandler(authSvc, logSvc)
+    Core_controllers.InitAuthHandler(authSvc, logSvc)
 
     // Routes
     routes.SetupAuthRoutes(app)

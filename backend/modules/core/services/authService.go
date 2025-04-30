@@ -11,7 +11,7 @@ import (
     "golang.org/x/crypto/bcrypt"
     "gorm.io/gorm"
 
-    authDto "myapp/dto/auth"
+    Core_authDto "myapp/modules/core/dto/auth"
     "myapp/models"
 )
 
@@ -27,7 +27,7 @@ func NewAuthService(db *gorm.DB, logSvc SystemLogService) *AuthService {
 
 // Login ตรวจสอบข้อมูลล็อกอินและสร้าง JWT
 // คืนค่า DTO ที่ประกอบด้วย token และข้อมูล user หรือ error
-func (s *AuthService) Login(ctx context.Context, input authDto.LoginRequest) (*authDto.LoginResponse, error) {
+func (s *AuthService) Login(ctx context.Context, input Core_authDto.LoginRequest) (*Core_authDto.LoginResponse, error) {
     //ดึงข้อมูล user จาก Database
     var user models.User
     err := s.db.WithContext(ctx).
@@ -61,9 +61,9 @@ func (s *AuthService) Login(ctx context.Context, input authDto.LoginRequest) (*a
     }
 
     //ส่งคืนของที่จำเป็นตามที่กำหนดไว้ใน LoginRespone
-    return &authDto.LoginResponse{
+    return &Core_authDto.LoginResponse{
         Token: signed,
-        User: authDto.UserInfoResponse{
+        User: Core_authDto.UserInfoResponse{
             ID:       user.ID,
             Username: user.Username,
             Email:    user.Email,

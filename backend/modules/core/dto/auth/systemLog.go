@@ -1,4 +1,4 @@
-package authDto
+package Core_authDto
 
 import "time"
 

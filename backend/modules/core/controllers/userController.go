@@ -1,9 +1,9 @@
-package controllers
+package Core_controllers
 
 import (
-	authDto "myapp/dto/auth"
-	userDto "myapp/dto/user"
-	"myapp/services"
+	Core_authDto "myapp/modules/core/dto/auth"
+	Core_UserDto "myapp/modules/core/dto/user"
+	"myapp/modules/core/services"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,7 +19,7 @@ import (
 // @Failure        400 {object} map[string]string "ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว"
 // @Router         /auth/register [post]
 func CreateUserFromRegister(c *fiber.Ctx) error {
-	var input authDto.RegisterInput
+	var input Core_authDto.RegisterInput
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
@@ -44,7 +44,7 @@ func CreateUserFromRegister(c *fiber.Ctx) error {
 // @Router       /admin/create_users [post]
 // @Security     ApiKeyAuth
 func CreateUserFromAdmin(c *fiber.Ctx) error {
-	var input userDto.CreateUserInput
+	var input Core_UserDto.CreateUserInput
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
@@ -68,7 +68,7 @@ func CreateUserFromAdmin(c *fiber.Ctx) error {
 // @Router       /admin/change_role [put]
 // @Security     ApiKeyAuth
 func ChangeUserRole(c *fiber.Ctx) error {
-	var input userDto.ChangeRoleInput
+	var input Core_UserDto.ChangeRoleInput
 
 	// รับข้อมูลจาก body
 	if err := c.BodyParser(&input); err != nil {

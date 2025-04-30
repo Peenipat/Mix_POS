@@ -1,4 +1,4 @@
-package authDto
+package Core_authDto
 type UserInfoResponse struct {
 	ID       uint   `json:"id" example:"1"`
 	Username string `json:"username" example:"admin"`

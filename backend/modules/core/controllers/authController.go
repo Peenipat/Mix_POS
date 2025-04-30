@@ -1,13 +1,13 @@
-package controllers
+package Core_controllers
 
 import (
 	"context"
 	"encoding/json"
 	"time"
 
-	authDto "myapp/dto/auth"
+	Core_authDto "myapp/modules/core/dto/auth"
 	"myapp/models"
-	"myapp/services"
+	"myapp/modules/core/services"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,7 +24,7 @@ func InitAuthHandler(a *services.AuthService, l services.SystemLogService) {
 
 func LoginHandler(c *fiber.Ctx) error {
     // 1) Bind request
-    var req authDto.LoginRequest // check type from input
+    var req Core_authDto.LoginRequest // check type from input
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
     }

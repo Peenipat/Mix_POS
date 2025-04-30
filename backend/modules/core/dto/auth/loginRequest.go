@@ -1,4 +1,4 @@
-package authDto
+package Core_authDto
 
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`

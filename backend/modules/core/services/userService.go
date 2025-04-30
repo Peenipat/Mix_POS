@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"myapp/database"
-	"myapp/dto/auth"
-	"myapp/dto/user"
+	Core_authDto "myapp/modules/core/dto/auth"
+	Core_userDto "myapp/modules/core/dto/user"
 	"myapp/models"
 	"myapp/utils"
 
@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateUserFromRegister(input authDto.RegisterInput) error {
+func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
 	// ตรวจซ้ำ email
 	var existingUser models.User
 	database.DB.Where("email = ?", input.Email).First(&existingUser)
@@ -30,7 +30,7 @@ func CreateUserFromRegister(input authDto.RegisterInput) error {
 		Username: input.Username,
 		Email:    input.Email,
 		Password: string(hashedPassword),
-		Role:     models.RoleUser, // default เป็น User
+		Role:     models.RoleNameUser, // default เป็น User
 	}
 
 	// save user ลง database
@@ -40,7 +40,7 @@ func CreateUserFromRegister(input authDto.RegisterInput) error {
 
 	return nil
 }
-func CreateUserFromAdmin(input userDto.CreateUserInput) error {
+func CreateUserFromAdmin(input Core_userDto.CreateUserInput) error {
 	
 	// ตรวจ email ซ้ำ
 	var existingUser models.User
@@ -50,13 +50,19 @@ func CreateUserFromAdmin(input userDto.CreateUserInput) error {
 	}
 
 	// ป้องกันการสร้าง SUPER_ADMIN โดยเด็ดขาด
-	if input.Role == string(models.RoleSuperAdmin) {
+	if input.Role == string(models.RoleNameSaaSSuperAdmin) {
 		return errors.New("cannot create SUPER_ADMIN")
 	}
 
 	// ตรวจว่า role ที่ใส่มาเป็น role ที่ระบบอนุญาตให้ admin สร้างได้
-	switch models.Role(input.Role) {
-	case models.RoleBranchAdmin, models.RoleUser, models.RoleStaff:
+	switch models.RoleName(input.Role) {
+	case 
+	models.RoleNameTenantAdmin,
+	models.RoleNameBranchAdmin, 
+	models.RoleNameAssistantManager, 
+	models.RoleNameStaff,
+	models.RoleNameUser:
+
 	default:
 		return errors.New("invalid role provided")
 	}
@@ -72,7 +78,7 @@ func CreateUserFromAdmin(input userDto.CreateUserInput) error {
 		Username: input.Username,
 		Email:    input.Email,
 		Password: string(hashedPassword),
-		Role:     models.Role(input.Role),
+		Role:     models.RoleName(input.Role),
 	}
 	// Save ลง database
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -82,7 +88,7 @@ func CreateUserFromAdmin(input userDto.CreateUserInput) error {
 	return nil
 }
 
-func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
+func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		var user models.User 
 
@@ -92,19 +98,21 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 		}
 
 		// ไม่อนุญาตเปลี่ยนเป็น SUPER_ADMIN
-		if input.Role == string(models.RoleSuperAdmin) {
+		if input.Role == string(models.RoleNameSaaSSuperAdmin) {
 			return errors.New("cannot change role to SUPER_ADMIN")
 		}
 
 		// Validate role ใหม่
-		validRoles := []models.Role{
-			models.RoleBranchAdmin,
-			models.RoleStaff,
-			models.RoleUser,
+		validRoles := []models.RoleName{
+			models.RoleNameTenantAdmin,
+			models.RoleNameBranchAdmin, 
+			models.RoleNameAssistantManager, 
+			models.RoleNameStaff,
+			models.RoleNameUser,
 		}
 		isValid := false
 		for _, r := range validRoles {
-			if models.Role(input.Role) == r {
+			if models.RoleName(input.Role) == r {
 				isValid = true
 				break
 			}
@@ -114,7 +122,7 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 		}
 
 		// อัปเดต role
-		user.Role = models.Role(input.Role)
+		user.Role = models.RoleName(input.Role)
 		if err := tx.Save(&user).Error; err != nil {
 			return errors.New("failed to update user role")
 		}
@@ -123,15 +131,15 @@ func ChangeRoleFromAdmin(input userDto.ChangeRoleInput) error {
 	})
 }
 
-func GetAllUsers(limit int , offset int)([]userDto.UserResponse, error){
+func GetAllUsers(limit int , offset int)([]Core_userDto.UserResponse, error){
 	var users []models.User
 	//ค้นหา user เช็ค limit และกำหนด offset 
 	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil,err
 	}
 
-	result := utils.MapSlice(users, func(u models.User) userDto.UserResponse {
-		return userDto.UserResponse{
+	result := utils.MapSlice(users, func(u models.User) Core_userDto.UserResponse {
+		return Core_userDto.UserResponse{
 			ID:       u.ID,
 			Username: u.Username,
 			Email:    u.Email,
@@ -142,18 +150,19 @@ func GetAllUsers(limit int , offset int)([]userDto.UserResponse, error){
 	return result, nil
 }
 
-func FilterUsersByRole(role string) ([]userDto.UserResponse, error) {
+func FilterUsersByRole(role string) ([]Core_userDto.UserResponse, error) {
 	// Validate role ก่อน
-	validRoles := []models.Role{
-		models.RoleSuperAdmin,
-		models.RoleBranchAdmin,
-		models.RoleStaff,
-		models.RoleUser,
+	validRoles := []models.RoleName{
+		models.RoleNameTenantAdmin,
+		models.RoleNameBranchAdmin,
+		models.RoleNameAssistantManager,
+		models.RoleNameStaff,
+		models.RoleNameUser, 
 	}
 
 	isValid := false
 	for _, r := range validRoles {
-		if models.Role(role) == r {
+		if models.RoleName(role) == r {
 			isValid = true
 			break
 		}
@@ -169,9 +178,9 @@ func FilterUsersByRole(role string) ([]userDto.UserResponse, error) {
 	}
 
 	// Map เป็น UserResponse
-	var result []userDto.UserResponse
+	var result []Core_userDto.UserResponse
 	for _, u := range users {
-		result = append(result, userDto.UserResponse{
+		result = append(result, Core_userDto.UserResponse{
 			ID:       u.ID,
 			Username: u.Username,
 			Email:    u.Email,

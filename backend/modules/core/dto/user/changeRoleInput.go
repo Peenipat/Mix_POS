@@ -1,4 +1,4 @@
-package userDto
+package Core_userDto
 
 type ChangeRoleInput struct {
 	ID uint   `json:"id" validate:"required"`

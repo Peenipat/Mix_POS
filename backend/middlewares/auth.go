@@ -8,7 +8,7 @@ func RequireSuperAdmin() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userRole := c.Locals("role")
 		roleStr, ok := userRole.(string)
-		if !ok || roleStr != string(models.RoleSuperAdmin) {
+		if !ok || roleStr != string(models.RoleNameSaaSSuperAdmin) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "permission denied",
 			})

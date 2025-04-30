@@ -1,4 +1,4 @@
-package controllers
+package Core_controllers
 
 import (
 	"encoding/json"
@@ -9,9 +9,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	authDto "myapp/dto/auth"
+	Core_authDto "myapp/modules/core/dto/auth"
 	"myapp/models"
-	"myapp/services"
+	"myapp/modules/core/services"
 )
 
 // logService เก็บ instance ของ SystemLogService
@@ -25,7 +25,7 @@ func InitSystemLogHandler(svc services.SystemLogService) {
 // CreateLog handles POST /admin/system_logs
 func CreateLog(ctx *fiber.Ctx) error {
 	//ผูกตัวแปรเข้ากับ request โดย check ด้วยว่าข้อมูลที่เข้ามามี type ตรงตามที่กำหนดไว้หรือเปล่า
-	var req authDto.CreateLogRequest
+	var req Core_authDto.CreateLogRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -72,7 +72,7 @@ func CreateLog(ctx *fiber.Ctx) error {
 	}
 
 	//เตรียมของเพื่อส่งกลับ
-	res := authDto.CreateLogResponse{
+	res := Core_authDto.CreateLogResponse{
 		LogID:     entry.LogID,
 		CreatedAt: entry.CreatedAt,
 	}

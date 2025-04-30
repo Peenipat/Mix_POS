@@ -3,10 +3,10 @@ package testService
 import (
 	// "errors"
 	"myapp/database"
-	authDto "myapp/dto/auth"
-	userDto "myapp/dto/user"
+	Core_authDto "myapp/modules/core/dto/auth"
+	Core_userDto "myapp/modules/core/dto/user"
 	"myapp/models"
-	"myapp/services"
+	"myapp/modules/core/services"
 	"myapp/tests"
 	"testing"
 
@@ -17,7 +17,7 @@ import (
 func Test_CreateUser_FromRegister_Success(t *testing.T) {
 	tests.SetupTestDB()
 
-	input := authDto.RegisterInput{
+	input := Core_authDto.RegisterInput{
 		Username: "testuser",
 		Email:    "test@example.com",
 		Password: "12345678",
@@ -30,7 +30,7 @@ func Test_CreateUser_FromRegister_Success(t *testing.T) {
 	database.DB.First(&user, "email = ?", input.Email)
 	assert.Equal(t, input.Username, user.Username)
 	assert.Equal(t, input.Email, user.Email)    // เช็ค DB ว่า email ตรงกับ input
-	assert.Equal(t, models.RoleUser, user.Role) // เช็คว่า role ต้องเป็น User
+	assert.Equal(t, models.RoleNameUser, user.Role) // เช็คว่า role ต้องเป็น User
 	assert.NotEmpty(t, user.Password)           // ต้องมีการ hash
 }
 
@@ -45,7 +45,7 @@ func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 		Password: "xxx",
 	})
 
-	input := authDto.RegisterInput{
+	input := Core_authDto.RegisterInput{
 		Username: "newuser",
 		Email:    "exist@example.com",
 		Password: "12345678",
@@ -61,33 +61,33 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 	db := tests.SetupTestDB()
 	testCases := []struct {
 		name  string
-		input userDto.CreateUserInput
+		input Core_userDto.CreateUserInput
 	}{
 		{
 			name: "BranchAdmin",
-			input: userDto.CreateUserInput{
+			input: Core_userDto.CreateUserInput{
 				Username: "TestUser1",
 				Email:    "test1@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleBranchAdmin), // สร้าง User ที่เป็น Role BranchAdmin
+				Role:     string(models.RoleNameBranchAdmin), // สร้าง User ที่เป็น Role BranchAdmin
 			},
 		},
 		{
 			name: "Staff",
-			input: userDto.CreateUserInput{
+			input: Core_userDto.CreateUserInput{
 				Username: "TestUser2",
 				Email:    "test2@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleStaff), // สร้าง User ที่เป็น Role Staff
+				Role:     string(models.RoleNameStaff), // สร้าง User ที่เป็น Role Staff
 			},
 		},
 		{
 			name: "User",
-			input: userDto.CreateUserInput{
+			input: Core_userDto.CreateUserInput{
 				Username: "TestUser3",
 				Email:    "test3@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleUser), // สร้าง User ที่เป็น Role User
+				Role:     string(models.RoleNameUser), // สร้าง User ที่เป็น Role User
 			},
 		},
 	}
@@ -101,7 +101,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 			db.First(&user, "email = ?", tc.input.Email)
 			assert.Equal(t, tc.input.Username, user.Username)
 			assert.Equal(t, tc.input.Email, user.Email)            // เช็ค DB ว่า email ตรงกับ input
-			assert.Equal(t, models.Role(tc.input.Role), user.Role) // เช็คว่า role ต้องเป็น BranchAdmin,Staff,User
+			assert.Equal(t, models.RoleName(tc.input.Role), user.Role) // เช็คว่า role ต้องเป็น BranchAdmin,Staff,User
 			assert.NotEmpty(t, user.Password)
 
 		})
@@ -113,22 +113,22 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 	tests.SetupTestDB()
 	testCases := []struct {
 		name        string
-		input       userDto.CreateUserInput
+		input       Core_userDto.CreateUserInput
 		expectedErr string
 	}{
 		{
 			name: "SuperAdmin",
-			input: userDto.CreateUserInput{
+			input: Core_userDto.CreateUserInput{
 				Username: "TestSuperAdmin",
 				Email:    "test_super_admin@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleSuperAdmin), // สร้าง User ที่เป็น Role SuperAdmin
+				Role:     string(models.RoleNameSaaSSuperAdmin), // สร้าง User ที่เป็น Role SuperAdmin
 			},
 			expectedErr: "cannot create SUPER_ADMIN",
 		},
 		{
 			name: "AnotherRole",
-			input: userDto.CreateUserInput{
+			input: Core_userDto.CreateUserInput{
 				Username: "TestUserAnother",
 				Email:    "test_another_role@gmail.com",
 				Password: "12345678",
@@ -154,13 +154,13 @@ func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 		Username: "ChangeUser",
 		Email:    "change_user@example.com",
 		Password: "12345678",
-		Role:     models.RoleUser,
+		Role:     models.RoleNameUser,
 	}
 	db.Create(&user)
 
-	input := userDto.ChangeRoleInput{
+	input := Core_userDto.ChangeRoleInput{
 		ID:   user.ID,
-		Role: string(models.RoleStaff),
+		Role: string(models.RoleNameStaff),
 	}
 
 	err := services.ChangeRoleFromAdmin(input)
@@ -168,7 +168,7 @@ func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 
 	var updated models.User
 	db.First(&updated, user.ID)
-	assert.Equal(t, models.RoleStaff, updated.Role)
+	assert.Equal(t, models.RoleNameStaff, updated.Role)
 }
 
 // Test การเปลี่ยน Role ผ่าน SuperAdmin กรณีพยายามเปลี่ยนเป็น SuperAdmin และ Role ที่ไม่มีจริง
@@ -179,26 +179,26 @@ func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 		Username: "ChangeSuperAdmin",
 		Email:    "changesuperadmin@gmail.com",
 		Password: "12345678",
-		Role:     models.RoleStaff,
+		Role:     models.RoleNameStaff,
 	}
 	db.Create(&user)
 
 	testCases := []struct {
 		name        string
-		input       userDto.ChangeRoleInput
+		input       Core_userDto.ChangeRoleInput
 		expectedErr string
 	}{
 		{
 			name: "SuperAdmin",
-			input: userDto.ChangeRoleInput{
+			input: Core_userDto.ChangeRoleInput{
 			ID: user.ID,
-			Role: string(models.RoleSuperAdmin), // เปลี่ยน User ที่เป็น Role Staff เป็น SuperAdmin
+			Role: string(models.RoleNameSaaSSuperAdmin), // เปลี่ยน User ที่เป็น Role Staff เป็น SuperAdmin
 			},
 			expectedErr: "cannot change role to SUPER_ADMIN",
 		},
 		{
 			name: "AnotherRole",
-			input: userDto.ChangeRoleInput{
+			input: Core_userDto.ChangeRoleInput{
 			ID: user.ID,
 			Role:   "HACKER", // เปลี่ยน User ที่เป็น Role Staff เป็น Role อื่นๆ
 			},
@@ -221,11 +221,11 @@ func Test_GetAllUser_limitData(t *testing.T){
 
 	// Mock Data
 	users := []models.User{
-		{Username: "User1", Email: "user1@example.com", Password: "xx", Role: models.RoleUser},
-		{Username: "User2", Email: "user2@example.com", Password: "xx", Role: models.RoleUser},
-		{Username: "User3", Email: "user3@example.com", Password: "xx", Role: models.RoleUser},
-		{Username: "User4", Email: "user4@example.com", Password: "xx", Role: models.RoleUser},
-		{Username: "User5", Email: "user5@example.com", Password: "xx", Role: models.RoleUser},
+		{Username: "User1", Email: "user1@example.com", Password: "xx", Role: models.RoleNameUser},
+		{Username: "User2", Email: "user2@example.com", Password: "xx", Role: models.RoleNameUser},
+		{Username: "User3", Email: "user3@example.com", Password: "xx", Role: models.RoleNameUser},
+		{Username: "User4", Email: "user4@example.com", Password: "xx", Role: models.RoleNameUser},
+		{Username: "User5", Email: "user5@example.com", Password: "xx", Role: models.RoleNameUser},
 	}
 	for _, u := range users {
 		db.Create(&u)

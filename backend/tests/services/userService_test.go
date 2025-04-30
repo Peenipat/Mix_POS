@@ -7,24 +7,15 @@ import (
 	userDto "myapp/dto/user"
 	"myapp/models"
 	"myapp/services"
+	"myapp/tests"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
-
-//เชื่อมต่อ database เข้า memory  
-func setupTestDB() *gorm.DB {
-	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	db.AutoMigrate(&models.User{})
-	database.DB = db
-	return db
-}
 
 // Test การ register ด้วยตัวเองได้ Role เป็น User [Success]
 func Test_CreateUser_FromRegister_Success(t *testing.T) {
-	setupTestDB()
+	tests.SetupTestDB()
 
 	input := authDto.RegisterInput{
 		Username: "testuser",
@@ -45,7 +36,7 @@ func Test_CreateUser_FromRegister_Success(t *testing.T) {
 
 // Test การ register ด้วยแต่เองกรณ๊ Email ซ้ำ
 func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
-	db := setupTestDB()
+	db := 	tests.SetupTestDB()
 
 	// test กรณี Email ซ้ำกัน
 	db.Create(&models.User{
@@ -67,7 +58,7 @@ func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 
 // Test การสร้าง User ผ่าน Admin ได้ Role เป็น BranchAdmin, Staff, User [Success]
 func Test_CreateUser_FromAdmin_Success(t *testing.T) {
-	db := setupTestDB()
+	db := tests.SetupTestDB()
 	testCases := []struct {
 		name  string
 		input userDto.CreateUserInput
@@ -119,7 +110,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 
 // Test การสร้าง User ผ่าน SuperAdmin กรณีใส่ Role ผิด เช่น สร้าง SuperAdmin หรือใส่ role ที่ไม่มีจริง
 func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
-	setupTestDB()
+	tests.SetupTestDB()
 	testCases := []struct {
 		name        string
 		input       userDto.CreateUserInput
@@ -157,7 +148,7 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 
 // Test การเปลี่ยน Role ผ่าน SuperAdmin ได้ Role เป็น BranchAdmin, Staff, User [Success]
 func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
-	db := setupTestDB()
+	db := tests.SetupTestDB()
 
 	user := models.User{
 		Username: "ChangeUser",
@@ -182,7 +173,7 @@ func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 
 // Test การเปลี่ยน Role ผ่าน SuperAdmin กรณีพยายามเปลี่ยนเป็น SuperAdmin และ Role ที่ไม่มีจริง
 func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
-	db := setupTestDB()
+	db := tests.SetupTestDB()
 
 	user := models.User{
 		Username: "ChangeSuperAdmin",
@@ -226,7 +217,7 @@ func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 
 // Test การดึงข้อมูล User โดยที่สามารถใส่ limit ได้ [Success] 
 func Test_GetAllUser_limitData(t *testing.T){
-	db := setupTestDB()
+	db := tests.SetupTestDB()
 
 	// Mock Data
 	users := []models.User{

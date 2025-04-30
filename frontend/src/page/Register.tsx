@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, RegisterForm } from "../schemas/authSchema";
 import { useNavigate } from "react-router-dom";
 import axios from "../lib/axios";
-import { useTypewriter } from "@/components/useTypewriter";
+import { useTypewriter } from "@/hooks/useTypewriter";
 
 export default function Register() {
     const messages = [

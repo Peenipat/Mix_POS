@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk,  } from '@reduxjs/toolkit';
-import { loginApi } from '@/lib/api';
+import { loginApi } from '@/lib/api/loginApi';
 import type { loginResponse } from '@/schemas/userSchema';
 
 

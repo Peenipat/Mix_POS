@@ -14,6 +14,7 @@ import Home from "./page/Home";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireRole from "./components/RequireRole";
+import Unauthorized from "./page/unauthorized";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       ต้อง login ก่อนเท่านั้น
       <Route

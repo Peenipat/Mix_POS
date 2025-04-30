@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { useEffect} from "react";
 import { useAppDispatch, useAppSelector } from '../store/hook';
 import { loginUser, clearError } from '@/store/authSlice';
-import { useTypewriter } from '../components/useTypewriter';
+import { useTypewriter } from '../hooks/useTypewriter';
 import { navigateByRole } from "@/utils/navigation";
 export default function Login() {
   const dispatch = useAppDispatch();

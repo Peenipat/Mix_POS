@@ -1,4 +1,4 @@
-package models
+package coreModels
 import (
 	"time"
 

@@ -4,7 +4,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"fmt"
-	 "myapp/models"
+	 "myapp/models/core"
 )
 const (
 	host = "localhost"
@@ -23,7 +23,7 @@ func ConnectDB(){
 		panic("failed to connect to database")
 	} 
 
-	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&coreModels.User{})
 
 	DB = db
 }

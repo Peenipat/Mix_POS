@@ -21,6 +21,7 @@ import (
     _ "myapp/docs"              // import generated docs
     Core_controllers "myapp/modules/core/controllers"
     "myapp/database"
+    "myapp/models/core"
     "myapp/models"
     "myapp/routes"
     "myapp/routes/admin"
@@ -44,7 +45,7 @@ func main() {
 
     // Connect & migrate
     database.ConnectDB()
-    database.DB.AutoMigrate(&models.User{}, &models.SystemLog{})
+    database.DB.AutoMigrate(&coreModels.User{}, &models.SystemLog{})
 
     // Initialize Services & Controllers
     logSvc := services.NewSystemLogService(database.DB)

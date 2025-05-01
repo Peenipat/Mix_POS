@@ -12,7 +12,7 @@ import (
     "gorm.io/gorm"
 
     Core_authDto "myapp/modules/core/dto/auth"
-    "myapp/models"
+    "myapp/models/core"
 )
 
 // ตัว strct มีไว้เก็บ type ที่ต้องการสำหรับการทำ Dependency Injection
@@ -29,7 +29,7 @@ func NewAuthService(db *gorm.DB, logSvc SystemLogService) *AuthService {
 // คืนค่า DTO ที่ประกอบด้วย token และข้อมูล user หรือ error
 func (s *AuthService) Login(ctx context.Context, input Core_authDto.LoginRequest) (*Core_authDto.LoginResponse, error) {
     //ดึงข้อมูล user จาก Database
-    var user models.User
+    var user coreModels.User
     err := s.db.WithContext(ctx).
         Where("email = ?", input.Email).
         First(&user).Error

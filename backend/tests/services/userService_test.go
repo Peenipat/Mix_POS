@@ -5,7 +5,7 @@ import (
 	"myapp/database"
 	Core_authDto "myapp/modules/core/dto/auth"
 	Core_userDto "myapp/modules/core/dto/user"
-	"myapp/models"
+	"myapp/models/core"
 	"myapp/modules/core/services"
 	"myapp/tests"
 	"testing"
@@ -26,11 +26,11 @@ func Test_CreateUser_FromRegister_Success(t *testing.T) {
 	err := services.CreateUserFromRegister(input) // เรียก service มาลอง test
 	assert.Nil(t, err)
 
-	var user models.User
+	var user coreModels.User
 	database.DB.First(&user, "email = ?", input.Email)
 	assert.Equal(t, input.Username, user.Username)
 	assert.Equal(t, input.Email, user.Email)    // เช็ค DB ว่า email ตรงกับ input
-	assert.Equal(t, models.RoleNameUser, user.Role) // เช็คว่า role ต้องเป็น User
+	assert.Equal(t, coreModels.RoleNameUser, user.Role) // เช็คว่า role ต้องเป็น User
 	assert.NotEmpty(t, user.Password)           // ต้องมีการ hash
 }
 
@@ -39,7 +39,7 @@ func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 	db := 	tests.SetupTestDB()
 
 	// test กรณี Email ซ้ำกัน
-	db.Create(&models.User{
+	db.Create(&coreModels.User{
 		Username: "exist",
 		Email:    "exist@example.com",
 		Password: "xxx",
@@ -69,7 +69,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 				Username: "TestUser1",
 				Email:    "test1@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleNameBranchAdmin), // สร้าง User ที่เป็น Role BranchAdmin
+				Role:     string(coreModels.RoleNameBranchAdmin), // สร้าง User ที่เป็น Role BranchAdmin
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 				Username: "TestUser2",
 				Email:    "test2@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleNameStaff), // สร้าง User ที่เป็น Role Staff
+				Role:     string(coreModels.RoleNameStaff), // สร้าง User ที่เป็น Role Staff
 			},
 		},
 		{
@@ -87,7 +87,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 				Username: "TestUser3",
 				Email:    "test3@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleNameUser), // สร้าง User ที่เป็น Role User
+				Role:     string(coreModels.RoleNameUser), // สร้าง User ที่เป็น Role User
 			},
 		},
 	}
@@ -97,11 +97,11 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 			err := services.CreateUserFromAdmin(tc.input)
 			assert.Nil(t, err)
 
-			var user models.User
+			var user coreModels.User
 			db.First(&user, "email = ?", tc.input.Email)
 			assert.Equal(t, tc.input.Username, user.Username)
 			assert.Equal(t, tc.input.Email, user.Email)            // เช็ค DB ว่า email ตรงกับ input
-			assert.Equal(t, models.RoleName(tc.input.Role), user.Role) // เช็คว่า role ต้องเป็น BranchAdmin,Staff,User
+			assert.Equal(t, coreModels.RoleName(tc.input.Role), user.Role) // เช็คว่า role ต้องเป็น BranchAdmin,Staff,User
 			assert.NotEmpty(t, user.Password)
 
 		})
@@ -122,7 +122,7 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 				Username: "TestSuperAdmin",
 				Email:    "test_super_admin@gmail.com",
 				Password: "12345678",
-				Role:     string(models.RoleNameSaaSSuperAdmin), // สร้าง User ที่เป็น Role SuperAdmin
+				Role:     string(coreModels.RoleNameSaaSSuperAdmin), // สร้าง User ที่เป็น Role SuperAdmin
 			},
 			expectedErr: "cannot create SUPER_ADMIN",
 		},
@@ -150,36 +150,36 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 	db := tests.SetupTestDB()
 
-	user := models.User{
+	user := coreModels.User{
 		Username: "ChangeUser",
 		Email:    "change_user@example.com",
 		Password: "12345678",
-		Role:     models.RoleNameUser,
+		Role:     coreModels.RoleNameUser,
 	}
 	db.Create(&user)
 
 	input := Core_userDto.ChangeRoleInput{
 		ID:   user.ID,
-		Role: string(models.RoleNameStaff),
+		Role: string(coreModels.RoleNameStaff),
 	}
 
 	err := services.ChangeRoleFromAdmin(input)
 	assert.Nil(t, err)
 
-	var updated models.User
+	var updated coreModels.User
 	db.First(&updated, user.ID)
-	assert.Equal(t, models.RoleNameStaff, updated.Role)
+	assert.Equal(t, coreModels.RoleNameStaff, updated.Role)
 }
 
 // Test การเปลี่ยน Role ผ่าน SuperAdmin กรณีพยายามเปลี่ยนเป็น SuperAdmin และ Role ที่ไม่มีจริง
 func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 	db := tests.SetupTestDB()
 
-	user := models.User{
+	user := coreModels.User{
 		Username: "ChangeSuperAdmin",
 		Email:    "changesuperadmin@gmail.com",
 		Password: "12345678",
-		Role:     models.RoleNameStaff,
+		Role:     coreModels.RoleNameStaff,
 	}
 	db.Create(&user)
 
@@ -192,7 +192,7 @@ func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 			name: "SuperAdmin",
 			input: Core_userDto.ChangeRoleInput{
 			ID: user.ID,
-			Role: string(models.RoleNameSaaSSuperAdmin), // เปลี่ยน User ที่เป็น Role Staff เป็น SuperAdmin
+			Role: string(coreModels.RoleNameSaaSSuperAdmin), // เปลี่ยน User ที่เป็น Role Staff เป็น SuperAdmin
 			},
 			expectedErr: "cannot change role to SUPER_ADMIN",
 		},
@@ -220,12 +220,12 @@ func Test_GetAllUser_limitData(t *testing.T){
 	db := tests.SetupTestDB()
 
 	// Mock Data
-	users := []models.User{
-		{Username: "User1", Email: "user1@example.com", Password: "xx", Role: models.RoleNameUser},
-		{Username: "User2", Email: "user2@example.com", Password: "xx", Role: models.RoleNameUser},
-		{Username: "User3", Email: "user3@example.com", Password: "xx", Role: models.RoleNameUser},
-		{Username: "User4", Email: "user4@example.com", Password: "xx", Role: models.RoleNameUser},
-		{Username: "User5", Email: "user5@example.com", Password: "xx", Role: models.RoleNameUser},
+	users := []coreModels.User{
+		{Username: "User1", Email: "user1@example.com", Password: "xx", Role: coreModels.RoleNameUser},
+		{Username: "User2", Email: "user2@example.com", Password: "xx", Role: coreModels.RoleNameUser},
+		{Username: "User3", Email: "user3@example.com", Password: "xx", Role: coreModels.RoleNameUser},
+		{Username: "User4", Email: "user4@example.com", Password: "xx", Role: coreModels.RoleNameUser},
+		{Username: "User5", Email: "user5@example.com", Password: "xx", Role: coreModels.RoleNameUser},
 	}
 	for _, u := range users {
 		db.Create(&u)

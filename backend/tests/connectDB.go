@@ -4,6 +4,7 @@ import (
 	// "errors"
 	"myapp/database"
 	"myapp/models"
+	"myapp/models/core"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -12,7 +13,7 @@ import (
 //เชื่อมต่อ database เข้า memory  
 func SetupTestDB() *gorm.DB {
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	db.AutoMigrate(&models.User{},&models.SystemLog{})
+	db.AutoMigrate(&coreModels.User{},&models.SystemLog{})
 	database.DB = db
 	return db
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"myapp/models"
+	"myapp/models/core"
 )
 
 // LogFilter defines parameters for querying system logs
@@ -36,9 +36,9 @@ type LogFilter struct {
 // - GetByID: ดึง log รายการเดียวตาม ID
 //สร้าง interface สำหรับแต่ละ function
 type SystemLogService interface {
-	Create(ctx context.Context, entry *models.SystemLog) error
-	Query(ctx context.Context, filter LogFilter) ([]models.SystemLog, int64, error)
-	GetByID(ctx context.Context, id uint) (models.SystemLog, error)
+	Create(ctx context.Context, entry *coreModels.SystemLog) error
+	Query(ctx context.Context, filter LogFilter) ([]coreModels.SystemLog, int64, error)
+	GetByID(ctx context.Context, id uint) (coreModels.SystemLog, error)
 }
 type systemLogService struct {
 	db *gorm.DB
@@ -50,13 +50,13 @@ func NewSystemLogService(db *gorm.DB) SystemLogService {
 }
 
 // สร้าง log และ save
-func (s *systemLogService) Create(ctx context.Context, entry *models.SystemLog) error {
+func (s *systemLogService) Create(ctx context.Context, entry *coreModels.SystemLog) error {
 	return s.db.WithContext(ctx).Create(entry).Error
 }
 
 // ดึง log ตามเงื่อนไข
-func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]models.SystemLog, int64, error) {
-	tx := s.db.WithContext(ctx).Model(&models.SystemLog{})
+func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]coreModels.SystemLog, int64, error) {
+	tx := s.db.WithContext(ctx).Model(&coreModels.SystemLog{})
 
 	// Apply filters
 	if filter.UserID != nil {
@@ -97,7 +97,7 @@ func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]model
 	offset := (filter.Page - 1) * filter.Limit
 
 	// ดึงข้อมูลและเรียงจากอันที่สร้างล่าสุดไปหาเก่าที่สุด
-	var logs []models.SystemLog
+	var logs []coreModels.SystemLog
 	err := tx.Order("created_at DESC").Offset(offset).Limit(filter.Limit).Find(&logs).Error
 	if err != nil {
 		return nil, 0, err
@@ -107,8 +107,8 @@ func (s *systemLogService) Query(ctx context.Context, filter LogFilter) ([]model
 }
 
 // ดึง log ตาม ID
-func (s *systemLogService) GetByID(ctx context.Context, id uint) (models.SystemLog, error) {
-	var entry models.SystemLog
+func (s *systemLogService) GetByID(ctx context.Context, id uint) (coreModels.SystemLog, error) {
+	var entry coreModels.SystemLog
 	err := s.db.WithContext(ctx).First(&entry, "log_id = ?", id).Error
 	return entry, err
 }

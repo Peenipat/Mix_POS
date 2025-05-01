@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	Core_authDto "myapp/modules/core/dto/auth"
-	"myapp/models"
+	Core_authDto "myapp/modules/core/dto/auth"	
 	"myapp/modules/core/services"
-
+    "myapp/models/core"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -33,7 +32,7 @@ func LoginHandler(c *fiber.Ctx) error {
     resp, err := authSvc.Login(context.Background(), req)
 
     // 3) Prepare common log entry fields
-    entry := &models.SystemLog{
+    entry := &coreModels.SystemLog{
         CreatedAt:  time.Now(),
         HTTPMethod: c.Method(),
         Endpoint:   c.Path(),

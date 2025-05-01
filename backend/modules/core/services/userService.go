@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 	"myapp/database"
+	"myapp/models/core"
 	Core_authDto "myapp/modules/core/dto/auth"
 	Core_userDto "myapp/modules/core/dto/user"
-	"myapp/models/core"
 	"myapp/utils"
 
 	"golang.org/x/crypto/bcrypt"
@@ -20,6 +20,11 @@ func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
 		return errors.New("email already in use")
 	}
 
+	var role coreModels.Role
+	if err := database.DB.Where("name = ?", coreModels.RoleNameUser).First(&role).Error; err != nil {
+		return errors.New("default role not found")
+	}
+
 	// hash password ด้วย bcrypt
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -30,7 +35,7 @@ func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
 		Username: input.Username,
 		Email:    input.Email,
 		Password: string(hashedPassword),
-		Role:     coreModels.RoleNameUser, // default เป็น User
+		RoleID:   role.ID,
 	}
 
 	// save user ลง database
@@ -41,123 +46,130 @@ func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
 	return nil
 }
 func CreateUserFromAdmin(input Core_userDto.CreateUserInput) error {
-	
-	// ตรวจ email ซ้ำ
-	var existingUser coreModels.User
-	database.DB.Where("email = ?", input.Email).First(&existingUser)
-	if existingUser.ID != 0 {
-		return errors.New("email already in use")
-	}
+    // 1) ตรวจ email ซ้ำ
+    var existing coreModels.User
+    database.DB.Where("email = ?", input.Email).First(&existing)
+    if existing.ID != 0 {
+        return errors.New("email already in use")
+    }
 
-	// ป้องกันการสร้าง SUPER_ADMIN โดยเด็ดขาด
-	if input.Role == string(coreModels.RoleNameSaaSSuperAdmin) {
-		return errors.New("cannot create SUPER_ADMIN")
-	}
+    // 2) ป้องกันสร้าง SUPER_ADMIN
+    if input.Role == string(coreModels.RoleNameSaaSSuperAdmin) {
+        return errors.New("cannot create SUPER_ADMIN")
+    }
 
-	// ตรวจว่า role ที่ใส่มาเป็น role ที่ระบบอนุญาตให้ admin สร้างได้
-	switch coreModels.RoleName(input.Role) {
-	case 
-	coreModels.RoleNameTenantAdmin,
-	coreModels.RoleNameBranchAdmin, 
-	coreModels.RoleNameAssistantManager, 
-	coreModels.RoleNameStaff,
-	coreModels.RoleNameUser:
+    // 3) ตรวจว่า role ใน input เป็นค่าที่อนุญาต
+    rn := coreModels.RoleName(input.Role)
+    switch rn {
+    case coreModels.RoleNameTenantAdmin,
+         coreModels.RoleNameBranchAdmin,
+         coreModels.RoleNameAssistantManager,
+         coreModels.RoleNameStaff,
+         coreModels.RoleNameUser:
+        // ผ่าน
+    default:
+        return errors.New("invalid role provided")
+    }
 
-	default:
-		return errors.New("invalid role provided")
-	}
+    // 4) หา Role record ที่ตรงกับชื่อ
+    var role coreModels.Role
+    if err := database.DB.Where("name = ?", rn).First(&role).Error; err != nil {
+        return errors.New("specified role not found")
+    }
 
-	// hash password อย่างปลอดภัย
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return errors.New("failed to hash password")
-	}
+    // 5) hash password
+    hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+    if err != nil {
+        return errors.New("failed to hash password")
+    }
 
-	// เตรียมสร้าง user
-	user := coreModels.User{
-		Username: input.Username,
-		Email:    input.Email,
-		Password: string(hashedPassword),
-		Role:     coreModels.RoleName(input.Role),
-	}
-	// Save ลง database
-	if err := database.DB.Create(&user).Error; err != nil {
-		return errors.New("failed to create user")
-	}
+    // 6) สร้าง User พร้อมตั้ง RoleID
+    user := coreModels.User{
+        Username: input.Username,
+        Email:    input.Email,
+        Password: string(hashed),
+        RoleID:   role.ID,      // <-- ใส่ FK ไปยัง roles.id
+    }
 
-	return nil
+    if err := database.DB.Create(&user).Error; err != nil {
+        return errors.New("failed to create user")
+    }
+    return nil
 }
+
 
 func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
-	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var user coreModels.User 
+    return database.DB.Transaction(func(tx *gorm.DB) error {
+        var user coreModels.User
 
-		// หา user
-		if err := tx.First(&user, input.ID).Error; err != nil {
-			return errors.New("user not found")
-		}
+        // 1) หา user
+        if err := tx.First(&user, input.ID).Error; err != nil {
+            return errors.New("user not found")
+        }
 
-		// ไม่อนุญาตเปลี่ยนเป็น SUPER_ADMIN
-		if input.Role == string(coreModels.RoleNameSaaSSuperAdmin) {
-			return errors.New("cannot change role to SUPER_ADMIN")
-		}
+        // 2) ห้ามเปลี่ยนเป็น SUPER_ADMIN
+        if input.Role == string(coreModels.RoleNameSaaSSuperAdmin) {
+            return errors.New("cannot change role to SUPER_ADMIN")
+        }
 
-		// Validate role ใหม่
-		validRoles := []coreModels.RoleName{
-			coreModels.RoleNameTenantAdmin,
-			coreModels.RoleNameBranchAdmin, 
-			coreModels.RoleNameAssistantManager, 
-			coreModels.RoleNameStaff,
-			coreModels.RoleNameUser,
-		}
-		isValid := false
-		for _, r := range validRoles {
-			if coreModels.RoleName(input.Role) == r {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			return errors.New("invalid role provided")
-		}
+        // 3) ตรวจว่าชื่อ role ใหม่เป็นค่าที่อนุญาต
+        rn := coreModels.RoleName(input.Role)
+        switch rn {
+        case coreModels.RoleNameTenantAdmin,
+             coreModels.RoleNameBranchAdmin,
+             coreModels.RoleNameAssistantManager,
+             coreModels.RoleNameStaff,
+             coreModels.RoleNameUser:
+            // ผ่าน validation
+        default:
+            return errors.New("invalid role provided")
+        }
 
-		// อัปเดต role
-		user.Role = coreModels.RoleName(input.Role)
-		if err := tx.Save(&user).Error; err != nil {
-			return errors.New("failed to update user role")
-		}
+        // 4) หา Role record ที่ตรงกับชื่อ
+        var role coreModels.Role
+        if err := tx.Where("name = ?", rn).First(&role).Error; err != nil {
+            return errors.New("specified role not found")
+        }
 
-		return nil
-	})
+        // 5) อัปเดต FK ใน user
+        user.RoleID = role.ID
+
+        if err := tx.Save(&user).Error; err != nil {
+            return errors.New("failed to update user role")
+        }
+        return nil
+    })
 }
 
-func GetAllUsers(limit int , offset int)([]Core_userDto.UserResponse, error){
+
+func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error) {
 	var users []coreModels.User
-	//ค้นหา user เช็ค limit และกำหนด offset 
+	//ค้นหา user เช็ค limit และกำหนด offset
 	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	result := utils.MapSlice(users, func(u coreModels.User) Core_userDto.UserResponse {
-		return Core_userDto.UserResponse{
+	result := utils.MapSlice(users, func(u coreModels.User) Core_authDto.UserInfoResponse {
+		return Core_authDto.UserInfoResponse{
 			ID:       u.ID,
 			Username: u.Username,
 			Email:    u.Email,
-			Role:     string(u.Role),
+			RoleID:   u.RoleID,      // รหัสบทบาท
+            Role:     u.Role.Name,
 		}
 	})
 
 	return result, nil
 }
 
-func FilterUsersByRole(role string) ([]Core_userDto.UserResponse, error) {
+func FilterUsersByRole(role string) ([]Core_authDto.UserInfoResponse, error) {
 	// Validate role ก่อน
 	validRoles := []coreModels.RoleName{
 		coreModels.RoleNameTenantAdmin,
 		coreModels.RoleNameBranchAdmin,
 		coreModels.RoleNameAssistantManager,
 		coreModels.RoleNameStaff,
-		coreModels.RoleNameUser, 
+		coreModels.RoleNameUser,
 	}
 
 	isValid := false
@@ -178,18 +190,16 @@ func FilterUsersByRole(role string) ([]Core_userDto.UserResponse, error) {
 	}
 
 	// Map เป็น UserResponse
-	var result []Core_userDto.UserResponse
+	var result []Core_authDto.UserInfoResponse
 	for _, u := range users {
-		result = append(result, Core_userDto.UserResponse{
+		result = append(result, Core_authDto.UserInfoResponse{
 			ID:       u.ID,
 			Username: u.Username,
 			Email:    u.Email,
-			Role:     string(u.Role),
+			RoleID:   u.RoleID,      
+            Role:     u.Role.Name,
 		})
 	}
 
 	return result, nil
 }
-
-
-

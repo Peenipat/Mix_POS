@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	Core_authDto "myapp/modules/core/dto/auth"
-	"myapp/models"
+	"myapp/models/core"
 	"myapp/modules/core/services"
 )
 
@@ -31,7 +31,7 @@ func CreateLog(ctx *fiber.Ctx) error {
 	}
 
 	// Map request to model Sytemlogs
-	entry := &models.SystemLog{
+	entry := &coreModels.SystemLog{
 		CreatedAt:  time.Now(),
 		Action:     req.Action,
 		Resource:   "", //กำหนดไว้รอรับจาก ตัวอื่น

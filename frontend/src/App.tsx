@@ -9,7 +9,7 @@ import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import Register from "./page/Register";
 import Dashboard from "./page/user/Dashboard";
 import LogTablePage from "./page/admin/super_admin/Log";
-
+import { RoleName } from "./types/Role";
 import Home from "./page/Home";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -37,7 +37,7 @@ export default function App() {
 
 
       <Route path="/admin" element={
-        <RequireRole roles={["SUPER_ADMIN"]}>
+        <RequireRole roles={[RoleName.SaaSSuperAdmin]}>
           <SuperAdminLayout />
         </RequireRole>
       }>
@@ -51,7 +51,7 @@ export default function App() {
       <Route
         path="/branch/dashboard"
         element={
-          <RequireRole roles={["BRANCH_ADMIN"]}>
+          <RequireRole roles={[RoleName.BranchAdmin]}>
             <BranchAdminDashboard />
           </RequireRole>
         }
@@ -60,7 +60,7 @@ export default function App() {
       <Route
         path="/staff/dashboard"
         element={
-          <RequireRole roles={["STAFF"]}>
+          <RequireRole roles={[RoleName.Staff]}>
             <StaffDashboard />
           </RequireRole>
         }

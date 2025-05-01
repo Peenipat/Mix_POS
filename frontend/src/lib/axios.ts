@@ -1,4 +1,6 @@
 import axios from "axios";
+// import { store } from "@/store"        // path ไปยัง Redux store
+// import { RootState } from "@/store";
 
 const instance = axios.create({
   baseURL: "http://localhost:3001/",

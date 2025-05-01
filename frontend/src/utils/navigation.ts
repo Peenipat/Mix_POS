@@ -6,7 +6,7 @@ export function navigateByRole(role: string | undefined, navigate: NavigateFunct
         return;
     }
     switch (role) {
-        case 'SUPER_ADMIN':
+        case 'SAAS_SUPER_ADMIN':
             navigate('/admin/dashboard');
             break;
         case 'BRANCH_ADMIN':

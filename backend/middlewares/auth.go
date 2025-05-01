@@ -1,7 +1,7 @@
 package middlewares
 import (
 		"github.com/gofiber/fiber/v2"
-		"myapp/models/core"
+		"myapp/modules/core/models"
 
 )
 func RequireSuperAdmin() fiber.Handler {

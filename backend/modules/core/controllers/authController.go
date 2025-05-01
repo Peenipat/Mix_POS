@@ -7,7 +7,7 @@ import (
 
 	Core_authDto "myapp/modules/core/dto/auth"	
 	"myapp/modules/core/services"
-    "myapp/models/core"
+    "myapp/modules/core/models"
 	"github.com/gofiber/fiber/v2"
 )
 

@@ -4,7 +4,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"fmt"
-	 "myapp/models/core"
+	"myapp/modules/core/models"
 )
 const (
 	host = "localhost"

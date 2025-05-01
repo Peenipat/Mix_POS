@@ -2,7 +2,7 @@ package tests
 
 import (
     "myapp/database"
-    coreModels "myapp/models/core"
+    coreModels "myapp/modules/core/models"
     "gorm.io/driver/sqlite"
     "gorm.io/gorm"
 )

@@ -3,7 +3,7 @@
 package bookingModels
 import (
 	"time"
-	"myapp/models/core"
+	"myapp/modules/core/models"
 	"gorm.io/gorm"
 )
 

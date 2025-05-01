@@ -12,7 +12,7 @@ import (
     "gorm.io/gorm"
 
     Core_authDto "myapp/modules/core/dto/auth"
-    "myapp/models/core"
+    "myapp/modules/core/models" 
 )
 
 // ตัว strct มีไว้เก็บ type ที่ต้องการสำหรับการทำ Dependency Injection

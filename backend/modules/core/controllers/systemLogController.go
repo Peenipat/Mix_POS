@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	Core_authDto "myapp/modules/core/dto/auth"
-	"myapp/models/core"
+	"myapp/modules/core/models"
 	"myapp/modules/core/services"
 )
 

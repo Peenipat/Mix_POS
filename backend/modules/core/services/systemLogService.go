@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"myapp/models/core"
+	"myapp/modules/core/models"
 )
 
 // LogFilter defines parameters for querying system logs

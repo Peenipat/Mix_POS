@@ -3,7 +3,7 @@ package testService
 import (
 	// "errors"
 	"myapp/database"
-	"myapp/models/core"
+	"myapp/modules/core/models"
 	Core_authDto "myapp/modules/core/dto/auth"
 	Core_userDto "myapp/modules/core/dto/user"
 	"myapp/modules/core/services"

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"myapp/models/core"
+	"myapp/modules/core/models"
 )
 // Barber แทนช่างในแต่ละสาขา
 // ผูกกับ User ผ่าน models.User.ID

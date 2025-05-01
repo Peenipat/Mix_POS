@@ -9,12 +9,14 @@ CREATE TABLE IF NOT EXISTS working_hours (
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่แก้ไขล่าสุด
   deleted_at  TIMESTAMPTZ    NULL,                      -- soft‐delete timestamp
 
+  -- บังคับไม่ให้มีซ้ำ (branch_id, weekday)
+  CONSTRAINT uq_working_hours_branch_weekday 
+    UNIQUE (branch_id, weekday),
+
   CONSTRAINT fk_working_hours_branch
     FOREIGN KEY (branch_id)
     REFERENCES branches(id)
     ON DELETE CASCADE
 );
 
--- Index ช่วยค้นหา working hours ตาม branch และ weekday
-CREATE INDEX IF NOT EXISTS idx_working_hours_branch_weekday
-  ON working_hours(branch_id, weekday);
+-- (ไม่จำเป็นต้องสร้าง index แยกอีก เพราะ UNIQUE constraint ก็สร้าง index ให้อัตโนมัติ)

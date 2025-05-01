@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS services (
   id          SERIAL         PRIMARY KEY,              -- รหัสอัตโนมัติ
   name        VARCHAR(100)   NOT NULL,                 -- ชื่อบริการ
-  duration    INTERVAL       NOT NULL,                 -- ระยะเวลาโดยประมาณ
+  duration    INT            NOT NULL,                 -- ระยะเวลาโดยประมาณ
   price       NUMERIC        NOT NULL,                 -- ราคาบริการ
   created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),   -- เวลาสร้างแถว
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),   -- เวลาแก้ไขล่าสุด

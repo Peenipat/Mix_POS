@@ -9,7 +9,7 @@ import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import Register from "./page/Register";
 import Dashboard from "./page/user/Dashboard";
 import LogTablePage from "./page/admin/super_admin/Log";
-import { RoleName } from "./types/Role";
+import { RoleName } from "./types/role";
 import Home from "./page/Home";
 
 import ProtectedRoute from "./components/ProtectedRoute";

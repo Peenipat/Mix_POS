@@ -46,6 +46,7 @@ export default function Login() {
   }, [status, error, dispatch]);
 
   const displayText = useTypewriter(messages) // เรียกใช้ function พิมพ์ตัวอักษร
+  console.log("API:", import.meta.env.VITE_API_BASE_URL);
   return (
     <div className="grid grid-cols-2 min-h-screen mx-auto">
       {/* ฝั่งซ้าย Login Form*/ }

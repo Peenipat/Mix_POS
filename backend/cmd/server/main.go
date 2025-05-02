@@ -47,6 +47,12 @@ func main() {
         log.Fatal("Missing JWT_SECRET")
     }
 
+    logSvc := services.NewSystemLogService(database.DB)
+    Core_controllers.InitSystemLogHandler(logSvc)
+
+    authSvc := services.NewAuthService(database.DB, logSvc)
+    Core_controllers.InitAuthHandler(authSvc, logSvc)
+    
     app.Use(logger.New())
     app.Use(cors.New(cors.Config{
         AllowOrigins:     "https://nipat-cv-com-cp.vercel.app, http://localhost:5173",
@@ -59,11 +65,7 @@ func main() {
     app.Use(compress.New()) 
     // Initialize Services & Controllers
     
-    logSvc := services.NewSystemLogService(database.DB)
-    Core_controllers.InitSystemLogHandler(logSvc)
-
-    authSvc := services.NewAuthService(database.DB, logSvc)
-    Core_controllers.InitAuthHandler(authSvc, logSvc)
+    
 
     // Routes
     routes.SetupAuthRoutes(app)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
     "github.com/joho/godotenv"
+    "fmt"
 
 	// "net/http"
 
@@ -62,7 +63,7 @@ func main() {
     // Global middleware
     app.Use(logger.New())
     app.Use(cors.New(cors.Config{
-        AllowOrigins:     "https://nipat-cv-com-cyfk6ekr3-nipats-projects.vercel.app, http://localhost:5173",
+        AllowOrigins:     "https://nipat-cv-com-cp.vercel.app, http://localhost:5173",
         AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
         AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
         AllowCredentials: true,
@@ -70,6 +71,10 @@ func main() {
     app.Use(recover.New())
     app.Use(helmet.New())
     app.Use(compress.New()) //บีบอัด response เพื่อลดขนาด
+
+    fmt.Println("JWT_SECRET:", os.Getenv("JWT_SECRET"))
+    fmt.Println("CORS Origin:", os.Getenv("ORIGIN"))
+
 
     
 

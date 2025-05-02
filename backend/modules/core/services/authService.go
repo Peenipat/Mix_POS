@@ -69,7 +69,7 @@ func (s *AuthService) Login(ctx context.Context, input Core_authDto.LoginRequest
             Username: user.Username,
             Email:    user.Email,
             RoleID:   user.RoleID,
-            Role:     user.Role.Name,
+            Role:     string(user.Role.Name),
         },
     }, nil
 }

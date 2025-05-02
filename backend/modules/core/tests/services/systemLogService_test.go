@@ -1,4 +1,4 @@
-package testService
+package coreServiceTest
 
 
 // import (

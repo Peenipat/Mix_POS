@@ -97,7 +97,6 @@ func CreateUserFromAdmin(input Core_userDto.CreateUserInput) error {
     return nil
 }
 
-
 func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
     return database.DB.Transaction(func(tx *gorm.DB) error {
         var user coreModels.User
@@ -141,7 +140,6 @@ func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
     })
 }
 
-
 func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error) {
 	var users []coreModels.User
 	//ค้นหา user เช็ค limit และกำหนด offset
@@ -155,7 +153,7 @@ func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error)
 			Username: u.Username,
 			Email:    u.Email,
 			RoleID:   u.RoleID,      // รหัสบทบาท
-            Role:     u.Role.Name,
+            Role:     string(u.Role.Name),
 		}
 	})
 
@@ -197,7 +195,7 @@ func FilterUsersByRole(role string) ([]Core_authDto.UserInfoResponse, error) {
 			Username: u.Username,
 			Email:    u.Email,
 			RoleID:   u.RoleID,      
-            Role:     u.Role.Name,
+            Role:     string(u.Role.Name),
 		})
 	}
 

@@ -27,8 +27,8 @@ import (
 	Core_controllers "myapp/modules/core/controllers"
 	"myapp/modules/core/models"
 	"myapp/modules/core/services"
-	"myapp/routes"
-	"myapp/routes/admin"
+	"myapp/modules/core/routes/admin"
+    "myapp/modules/core/routes"
 	"myapp/seeds"
 )
 

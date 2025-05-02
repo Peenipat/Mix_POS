@@ -1,4 +1,4 @@
-package testService
+package coreServiceTest
 
 import (
 	// "errors"
@@ -7,7 +7,7 @@ import (
 	Core_authDto "myapp/modules/core/dto/auth"
 	Core_userDto "myapp/modules/core/dto/user"
 	"myapp/modules/core/services"
-	"myapp/tests"
+	coreTests "myapp/modules/core/tests"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,11 +17,11 @@ import (
 // Test การ register ด้วยตัวเองได้ Role เป็น User [Success]
 func Test_CreateUser_FromRegister_Success(t *testing.T) {
     // 1) เตรียม DB ใหม่ และ override global
-    db := tests.SetupTestDB()
+    db := coreTests.SetupTestDB()
     database.DB = db
 
     // 2) สร้าง Role “USER” ลงในตารางก่อน (Service จะ lookup ตามชื่อนี้)
-    userRole := coreModels.Role{Name: string(coreModels.RoleNameUser)}
+    userRole := coreModels.Role{Name: coreModels.RoleNameUser}
     require.NoError(t, db.Create(&userRole).Error)
 
     // 3) ทำการ register
@@ -49,7 +49,7 @@ func Test_CreateUser_FromRegister_Success(t *testing.T) {
 
 // Test การ register ด้วยแต่เองกรณ๊ Email ซ้ำ
 func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
-	db := tests.SetupTestDB()
+	db := coreTests.SetupTestDB()
 
 	// test กรณี Email ซ้ำกัน
 	db.Create(&coreModels.User{
@@ -72,13 +72,13 @@ func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 // Test การสร้าง User ผ่าน Admin ได้ Role เป็น BranchAdmin, Staff, User [Success]
 func Test_CreateUser_FromAdmin_Success(t *testing.T) {
     // 1) เตรียม DB ใน memory แล้ว override global
-    db := tests.SetupTestDB()
+    db := coreTests.SetupTestDB()
     database.DB = db
 
     // 2) สร้าง Role records สำหรับทดสอบ
-    branchRole := coreModels.Role{Name: string(coreModels.RoleNameBranchAdmin)}
-    staffRole  := coreModels.Role{Name: string(coreModels.RoleNameStaff)}
-    userRole   := coreModels.Role{Name: string(coreModels.RoleNameUser)}
+    branchRole := coreModels.Role{Name: coreModels.RoleNameBranchAdmin}
+    staffRole  := coreModels.Role{Name: coreModels.RoleNameStaff}
+    userRole   := coreModels.Role{Name: coreModels.RoleNameUser}
     require.NoError(t, db.Create(&branchRole).Error)
     require.NoError(t, db.Create(&staffRole).Error)
     require.NoError(t, db.Create(&userRole).Error)
@@ -144,7 +144,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
 
 // Test การสร้าง User ผ่าน SuperAdmin กรณีใส่ Role ผิด เช่น สร้าง SuperAdmin หรือใส่ role ที่ไม่มีจริง
 func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
-	tests.SetupTestDB()
+	coreTests.SetupTestDB()
 	testCases := []struct {
 		name        string
 		input       Core_userDto.CreateUserInput
@@ -183,14 +183,14 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 // Test การเปลี่ยน Role ผ่าน SuperAdmin ได้ Role เป็น BranchAdmin, Staff, User [Success]
 func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 	// 1) สร้าง DB สำรอง
-	db := tests.SetupTestDB()
+	db := coreTests.SetupTestDB()
 
 	// 2) แทนที่ database.DB ให้เป็นตัวนี้
 	database.DB = db
 
 	// 3) สร้าง Role record
-	userRole := coreModels.Role{Name: string(coreModels.RoleNameUser)}
-	staffRole := coreModels.Role{Name: string(coreModels.RoleNameStaff)}
+	userRole := coreModels.Role{Name: coreModels.RoleNameUser}
+	staffRole := coreModels.Role{Name: coreModels.RoleNameStaff}
 	require.NoError(t, db.Create(&userRole).Error)
 	require.NoError(t, db.Create(&staffRole).Error)
 
@@ -217,14 +217,14 @@ func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 
 	// 7) ยืนยันว่ามันเปลี่ยน RoleID และ Role.Name ถูกต้อง
 	assert.Equal(t, staffRole.ID, updated.RoleID)
-	assert.Equal(t, string(coreModels.RoleNameStaff), updated.Role.Name)
+	assert.Equal(t, coreModels.RoleNameStaff, updated.Role.Name)
 }
 
 // Test การเปลี่ยน Role ผ่าน SuperAdmin กรณีพยายามเปลี่ยนเป็น SuperAdmin และ Role ที่ไม่มีจริง
 func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
-	db := tests.SetupTestDB()
+	db := coreTests.SetupTestDB()
 
-	staffRole := coreModels.Role{Name: string(coreModels.RoleNameStaff)}
+	staffRole := coreModels.Role{Name: coreModels.RoleNameStaff}
 	db.Create(&staffRole)
 	user := coreModels.User{
 		Username: "ChangeSuperAdmin",
@@ -268,9 +268,9 @@ func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 
 // Test การดึงข้อมูล User โดยที่สามารถใส่ limit ได้ [Success]
 func Test_GetAllUser_limitData(t *testing.T) {
-	db := tests.SetupTestDB()
+	db := coreTests.SetupTestDB()
 
-	userRole := coreModels.Role{Name: string(coreModels.RoleNameStaff)}
+	userRole := coreModels.Role{Name: coreModels.RoleNameStaff}
 	db.Create(&userRole)
 	// Mock Data
 	users := []coreModels.User{

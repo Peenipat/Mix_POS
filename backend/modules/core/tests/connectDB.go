@@ -1,4 +1,4 @@
-package tests
+package coreTests
 
 import (
     "myapp/database"

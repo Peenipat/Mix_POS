@@ -143,10 +143,15 @@ func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
 
 func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error) {
 	var users []coreModels.User
-	//ค้นหา user เช็ค limit และกำหนด offset
-	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
-		return nil, err
-	}
+
+    if err := database.DB.
+	Preload("Role").
+	Order("id ASC").
+	Limit(limit).
+	Offset(offset).
+	Find(&users).Error; err != nil {
+	return nil, err
+}
 
 	result := utils.MapSlice(users, func(u coreModels.User) Core_authDto.UserInfoResponse {
 		return Core_authDto.UserInfoResponse{

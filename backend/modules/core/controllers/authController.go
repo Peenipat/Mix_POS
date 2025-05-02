@@ -66,7 +66,7 @@ func LoginHandler(c *fiber.Ctx) error {
         Value:    resp.Token, // <-- ใช้ resp.Token (ที่ service login สร้างไว้แล้ว)
         Expires:  time.Now().Add(72 * time.Hour),
         HTTPOnly: true, // อ่าน cookies จาก client
-        Secure:   false,    // ต้องใช้ https ตอน production
+        Secure:   true,    // ต้องใช้ https ตอน production
         SameSite: "Lax",   
     })
 

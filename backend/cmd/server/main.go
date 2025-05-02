@@ -62,7 +62,7 @@ func main() {
     // Global middleware
     app.Use(logger.New())
     app.Use(cors.New(cors.Config{
-        AllowOrigins:     "http://localhost:5173",
+        AllowOrigins:     "https://nipat-cv-com-cyfk6ekr3-nipats-projects.vercel.app, http://localhost:5173",
         AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
         AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
         AllowCredentials: true,

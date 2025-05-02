@@ -47,6 +47,16 @@ func main() {
         log.Fatal("Missing JWT_SECRET")
     }
 
+    app.Use(logger.New())
+    app.Use(cors.New(cors.Config{
+        AllowOrigins:     "https://nipat-cv-com-cp.vercel.app, http://localhost:5173",
+        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+        AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+        AllowCredentials: true,
+    }))
+    app.Use(recover.New())
+    app.Use(helmet.New())
+    app.Use(compress.New()) 
     // Initialize Services & Controllers
     
     logSvc := services.NewSystemLogService(database.DB)
@@ -60,16 +70,7 @@ func main() {
     admin.SetupAdminRoutes(app)
 
     // Global middleware
-    app.Use(logger.New())
-    app.Use(cors.New(cors.Config{
-        AllowOrigins:     "https://nipat-cv-com-cp.vercel.app, http://localhost:5173",
-        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-        AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-        AllowCredentials: true,
-    }))
-    app.Use(recover.New())
-    app.Use(helmet.New())
-    app.Use(compress.New()) //บีบอัด response เพื่อลดขนาด
+    //บีบอัด response เพื่อลดขนาด
 
 
 

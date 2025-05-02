@@ -67,7 +67,7 @@ func LoginHandler(c *fiber.Ctx) error {
         Expires:  time.Now().Add(72 * time.Hour),
         HTTPOnly: true, // อ่าน cookies จาก client
         Secure:   true,    // ต้องใช้ https ตอน production
-        SameSite: "Lax",   
+        SameSite: "None",   
     })
 
     // 4) Return response

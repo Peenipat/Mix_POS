@@ -1,7 +1,8 @@
 package coreServiceTest
 
 import (
-	// "errors"
+	
+	"errors"
 	"myapp/database"
 	"myapp/modules/core/models"
 	Core_authDto "myapp/modules/core/dto/auth"
@@ -45,8 +46,6 @@ func Test_CreateUser_FromRegister_Success(t *testing.T) {
     assert.Equal(t, userRole.Name,  user.Role.Name)   // ชื่อ role ต้องคือ “USER”
     assert.NotEmpty(t, user.Password)                 // รหัสผ่านต้อง hashed
 }
-
-
 // Test การ register ด้วยแต่เองกรณ๊ Email ซ้ำ
 func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 	db := coreTests.SetupTestDB()
@@ -68,7 +67,6 @@ func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "email already in use", err.Error())
 }
-
 // Test การสร้าง User ผ่าน Admin ได้ Role เป็น BranchAdmin, Staff, User [Success]
 func Test_CreateUser_FromAdmin_Success(t *testing.T) {
     // 1) เตรียม DB ใน memory แล้ว override global
@@ -141,7 +139,6 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
         })
     }
 }
-
 // Test การสร้าง User ผ่าน SuperAdmin กรณีใส่ Role ผิด เช่น สร้าง SuperAdmin หรือใส่ role ที่ไม่มีจริง
 func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 	coreTests.SetupTestDB()
@@ -179,7 +176,6 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 		})
 	}
 }
-
 // Test การเปลี่ยน Role ผ่าน SuperAdmin ได้ Role เป็น BranchAdmin, Staff, User [Success]
 func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 	// 1) สร้าง DB สำรอง
@@ -219,7 +215,6 @@ func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 	assert.Equal(t, staffRole.ID, updated.RoleID)
 	assert.Equal(t, coreModels.RoleNameStaff, updated.Role.Name)
 }
-
 // Test การเปลี่ยน Role ผ่าน SuperAdmin กรณีพยายามเปลี่ยนเป็น SuperAdmin และ Role ที่ไม่มีจริง
 func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 	db := coreTests.SetupTestDB()
@@ -265,7 +260,6 @@ func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 	}
 
 }
-
 // Test การดึงข้อมูล User โดยที่สามารถใส่ limit ได้ [Success]
 func Test_GetAllUser_limitData(t *testing.T) {
 	db := coreTests.SetupTestDB()
@@ -292,4 +286,74 @@ func Test_GetAllUser_limitData(t *testing.T) {
 	assert.Equal(t, "User1", result[0].Username)
 	assert.Equal(t, "User2", result[1].Username)
 	assert.Equal(t, "User3", result[2].Username)
+}
+// ตรวจว่า FilterUsersByRole ทำงานถูกต้องทั้งเคสปกติและกรณี error
+func TestFilterUsersByRole(t *testing.T) {
+	// 1) ตั้งค่า DB in-memory แล้ว migrate เฉพาะ Role + User
+	db := coreTests.SetupTestDB()
+	database.DB = db
+	if err := db.AutoMigrate(&coreModels.Role{}, &coreModels.User{}); err != nil {
+		t.Fatalf("migrate failed: %v", err)
+	}
+
+	// 2) สร้าง Roles
+	roles := []coreModels.Role{
+		{Name: coreModels.RoleNameBranchAdmin},
+		{Name: coreModels.RoleNameStaff},
+		{Name: coreModels.RoleNameUser},
+	}
+	for i := range roles {
+		if err := db.Create(&roles[i]).Error; err != nil {
+			t.Fatalf("seed role %s failed: %v", roles[i].Name, err)
+		}
+	}
+
+	// 3) สร้าง Users สองคน สำหรับสอง Role แรก
+	u1 := coreModels.User{
+		Username: "branch_mgr",
+		Email:    "mgr@example.com",
+		Password: "ignored",
+		RoleID:   roles[0].ID,
+	}
+	u2 := coreModels.User{
+		Username: "staffer",
+		Email:    "staff@example.com",
+		Password: "ignored",
+		RoleID:   roles[1].ID,
+	}
+	if err := db.Create(&u1).Error; err != nil {
+		t.Fatalf("create u1 failed: %v", err)
+	}
+	if err := db.Create(&u2).Error; err != nil {
+		t.Fatalf("create u2 failed: %v", err)
+	}
+
+	// 4) ทดสอบกรณีกรอง RoleNameStaff → ควรได้ user เดียว
+	out, err := services.FilterUsersByRole(string(coreModels.RoleNameStaff))
+	if err != nil {
+		t.Errorf("FilterUsersByRole returned error: %v", err)
+	}
+	if len(out) != 1 {
+		t.Errorf("expected 1 user, got %d", len(out))
+	} else if out[0].Email != u2.Email {
+		t.Errorf("expected %q, got %q", u2.Email, out[0].Email)
+	}
+
+	// 5) ทดสอบกรณี Role ไม่มีคนใช้แต่ถูกต้อง → ได้ slice ว่าง
+	out2, err := services.FilterUsersByRole(string(coreModels.RoleNameUser))
+	if err != nil {
+		t.Errorf("services.FilterUsersByRole(User) returned error: %v", err)
+	}
+	if len(out2) != 0 {
+		t.Errorf("expected 0 users, got %d", len(out2))
+	}
+
+	// 6) ทดสอบกรณี role ไม่ถูกต้อง → ต้องได้ error
+	_, err = services.FilterUsersByRole("INVALID_ROLE")
+	if !errors.Is(err, errors.New("invalid role")) {
+		// เปรียบเทียบเป็นข้อความก็ได้
+		if err == nil || err.Error() != "invalid role" {
+			t.Errorf("expected invalid role error, got %v", err)
+		}
+	}
 }

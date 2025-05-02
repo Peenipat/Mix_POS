@@ -1,3 +1,4 @@
+// seeds/seedModules.go
 package seeds
 
 import (
@@ -7,31 +8,28 @@ import (
     coreModels "myapp/modules/core/models"
 )
 
+// SeedModules ต้องรันก่อน SeedRoles
 func SeedModules(db *gorm.DB) error {
-    modules := []coreModels.Module{
-        {Key: "CORE",           Description: "Core system (auth, users, roles)"},
-        {Key: "BOOKING",        Description: "Booking module"},
-        {Key: "POS_RESTAURANT", Description: "Restaurant POS module"},
-        // ... เพิ่มโมดูลอื่นๆ ตามต้องการ
+    now := time.Now()
+    modules := []coreModels.Modules{
+        {Key: "CORE",        Description: "Core system",        CreatedAt: now, UpdatedAt: now},
+        {Key: "BOOKING",     Description: "Appointment booking",CreatedAt: now, UpdatedAt: now},
+        // เพิ่มโมดูลอื่น ๆ ตามต้องการ
     }
 
-    now := time.Now()
     for _, m := range modules {
-        // ถ้ายังไม่มี key นี้ให้สร้าง (set timestamps)
-        record := coreModels.Module{Key: m.Key}
-        attrs  := coreModels.Module{
+        record := coreModels.Modules{Key: m.Key}
+        attrs  := coreModels.Modules{
             Description: m.Description,
-            CreatedAt:   now,
             UpdatedAt:   now,
         }
         if err := db.
-            Where(&record).
+            Where("key = ?", m.Key).
             Assign(attrs).
-            FirstOrCreate(&record).
+            FirstOrCreate(&record, record).
             Error; err != nil {
             return err
         }
     }
     return nil
 }
-

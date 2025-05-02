@@ -9,6 +9,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+
+
 // @Summary        สร้าง Account Role USER
 // @Description    ลงทะเบียนเพื่อ สร้าง Account โดย User เป็นคนสร้างเอง
 // @Tags           Auth
@@ -89,6 +91,10 @@ func ChangeUserRole(c *fiber.Ctx) error {
 	})
 }
 
+var getAllUsersFunc = services.GetAllUsers
+func InitGetAllUsers(fn func(limit, offset int) ([]Core_authDto.UserInfoResponse, error)) {
+  getAllUsersFunc = fn
+}
 // GetAllUsers godoc
 // @Summary ดึงข้อมูลผู้ใช้งานทั้งหมด
 // @Description สำหรับ Super Admin ดึง Users ทั้งหมด พร้อม Pagination
@@ -102,19 +108,22 @@ func ChangeUserRole(c *fiber.Ctx) error {
 // @Router /admin/users [get]
 // @Security ApiKeyAuth
 func GetAllUsers(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
+	page, _  := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-
-	offset := (page - 1) * limit
-
-	users, err := services.GetAllUsers(limit, offset)
+	offset   := (page-1)*limit
+  
+	users, err := getAllUsersFunc(limit, offset)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch users"})
+	  return c.Status(500).JSON(fiber.Map{"error": "failed to fetch users"})
 	}
-
 	return c.Status(200).JSON(users)
-}
+  }
 
+  var filterUsersByRoleFunc = services.FilterUsersByRole
+
+func InitFilterUsersByRole(fn func(string) ([]Core_authDto.UserInfoResponse, error)) {
+    filterUsersByRoleFunc = fn
+}
 // FilterUsersByRole godoc
 // @Summary      ดึงข้อมูลผู้ใช้งานโดยเลือกเฉพาะ role ที่ต้องการ
 // @Description  ใช้สำหรับ Super Admin เพื่อดึง Users เฉพาะ role ที่ระบุ เช่น STAFF, USER, BRANCH_ADMIN
@@ -142,7 +151,7 @@ func FilterUsersByRole(c *fiber.Ctx) error {
 	}
 
 	// เรียก service ไปหาข้อมูล
-	users, err := services.FilterUsersByRole(role)
+	users, err := filterUsersByRoleFunc(role)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

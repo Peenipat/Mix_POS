@@ -23,7 +23,7 @@ const (
 type Role struct {
     ID          uint           `gorm:"primaryKey" json:"id"`
     ModuleID    uint           `gorm:"not null;index" json:"module_id"`               // FK → modules(id)
-    Module      Module         `gorm:"foreignKey:ModuleID" json:"module,omitempty"`   // preload โมดูลได้
+    Module      Modules         `gorm:"foreignKey:ModuleID" json:"module,omitempty"`   // preload โมดูลได้
     Name        RoleName       `gorm:"size:50;not null" json:"name"`                  // ชื่อเช่น SUPER_ADMIN
     Description string         `gorm:"type:text" json:"description"`                  // คำอธิบายบทบาท
     CreatedAt   time.Time      `json:"created_at"`

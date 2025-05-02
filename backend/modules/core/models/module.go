@@ -8,7 +8,7 @@ import (
 )
 
 // Module เก็บชื่อโมดูล/ฟีเจอร์หลักของระบบ
-type Module struct {
+type Modules struct {
     ID          uint           `gorm:"primaryKey" json:"id"`
     Key         string         `gorm:"size:50;not null;uniqueIndex" json:"key"`       // เช่น "CORE","BOOKING","POS_RESTAURANT"
     Description string         `gorm:"type:text;not null" json:"description"`         // คำอธิบายโมดูล

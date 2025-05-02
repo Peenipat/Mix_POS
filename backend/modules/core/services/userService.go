@@ -1,6 +1,7 @@
 package services
 
 import (
+	
 	"errors"
 	"myapp/database"
 	"myapp/modules/core/models"
@@ -160,44 +161,34 @@ func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error)
 	return result, nil
 }
 
-func FilterUsersByRole(role string) ([]Core_authDto.UserInfoResponse, error) {
-	// Validate role ก่อน
-	validRoles := []coreModels.RoleName{
-		coreModels.RoleNameTenantAdmin,
-		coreModels.RoleNameBranchAdmin,
-		coreModels.RoleNameAssistantManager,
-		coreModels.RoleNameStaff,
-		coreModels.RoleNameUser,
-	}
+func FilterUsersByRole(roleName string) ([]Core_authDto.UserInfoResponse, error) {
+    // 1) หา Role จากชื่อ
+    var role coreModels.Role
+    if err := database.DB.
+        Where("name = ?", roleName).
+        First(&role).Error; err != nil {
+        return nil, errors.New("invalid role")
+    }
 
-	isValid := false
-	for _, r := range validRoles {
-		if coreModels.RoleName(role) == r {
-			isValid = true
-			break
-		}
-	}
-	if !isValid {
-		return nil, errors.New("invalid role")
-	}
+    // 2) ดึง user ที่มี role_id ตรงกับ role.ID
+    var users []coreModels.User
+    if err := database.DB.
+        Where("role_id = ?", role.ID).
+        Find(&users).Error; err != nil {
+        return nil, errors.New("failed to fetch users")
+    }
 
-	// ดึง users
-	var users []coreModels.User
-	if err := database.DB.Where("role = ?", role).Find(&users).Error; err != nil {
-		return nil, errors.New("failed to fetch users")
-	}
-
-	// Map เป็น UserResponse
-	var result []Core_authDto.UserInfoResponse
-	for _, u := range users {
-		result = append(result, Core_authDto.UserInfoResponse{
-			ID:       u.ID,
-			Username: u.Username,
-			Email:    u.Email,
-			RoleID:   u.RoleID,      
-            Role:     string(u.Role.Name),
-		})
-	}
-
-	return result, nil
+    // 3) แมปเป็น DTO
+    var result []Core_authDto.UserInfoResponse
+    for _, u := range users {
+        result = append(result, Core_authDto.UserInfoResponse{
+            ID:       u.ID,
+            Username: u.Username,
+            Email:    u.Email,
+            RoleID:   u.RoleID,
+            Role:     string(role.Name), // หรือ u.Role.Name ถ้า Preload("Role") ไว้
+        })
+    }
+    return result, nil
 }
+

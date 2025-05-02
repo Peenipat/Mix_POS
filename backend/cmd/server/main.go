@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
     "github.com/joho/godotenv"
-    "fmt"
 
 	// "net/http"
 
@@ -72,13 +71,7 @@ func main() {
     app.Use(helmet.New())
     app.Use(compress.New()) //บีบอัด response เพื่อลดขนาด
 
-    fmt.Println("JWT_SECRET:", os.Getenv("JWT_SECRET"))
-    fmt.Println("CORS Origin:", os.Getenv("ORIGIN"))
 
-
-    
-
-    
 
     // Route api docs
     app.Get("/swagger/*", fiberSwagger.WrapHandler)

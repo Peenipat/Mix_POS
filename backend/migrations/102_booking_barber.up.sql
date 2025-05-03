@@ -19,3 +19,15 @@ CREATE TABLE IF NOT EXISTS barbers (
 -- ดัชนีช่วยค้นหา
 CREATE INDEX IF NOT EXISTS idx_barbers_branch ON barbers(branch_id);
 CREATE INDEX IF NOT EXISTS idx_barbers_user   ON barbers(user_id);
+
+CREATE TABLE IF NOT EXISTS barbers (
+  id          SERIAL         PRIMARY KEY,
+  branch_id   INT            NOT NULL,     -- ref: external core.branches.id
+  user_id     INT            NOT NULL UNIQUE, -- ref: external core.users.id
+  created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),
+  deleted_at  TIMESTAMPTZ    NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_barbers_branch ON barbers(branch_id);
+CREATE INDEX IF NOT EXISTS idx_barbers_user   ON barbers(user_id);

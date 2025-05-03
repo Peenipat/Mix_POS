@@ -1,4 +1,4 @@
-package bookingModels
+package barberBookingModels
 import (
 	"time"
 	"gorm.io/gorm"

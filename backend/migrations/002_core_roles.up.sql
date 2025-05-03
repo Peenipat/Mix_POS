@@ -7,3 +7,4 @@ CREATE TABLE IF NOT EXISTS roles (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(), -- วันที่อัปเดต
     deleted_at  TIMESTAMPTZ NULL                   -- วันที่ลบ (soft delete)
 );
+

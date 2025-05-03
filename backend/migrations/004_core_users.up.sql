@@ -17,3 +17,5 @@ CREATE TABLE users (
 -- 3) สร้างดัชนีช่วยค้นหา
 CREATE INDEX idx_users_deleted_at ON users(deleted_at);
 CREATE INDEX idx_users_branch     ON users(branch_id);
+
+

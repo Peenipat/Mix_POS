@@ -8,3 +8,5 @@ CREATE TABLE IF NOT EXISTS tenants (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(), -- วันที่อัปเดตล่าสุด
     deleted_at  TIMESTAMPTZ NULL                   -- วันที่ลบ record (soft delete)
 );
+
+

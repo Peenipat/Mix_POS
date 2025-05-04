@@ -23,7 +23,10 @@ import (
 
 	"myapp/database"
 	_ "myapp/docs" // import generated docs
+	bookingControllers "myapp/modules/barberbooking/controllers"
 	bookingModels "myapp/modules/barberbooking/models"
+	bookingRoutes "myapp/modules/barberbooking/routes"
+	bookingServices "myapp/modules/barberbooking/services"
 	Core_controllers "myapp/modules/core/controllers"
 	"myapp/modules/core/models"
 	"myapp/modules/core/services"
@@ -158,7 +161,15 @@ func main() {
 	authSvc := services.NewAuthService(database.DB, logSvc)
 	Core_controllers.InitAuthHandler(authSvc, logSvc)
 
-	// Routes
+	// === Barber Booking Module: Service Feature ===
+	serviceService := bookingServices.NewServiceService(database.DB)
+	serviceController := bookingControllers.NewServiceController(serviceService)
+	
+
+	bookingGroup := app.Group("/api/barberbooking")
+
+	// Register routes
+	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)
 	routes.SetupAuthRoutes(app)
 	admin.SetupAdminRoutes(app)
 

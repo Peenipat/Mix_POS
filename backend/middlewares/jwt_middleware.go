@@ -1,13 +1,14 @@
 package middlewares
+
 import (
 	"os"
+
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gofiber/fiber/v2"
 )
 
 func RequireAuth() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// อ่าน token จาก Cookie
 		tokenStr := c.Cookies("token")
 		if tokenStr == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -17,7 +18,6 @@ func RequireAuth() fiber.Handler {
 
 		secret := os.Getenv("JWT_SECRET")
 
-		// Parse token
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secret), nil
 		})
@@ -27,19 +27,40 @@ func RequireAuth() fiber.Handler {
 			})
 		}
 
-		// ดึง claims มาเก็บใน context
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			userID := uint(claims["user_id"].(float64))
-			role := claims["role"].(string)
-
-			c.Locals("user_id", userID)
-			c.Locals("role", role)
-
-			return c.Next()
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid token claims",
+			})
 		}
 
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid token claims",
-		})
+		// ดึง user_id
+		userIDFloat, ok := claims["user_id"].(float64)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid user_id",
+			})
+		}
+		userID := uint(userIDFloat)
+
+		// ดึง role
+		role, ok := claims["role"].(string)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid role",
+			})
+		}
+
+		// ดึง tenant_id (optional สำหรับ SUPER_ADMIN)
+		var tenantID uint
+		if tid, ok := claims["tenant_id"].(float64); ok {
+			tenantID = uint(tid)
+			c.Locals("tenant_id", tenantID)
+		}
+
+		c.Locals("user_id", userID)
+		c.Locals("role", role)
+
+		return c.Next()
 	}
 }

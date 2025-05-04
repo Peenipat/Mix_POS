@@ -10,6 +10,7 @@ type RoleName string
 
 const (
 	RoleNameSaaSSuperAdmin   RoleName = "SAAS_SUPER_ADMIN" // admin ฝั่ง SaaS ดูแลระบบทั้งหมด
+	RoleNameTenant      	 RoleName = "TENANT"
 	RoleNameTenantAdmin      RoleName = "TENANT_ADMIN"
 	RoleNameBranchAdmin      RoleName = "BRANCH_ADMIN"
 	RoleNameAssistantManager RoleName = "ASSISTANT_MANAGER"

@@ -11,6 +11,7 @@ import Dashboard from "./page/user/Dashboard";
 import LogTablePage from "./page/admin/super_admin/Log";
 import { RoleName } from "./types/role";
 import Home from "./page/Home";
+import TenantDashboard from "./page/barberbooking/Tenant/TenantDashboard";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireRole from "./components/RequireRole";
@@ -46,6 +47,15 @@ export default function App() {
         <Route path="users" element={<ManageUsers />} />
         <Route path="log" element={<LogTablePage />} />
       </Route>
+
+      <Route
+        path="/tenant/dashboard"
+        element={
+          <RequireRole roles={[RoleName.Tenant]}>
+            <TenantDashboard />
+          </RequireRole>
+        }
+      />
 
       {/* ต้องเป็น BRANCH_ADMIN */}
       <Route

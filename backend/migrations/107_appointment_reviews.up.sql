@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS appointment_reviews (
   rating         INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
   comment        TEXT,
   created_at     TIMESTAMPTZ DEFAULT now(),
+  updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่แก้ไขล่าสุด
+  deleted_at  TIMESTAMPTZ    NULL,                      -- soft‐delete timestamp
 
   CONSTRAINT fk_review_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
   CONSTRAINT fk_review_customer    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL

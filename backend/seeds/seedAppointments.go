@@ -12,51 +12,68 @@ import (
 // SeedAppointments สร้างตัวอย่างการนัดหมาย (Appointment)
 // เรียกหลังจาก SeedBranches(), SeedServices(), SeedBarbers() และ SeedUsers()
 func SeedAppointments(db *gorm.DB) error {
-    // 1) หา Default Branch, Service, Barber, Customer
-    var (
-        branch   coreModels.Branch
-        service  bookingModels.Service
-        barber   bookingModels.Barber
-        customer coreModels.User
-    )
-    if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
-        return err
-    }
-    if err := db.Where("name = ?", "Haircut").First(&service).Error; err != nil {
-        return err
-    }
-    if err := db.Where("branch_id = ?", branch.ID).First(&barber).Error; err != nil {
-        return err
-    }
-    // เปลี่ยนมาใช้ email ที่ seed จริง
-    if err := db.Where("email = ?", "user@default.example.com").First(&customer).Error; err != nil {
-        return err
-    }
+	var (
+		branch   coreModels.Branch
+		service  bookingModels.Service
+		barber   bookingModels.Barber
+		customer bookingModels.Customer
+	)
 
-    // 2) กำหนดเวลานัดสำหรับวันพรุ่งนี้ 10:00–(10:00 + duration นาที)
-    tomorrow := time.Now().Add(24 * time.Hour)
-    start := time.Date(
-        tomorrow.Year(), tomorrow.Month(), tomorrow.Day(),
-        10, 0, 0, 0,
-        tomorrow.Location(),
-    )
-    // แปลง service.Duration (นาที) → time.Duration
-    end := start.Add(time.Duration(service.Duration) * time.Minute)
+	// 1) โหลดข้อมูลที่เกี่ยวข้อง
+	if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+		return err
+	}
+	if err := db.Where("name = ?", "Haircut").First(&service).Error; err != nil {
+		return err
+	}
+	if err := db.Where("branch_id = ?", branch.ID).First(&barber).Error; err != nil {
+		return err
+	}
+	if err := db.Where("email = ?", "somchai@example.com").First(&customer).Error; err != nil {
+		return err
+	}
 
-    // 3) สร้างหรืออัปเดต Appointment
-    record := bookingModels.Appointment{
-        BranchID:   branch.ID,
-        ServiceID:  service.ID,
-        BarberID:   &barber.ID,
-        CustomerID: customer.ID,
-        StartTime:  start,
-    }
-    attrs := bookingModels.Appointment{
-        EndTime: end,
-        Status:  "PENDING",
-        Notes:   "Seeded test appt",
-    }
-    return db.Where(record).
-        Assign(attrs).
-        FirstOrCreate(&record).Error
+	// 2) เตรียมเวลานัดหมาย
+	tomorrow := time.Now().Add(24 * time.Hour)
+	loc := time.Local
+
+	appointments := []bookingModels.Appointment{
+		{
+			BranchID:   branch.ID,
+			ServiceID:  service.ID,
+			BarberID:   &barber.ID,
+			CustomerID: customer.ID,
+			StartTime:  time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 0, 0, 0, loc),
+			EndTime:    time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 30, 0, 0, loc),
+			Status:     bookingModels.StatusPending,
+			Notes:      "Seeded pending appt",
+		},
+		{
+			BranchID:   branch.ID,
+			ServiceID:  service.ID,
+			BarberID:   &barber.ID,
+			CustomerID: customer.ID,
+			StartTime:  time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 30, 0, 0, loc),
+			EndTime:    time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 11, 0, 0, 0, loc),
+			Status:     bookingModels.StatusComplete,
+			Notes:      "Seeded completed appt",
+		},
+	}
+
+	for _, appt := range appointments {
+		record := bookingModels.Appointment{
+			BranchID:   appt.BranchID,
+			ServiceID:  appt.ServiceID,
+			BarberID:   appt.BarberID,
+			CustomerID: appt.CustomerID,
+			StartTime:  appt.StartTime,
+		}
+		if err := db.Where(record).Assign(appt).FirstOrCreate(&record).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
+
+

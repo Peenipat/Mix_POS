@@ -33,107 +33,154 @@ import (
 )
 
 func main() {
-    app := fiber.New()
+	app := fiber.New()
 
-    // Global middleware
-    app.Use(logger.New())
-    app.Use(cors.New(cors.Config{
-        AllowOrigins:     "http://localhost:5173",
-        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-        AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-        AllowCredentials: true,
-    }))
-    app.Use(recover.New())
-    app.Use(helmet.New())
-    app.Use(compress.New()) //บีบอัด response เพื่อลดขนาด
+	// Global middleware
+	app.Use(logger.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:5173",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowCredentials: true,
+	}))
+	app.Use(recover.New())
+	app.Use(helmet.New())
+	app.Use(compress.New()) //บีบอัด response เพื่อลดขนาด
 
-    // Connect & migrate
-    database.ConnectDB()
-    database.DB.AutoMigrate(
-        &coreModels.Role{},
-        &coreModels.Tenant{},
-        &coreModels.Branch{},
-        &coreModels.User{},
-        &coreModels.TenantUser{},
+	// Connect & migrate
+	database.ConnectDB()
+	database.DB.AutoMigrate(
+		// Core module: สร้างสิ่งที่เป็นรากก่อน
+		&coreModels.Tenant{},
+		&coreModels.Role{},
+		&coreModels.Module{},
+		&coreModels.Branch{},
+		&coreModels.User{},
+		&coreModels.TenantUser{},
+		&coreModels.TenantModule{},
 
-        &bookingModels.Service{},
-        &bookingModels.WorkingHour{},
-        &bookingModels.Unavailability{},
-        &bookingModels.Barber{},
-        &bookingModels.Appointment{},
-    )
+		// Booking module
+		&bookingModels.Customer{},
+		&bookingModels.Service{},
+		&bookingModels.WorkingHour{},
+		&bookingModels.Barber{},
+		&bookingModels.Unavailability{},
+		&bookingModels.Appointment{},
+		&bookingModels.AppointmentStatusLog{},
+		&bookingModels.AppointmentReview{},
+		&bookingModels.BarberWorkloads{},
+	)
 
-     // 1) Seed Roles
-     if err := seeds.SeedRoles(database.DB); err != nil {
-        log.Fatalf("failed to seed roles: %v", err)
-    }
-    // 2) Seed Tenants
-    if err := seeds.SeedTenants(database.DB); err != nil {
-        log.Fatalf("failed to seed tenants: %v", err)
-    }
-    // 3) Seed Branch
-    if err := seeds.SeedBranches(database.DB); err != nil {
-        log.Fatalf("seed branches failed: %v", err)
-    }
-    // 4) Seed User
-    if err := seeds.SeedUsers(database.DB); err != nil {
-        log.Fatalf("seed users failed: %v", err)
-    }
-    // 5) Seed TenantUsers
-    if err := seeds.SeedTenantUsers(database.DB); err != nil {
-        log.Fatalf("seed tenant_users failed: %v", err)
-    }
-    // 6) Seed Services
-    if err := seeds.SeedServices(database.DB); err != nil {
-        log.Fatalf("seed services failed: %v", err)
-    }
-    // 7) Seed WorkingHours
-    if err := seeds.SeedWorkingHours(database.DB); err != nil {
-        log.Fatalf("seed working hours failed: %v", err)
-    }
-     // 8) Seed Unavailabilities
-    if err := seeds.SeedUnavailabilities(database.DB); err != nil {
-        log.Fatalf("seed unavailabilities failed: %v", err)
-    }
-      // 9) Seed Barbers
-    if err := seeds.SeedBarbers(database.DB); err != nil {
-        log.Fatalf("seed barbers failed: %v", err)
-    }
-      // 10) Seed Appointments
-    if err := seeds.SeedAppointments(database.DB); err != nil {
-        log.Fatalf("seed appointments failed: %v", err)
-    }
+	// 1) Seed Tenants → เพื่อให้มี tenant ใช้ใน Role, Branch, User
+	if err := seeds.SeedTenants(database.DB); err != nil {
+		log.Fatalf("failed to seed tenants: %v", err)
+	}
 
-    // Initialize Services & Controllers
-    logSvc := services.NewSystemLogService(database.DB)
-    Core_controllers.InitSystemLogHandler(logSvc)
+	// 2) Seed Roles → ต้องใช้ TenantID (บาง role อาจเป็น per-tenant)
+	if err := seeds.SeedRoles(database.DB); err != nil {
+		log.Fatalf("failed to seed roles: %v", err)
+	}
 
-    authSvc := services.NewAuthService(database.DB, logSvc)
-    Core_controllers.InitAuthHandler(authSvc, logSvc)
+	// 3) Seed Modules → ระบบรองรับ feature ของ tenant (tenant_modules จะตามมาภายหลัง)
+	if err := seeds.SeedModules(database.DB); err != nil {
+		log.Fatalf("seed modules failed: %v", err)
+	}
 
-    // Routes
-    routes.SetupAuthRoutes(app)
-    admin.SetupAdminRoutes(app)
+	// 4) Seed Branches → ใช้ tenant_id
+	if err := seeds.SeedBranches(database.DB); err != nil {
+		log.Fatalf("seed branches failed: %v", err)
+	}
 
-    // Route api docs
-    app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	// 5) Seed Users → ใช้ role_id และ branch_id
+	if err := seeds.SeedUsers(database.DB); err != nil {
+		log.Fatalf("seed users failed: %v", err)
+	}
 
-    // ลง middleware rate limiter หลัง route เพื่อจำกัดความถี่
-    app.Use(limiter.New(limiter.Config{
-        Max:        100,
-        Expiration: 30 * time.Second,
-    }))
-    // ลอง deploy front-end 
-    // app.Use("/", filesystem.New(filesystem.Config{
-    //     Root:   http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"),
-    //     Browse: false,
-    //     Index:  "index.html",
-    // }))
+	// 6) Seed TenantUsers → ต้องมี tenant และ user
+	if err := seeds.SeedTenantUsers(database.DB); err != nil {
+		log.Fatalf("seed tenant_users failed: %v", err)
+	}
 
-    // Start server
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "3001"
-    }
-    log.Fatal(app.Listen(":" + port))
+	// 7) Seed Customers → เป็นลูกค้าจากภายนอก ไม่ต้องพึ่ง tenant_id
+	if err := seeds.SeedCustomers(database.DB); err != nil {
+		log.Fatalf("seed customers failed: %v", err)
+	}
+
+	// 8) Seed Services → ข้อมูลภายใน barber module
+	if err := seeds.SeedServices(database.DB); err != nil {
+		log.Fatalf("seed services failed: %v", err)
+	}
+
+	// 9) Seed WorkingHours → ต้องมี branch
+	if err := seeds.SeedWorkingHours(database.DB); err != nil {
+		log.Fatalf("seed working hours failed: %v", err)
+	}
+
+	// 10) Seed Unavailabilities → ต้องมี branch และ (optional) barber
+	if err := seeds.SeedUnavailabilities(database.DB); err != nil {
+		log.Fatalf("seed unavailabilities failed: %v", err)
+	}
+
+	// 11) Seed Barbers → ต้องมี branch และ user
+	if err := seeds.SeedBarbers(database.DB); err != nil {
+		log.Fatalf("seed barbers failed: %v", err)
+	}
+
+	// 12) Seed Appointments → ต้องมี branch, service, barber, customer
+	if err := seeds.SeedAppointments(database.DB); err != nil {
+		log.Fatalf("seed appointments failed: %v", err)
+	}
+
+	// 13) Seed Appointment Status Logs → ต้องมี appointment
+	if err := seeds.SeedAppointmentStatusLogs(database.DB); err != nil {
+		log.Fatalf("seed appointment status logs failed: %v", err)
+	}
+
+	// 14) Seed Appointment Reviews → ต้องมี appointment และ customer
+	if err := seeds.SeedAppointmentReviews(database.DB); err != nil {
+		log.Fatalf("seed appointment reviews failed: %v", err)
+	}
+
+	// 15) Seed Barber Workloads → ต้องมี barbers + appointments
+	if err := seeds.SeedBarberWorkloads(database.DB); err != nil {
+		log.Fatalf("seed barber workloads failed: %v", err)
+	}
+
+	// 16) Seed TenantModules
+	if err := seeds.SeedTenantModules(database.DB); err != nil {
+		log.Fatalf("seed tenant modules failed: %v", err)
+	}
+
+	// Initialize Services & Controllers
+	logSvc := services.NewSystemLogService(database.DB)
+	Core_controllers.InitSystemLogHandler(logSvc)
+
+	authSvc := services.NewAuthService(database.DB, logSvc)
+	Core_controllers.InitAuthHandler(authSvc, logSvc)
+
+	// Routes
+	routes.SetupAuthRoutes(app)
+	admin.SetupAdminRoutes(app)
+
+	// Route api docs
+	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+
+	// ลง middleware rate limiter หลัง route เพื่อจำกัดความถี่
+	app.Use(limiter.New(limiter.Config{
+		Max:        100,
+		Expiration: 30 * time.Second,
+	}))
+	// ลอง deploy front-end
+	// app.Use("/", filesystem.New(filesystem.Config{
+	//     Root:   http.Dir("/Users/nipatchapakdee/Mix_POS/frontend/dist"),
+	//     Browse: false,
+	//     Index:  "index.html",
+	// }))
+
+	// Start server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3001"
+	}
+	log.Fatal(app.Listen(":" + port))
 }

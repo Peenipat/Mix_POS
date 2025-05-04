@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS barber_workload (
+CREATE TABLE IF NOT EXISTS barber_workloads (
   id SERIAL PRIMARY KEY,
   barber_id INT NOT NULL,
   date DATE NOT NULL,
@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS barber_workload (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_barber_workload_unique
-  ON barber_workload(barber_id, date);
+  ON barber_workloads(barber_id, date);

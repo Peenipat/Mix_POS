@@ -30,13 +30,14 @@ func SeedBranches(db *gorm.DB) error {
             Name:     b.Name,
         }
         attrs := coreModels.Branch{
+            CreatedAt: now,
             UpdatedAt: now,
         }
-        if err := db.Where(record).
-            Assign(attrs).
-            FirstOrCreate(&record).Error; err != nil {
+        
+        if err := db.Unscoped().Where(record).Assign(attrs).FirstOrCreate(&record).Error; err != nil {
             return err
         }
+        
     }
     return nil
 }

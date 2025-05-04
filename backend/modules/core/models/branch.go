@@ -20,5 +20,4 @@ type Branch struct {
     // Relations (optional preload)
     Tenant    *Tenant        `gorm:"foreignKey:TenantID" json:"tenant,omitempty"`
     Users     []User         `gorm:"foreignKey:BranchID" json:"users,omitempty"`
-    // อนาคตสามารถเพิ่ม relation ไปยัง WorkingHour, Barber ฯลฯ ได้
 }

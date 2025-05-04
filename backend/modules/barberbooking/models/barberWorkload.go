@@ -2,7 +2,7 @@ package barberBookingModels
 import (
 	"time"
 )
-type BarberWorkload struct {
+type BarberWorkloads struct {
 	ID               uint      `gorm:"primaryKey" json:"id"`
 	BarberID         uint      `gorm:"not null;index:idx_barber_date,unique" json:"barber_id"`
 	Barber           Barber    `gorm:"foreignKey:BarberID" json:"barber,omitempty"`

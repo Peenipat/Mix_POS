@@ -1,9 +1,12 @@
 CREATE TABLE IF NOT EXISTS unavailabilities (
   id          SERIAL PRIMARY KEY,
-  barber_id   INT NULL,               -- ref: booking.barbers.id
-  branch_id   INT NULL,               -- ref: core.branches.id
-  date        DATE NOT NULL,          -- วันหยุด
+  barber_id   INT NULL,
+  branch_id   INT NULL,
+  date        DATE NOT NULL,
   reason      TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at  TIMESTAMPTZ                  -- soft‐delete timestamp
 
   -- ❌ ตัด FK ออกเพื่อไม่ผูกตายตัวกับโมดูลอื่น
   -- CONSTRAINT fk_unavailabilities_barber FOREIGN KEY (barber_id) REFERENCES barbers(id) ON DELETE SET NULL,

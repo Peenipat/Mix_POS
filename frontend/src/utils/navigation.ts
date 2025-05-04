@@ -9,6 +9,9 @@ export function navigateByRole(role: string | undefined, navigate: NavigateFunct
         case 'SAAS_SUPER_ADMIN':
             navigate('/admin/dashboard');
             break;
+        case 'TENANT':
+            navigate('/tenant/dashboard');
+            break;
         case 'BRANCH_ADMIN':
             navigate('/branch/dashboard');
             break;

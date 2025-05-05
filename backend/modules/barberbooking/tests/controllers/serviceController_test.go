@@ -5,8 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v4"
+	"net/http"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	// "strconv"
 	"testing"
@@ -14,6 +18,7 @@ import (
 	barberBookingControllers "myapp/modules/barberbooking/controllers"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingServices "myapp/modules/barberbooking/services"
+	// "myapp/middlewares"
 
 	"net/http/httptest"
 
@@ -66,7 +71,28 @@ func setupTestApp(mockSvc barberBookingServices.IServiceService) *fiber.App {
 		return controller.CreateService(c)
 	})
 
+	app.Put("/services/:id", func(c *fiber.Ctx) error {
+		// mock auth ด้วย header
+		role := c.Get("X-Mock-Role")
+		c.Locals("role", role)
+		return controller.UpdateService(c)
+	})
+
 	return app
+}
+
+func generateExpiredToken() string {
+	claims := jwt.MapClaims{
+		"user_id":   1,
+		"role":      "TENANT_ADMIN",
+		"tenant_id": 123,
+		"exp":       time.Now().Add(-1 * time.Hour).Unix(), // ❌ หมดอายุไปแล้ว
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	secret := os.Getenv("JWT_SECRET")
+	signed, _ := token.SignedString([]byte(secret))
+	return signed
 }
 
 func TestGetAllServices_Success(t *testing.T) {
@@ -165,7 +191,6 @@ func TestCreateService(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
 
-		
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 201, resp.StatusCode)
@@ -197,7 +222,7 @@ func TestCreateService(t *testing.T) {
 		assert.Equal(t, 403, resp.StatusCode) // หรือ 401 ขึ้นกับ middleware จริงของคุณ
 	})
 
-	// CASE 4: Invalid Input (duration = 0) 
+	// CASE 4: Invalid Input (duration = 0)
 	t.Run("CreateService_InvalidInput", func(t *testing.T) {
 		body := request{Name: "Invalid", Duration: 0, Price: 100}
 		reqBody, _ := json.Marshal(body)
@@ -210,14 +235,13 @@ func TestCreateService(t *testing.T) {
 		assert.Equal(t, 400, resp.StatusCode) // หรือ 422 แล้วแต่คุณจัดการ
 	})
 
-	// CASE 5: Service Layer Error DB ล่ม หรือไม่ก็ service api พัง 
+	// CASE 5: Service Layer Error DB ล่ม หรือไม่ก็ service api พัง
 	t.Run("CreateService_InternalError", func(t *testing.T) {
 		body := request{Name: "Massage", Duration: 30, Price: 500}
 		mockSvc.On("CreateService", mock.MatchedBy(func(arg interface{}) bool {
 			svc, ok := arg.(*barberBookingModels.Service)
 			return ok && svc.Name != ""
 		})).Return(errors.New("mock internal error")).Once()
-
 
 		reqBody, _ := json.Marshal(body)
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
@@ -236,7 +260,7 @@ func TestCreateService(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
@@ -248,7 +272,7 @@ func TestCreateService(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
@@ -260,7 +284,7 @@ func TestCreateService(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
@@ -273,7 +297,7 @@ func TestCreateService(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
@@ -286,7 +310,7 @@ func TestCreateService(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
@@ -297,18 +321,18 @@ func TestCreateService(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", "token=expired.jwt.token.here") // จำลอง token ที่หมดอายุ
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode) // หรือ 403 ขึ้นกับ middleware ของคุณ
 	})
 
-	//CASE 12: token แปลก ๆ 
+	//CASE 12: token แปลก ๆ
 	t.Run("CreateService_InvalidToken", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", "token=invalid.token") // จำลอง token ผิดโครงสร้าง
-	
+
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
@@ -317,25 +341,24 @@ func TestCreateService(t *testing.T) {
 	//CASE 13:จำลอง 20 คนสร้างพร้อมกัน
 	t.Run("CreateService_ConcurrentRequests", func(t *testing.T) {
 		var wg sync.WaitGroup
-	
+
 		for i := 0; i < 20; i++ {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
-	
+
 				// ✅ mock แยกในแต่ละ thread
 				mockSvc := new(MockService)
 				mockSvc.On("CreateService", mock.AnythingOfType("*barberBookingModels.Service")).Return(nil).Maybe()
 
-	
 				app := setupTestApp(mockSvc)
-	
+
 				body := request{Name: fmt.Sprintf("Service%d", index), Duration: 15, Price: 100}
 				reqBody, _ := json.Marshal(body)
 				req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 				resp, err := app.Test(req)
 				assert.NoError(t, err)
 				assert.Equal(t, 201, resp.StatusCode)
@@ -343,7 +366,267 @@ func TestCreateService(t *testing.T) {
 		}
 		wg.Wait()
 	})
+
+}
+
+func TestUpdateService(t *testing.T) {
+	mockSvc := new(MockService)
+	app := setupTestApp(mockSvc)
+
+	ctrl := barberBookingControllers.NewServiceController(mockSvc)
+	app.Put("/services/:id", ctrl.UpdateService)
+
+	type request struct {
+		Name     string `json:"name"`
+		Duration int    `json:"duration"`
+		Price    int    `json:"price"`
+	}
+
+	t.Run("UpdateService_Success_TenantAdmin", func(t *testing.T) {
+		svcID := uint(1)
+		body := request{Name: "New Name", Duration: 40, Price: 300}
+
+		// STEP 1: mock GetServiceByID
+		mockSvc.On("GetServiceByID", svcID).Return(&barberBookingModels.Service{
+			ID:       svcID,
+			Name:     "Old Name",
+			Duration: 30,
+			Price:    200,
+		}, nil).Once()
+
+		// STEP 2: mock UpdateService
+		mockSvc.On("UpdateService", svcID, mock.MatchedBy(func(arg interface{}) bool {
+			svc, ok := arg.(*barberBookingModels.Service)
+			return ok && svc.Name != ""
+		})).Return(&barberBookingModels.Service{
+			ID:       svcID,
+			Name:     "New Name",
+			Duration: 40,
+			Price:    300,
+		}, nil).Once()
+
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/services/%d", svcID), bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_Forbidden_RoleMismatch", func(t *testing.T) {
+		body := request{Name: "Haircut", Duration: 20, Price: 150}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "USER")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_Unauthorized_NoToken", func(t *testing.T) {
+		body := request{Name: "Haircut", Duration: 20, Price: 150}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_InvalidInput", func(t *testing.T) {
+		body := request{Name: "", Duration: 0, Price: -10}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_InternalError", func(t *testing.T) {
+		body := request{Name: "Massage", Duration: 30, Price: 500}
+
+		// 🔧 เพิ่ม mock สำหรับ GetServiceByID ด้วย
+		mockSvc.On("GetServiceByID", uint(1)).Return(&barberBookingModels.Service{
+			ID:       1,
+			Name:     "Old Name",
+			Duration: 20,
+			Price:    100,
+		}, nil).Maybe()
+
+		mockSvc.On("UpdateService", uint(1), mock.Anything).Return((*barberBookingModels.Service)(nil), errors.New("mock error")).Maybe()
+
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 500, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_EmptyName", func(t *testing.T) {
+		body := request{Name: " ", Duration: 20, Price: 100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_ZeroPrice", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: 20, Price: 0}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_NegativePrice", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: 20, Price: -100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_NegativeDuration", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: -5, Price: 100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_TooLongName", func(t *testing.T) {
+		body := request{Name: strings.Repeat("A", 200), Duration: 15, Price: 100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_InvalidIDFormat", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: 15, Price: 100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/abc", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_NotFound", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: 15, Price: 100}
+		mockSvc.On("GetServiceByID", mock.AnythingOfType("uint")).Return((*barberBookingModels.Service)(nil), errors.New("not found")).Maybe()
+
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/999", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 404, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_ExpiredToken", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: 15, Price: 100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(&http.Cookie{Name: "token", Value: generateExpiredToken()})
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_InvalidToken", func(t *testing.T) {
+		body := request{Name: "Cut", Duration: 15, Price: 100}
+		reqBody, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(&http.Cookie{Name: "token", Value: "bad_token"})
+
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("UpdateService_ConcurrentRequests", func(t *testing.T) {
+		var wg sync.WaitGroup
+	
+		for i := 0; i < 20; i++ {
+			wg.Add(1)
+			go func(index int) {
+				defer wg.Done()
+	
+				// 🔁 Create isolated mock service per goroutine
+				mockSvc := new(MockService)
+	
+				mockSvc.On("GetServiceByID", mock.AnythingOfType("uint")).Return(&barberBookingModels.Service{
+					ID:       1,
+					Name:     "Original",
+					Duration: 20,
+					Price:    100,
+				}, nil).Maybe()
+	
+				mockSvc.On("UpdateService", mock.AnythingOfType("uint"), mock.Anything).
+					Return(&barberBookingModels.Service{
+						ID:       1,
+						Name:     fmt.Sprintf("Service %d", index),
+						Duration: 30,
+						Price:    200,
+					}, nil).Maybe()
+	
+				app := setupTestApp(mockSvc)
+	
+				body := request{Name: fmt.Sprintf("Service %d", index), Duration: 30, Price: 200}
+				reqBody, _ := json.Marshal(body)
+	
+				req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
+	
+				resp, err := app.Test(req)
+				assert.NoError(t, err)
+				assert.Equal(t, 200, resp.StatusCode)
+			}(i)
+		}
+		wg.Wait()
+	})
 	
 	
 	
+
 }

@@ -88,7 +88,7 @@ func IsAuthorizedRole(role string, allowed []coreModels.RoleName) bool {
 }
 
 func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
-	// ✅ ตรวจสิทธิ์ผู้ใช้งาน
+	//  ตรวจสิทธิ์ผู้ใช้งาน
 	roleStr, ok := c.Locals("role").(string)
 	if !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -137,29 +137,27 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 	})
 }
 
-
 func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
-	// ✅ เช็คสิทธิ์ก่อน
-	role := c.Locals("role")
-	roleStr, ok := role.(string)
-	if !ok || (roleStr != string(coreModels.RoleNameTenant) && roleStr != string(coreModels.RoleNameTenantAdmin)) {
+	// 1. ตรวจสอบ role
+	roleStr, ok := c.Locals("role").(string)
+	if !ok || !IsAuthorizedRole(roleStr, RolesCanManageService) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Permission denied",
 		})
 	}
 
-	// ✅ แปลง id
+	// 2. อ่าน ID จาก path param
 	idParam := c.Params("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
+	serviceID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil || serviceID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid service ID",
 		})
 	}
 
-	// ✅ แปลง body
+	// 3. parse body
 	var payload barberBookingModels.Service
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -168,8 +166,31 @@ func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 		})
 	}
 
-	// ✅ เรียก service
-	updated, err := ctrl.ServiceService.UpdateService(uint(id), &payload)
+	// 4. validate
+	payload.Name = strings.TrimSpace(payload.Name)
+	if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid service input",
+		})
+	}
+
+	// 5. หา service เดิมก่อน (เผื่อไม่เจอ)
+	existingService, err := ctrl.ServiceService.GetServiceByID(uint(serviceID))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Service not found",
+		})
+	}
+
+	// 6. อัปเดตค่าจาก payload
+	existingService.Name = payload.Name
+	existingService.Duration = payload.Duration
+	existingService.Price = payload.Price
+
+	// 7. call service
+	updatedService, err := ctrl.ServiceService.UpdateService(uint(serviceID), existingService)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -178,10 +199,10 @@ func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(fiber.Map{
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "success",
 		"message": "Service updated",
-		"data":    updated,
+		"data":    updatedService,
 	})
 }
 

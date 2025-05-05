@@ -3,7 +3,7 @@ package Core_controllers
 import (
 	Core_authDto "myapp/modules/core/dto/auth"
 	Core_UserDto "myapp/modules/core/dto/user"
-	"myapp/modules/core/services"
+	coreServices "myapp/modules/core/services"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,7 +24,7 @@ func CreateUserFromRegister(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	err := services.CreateUserFromRegister(input)
+	err := coreServices.CreateUserFromRegister(input)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -49,7 +49,7 @@ func CreateUserFromAdmin(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	if err := services.CreateUserFromAdmin(input); err != nil {
+	if err := coreServices.CreateUserFromAdmin(input); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -78,7 +78,7 @@ func ChangeUserRole(c *fiber.Ctx) error {
 	}
 
 	// เรียกใช้ Service
-	if err := services.ChangeRoleFromAdmin(input); err != nil {
+	if err := coreServices.ChangeRoleFromAdmin(input); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -107,7 +107,7 @@ func GetAllUsers(c *fiber.Ctx) error {
 
 	offset := (page - 1) * limit
 
-	users, err := services.GetAllUsers(limit, offset)
+	users, err := coreServices.GetAllUsers(limit, offset)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch users"})
 	}
@@ -142,7 +142,7 @@ func FilterUsersByRole(c *fiber.Ctx) error {
 	}
 
 	// เรียก service ไปหาข้อมูล
-	users, err := services.FilterUsersByRole(role)
+	users, err := coreServices.FilterUsersByRole(role)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

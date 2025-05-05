@@ -29,7 +29,7 @@ import (
 	bookingServices "myapp/modules/barberbooking/services"
 	Core_controllers "myapp/modules/core/controllers"
 	"myapp/modules/core/models"
-	"myapp/modules/core/services"
+	coreServices "myapp/modules/core/services"
 	"myapp/routes"
 	"myapp/routes/admin"
 	"myapp/seeds"
@@ -155,10 +155,10 @@ func main() {
 	}
 
 	// Initialize Services & Controllers
-	logSvc := services.NewSystemLogService(database.DB)
+	logSvc := coreServices.NewSystemLogService(database.DB)
 	Core_controllers.InitSystemLogHandler(logSvc)
 
-	authSvc := services.NewAuthService(database.DB, logSvc)
+	authSvc := coreServices.NewAuthService(database.DB, logSvc)
 	Core_controllers.InitAuthHandler(authSvc, logSvc)
 
 	// === Barber Booking Module: Service Feature ===

@@ -1,5 +1,5 @@
 // services/auth_service.go
-package services
+package coreServices
 
 import (
     "context"

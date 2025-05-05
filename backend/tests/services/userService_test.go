@@ -6,7 +6,7 @@ import (
 	"myapp/modules/core/models"
 	Core_authDto "myapp/modules/core/dto/auth"
 	Core_userDto "myapp/modules/core/dto/user"
-	"myapp/modules/core/services"
+	coreServices "myapp/modules/core/services"
 	"myapp/tests"
 	"testing"
 
@@ -30,7 +30,7 @@ func Test_CreateUser_FromRegister_Success(t *testing.T) {
         Email:    "test@example.com",
         Password: "12345678",
     }
-    err := services.CreateUserFromRegister(input)
+    err := coreServices.CreateUserFromRegister(input)
     require.NoError(t, err)
 
     // 4) ดึง User จาก DB พร้อม preload Role เพื่อเช็คชื่อบทบาท
@@ -64,7 +64,7 @@ func Test_CreateUser_FromRegister_EmailAlreadyUsed(t *testing.T) {
 		Password: "12345678",
 	}
 
-	err := services.CreateUserFromRegister(input)
+	err := coreServices.CreateUserFromRegister(input)
 	assert.NotNil(t, err)
 	assert.Equal(t, "email already in use", err.Error())
 }
@@ -125,7 +125,7 @@ func Test_CreateUser_FromAdmin_Success(t *testing.T) {
     for _, tc := range testCases {
         t.Run(tc.name, func(t *testing.T) {
             // เรียก service
-            err := services.CreateUserFromAdmin(tc.input)
+            err := coreServices.CreateUserFromAdmin(tc.input)
             require.NoError(t, err)
 
             // โหลด User พร้อม preload Role
@@ -173,7 +173,7 @@ func Test_CreateUser_FromAdmin_InvalidRole(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := services.CreateUserFromAdmin(tc.input)
+			err := coreServices.CreateUserFromAdmin(tc.input)
 			assert.NotNil(t, err)
 			assert.Equal(t, tc.expectedErr, err.Error())
 		})
@@ -208,7 +208,7 @@ func Test_ChangeRole_FromAdmin_Success(t *testing.T) {
 		ID:   user.ID,
 		Role: string(coreModels.RoleNameStaff),
 	}
-	err := services.ChangeRoleFromAdmin(input)
+	err := coreServices.ChangeRoleFromAdmin(input)
 	require.NoError(t, err)
 
 	// 6) โหลด User ซ้ำพร้อม Preload(Role)
@@ -258,7 +258,7 @@ func Test_ChangeRole_FromAdmin_InvalidRole(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := services.ChangeRoleFromAdmin(tc.input)
+			err := coreServices.ChangeRoleFromAdmin(tc.input)
 			assert.NotNil(t, err)
 			assert.Equal(t, tc.expectedErr, err.Error())
 		})
@@ -284,7 +284,7 @@ func Test_GetAllUser_limitData(t *testing.T) {
 		db.Create(&u)
 	}
 	// call service
-	result, err := services.GetAllUsers(3, 0)
+	result, err := coreServices.GetAllUsers(3, 0)
 
 	// check
 	assert.Nil(t, err)

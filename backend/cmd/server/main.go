@@ -79,14 +79,14 @@ func main() {
 		log.Fatalf("failed to seed tenants: %v", err)
 	}
 
-	// 2) Seed Roles → ต้องใช้ TenantID (บาง role อาจเป็น per-tenant)
-	if err := seeds.SeedRoles(database.DB); err != nil {
-		log.Fatalf("failed to seed roles: %v", err)
-	}
-
-	// 3) Seed Modules → ระบบรองรับ feature ของ tenant (tenant_modules จะตามมาภายหลัง)
+	// 2) Seed Modules → ระบบรองรับ feature ของ tenant (tenant_modules จะตามมาภายหลัง)
 	if err := seeds.SeedModules(database.DB); err != nil {
 		log.Fatalf("seed modules failed: %v", err)
+	}
+
+	// 3) Seed Roles → ต้องใช้ TenantID (บาง role อาจเป็น per-tenant)
+	if err := seeds.SeedRoles(database.DB); err != nil {
+		log.Fatalf("failed to seed roles: %v", err)
 	}
 
 	// 4) Seed Branches → ใช้ tenant_id

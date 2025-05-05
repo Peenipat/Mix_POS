@@ -13,6 +13,8 @@ func RequireTenant() fiber.Handler {
 				"message": "Permission denied: tenant access required",
 			})
 		}
+
+		
 		return c.Next()
 	}
 }

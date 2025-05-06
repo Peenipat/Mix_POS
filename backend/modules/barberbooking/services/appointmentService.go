@@ -148,6 +148,70 @@ func (s *appointmentService) GetAvailableBarbers(ctx context.Context, tenantID, 
 	return barbers, err
 }
 
+func (s *appointmentService) UpdateAppointment(ctx context.Context, id uint, tenantID uint, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error) {
+	if input == nil {
+		return nil, errors.New("input appointment data is required")
+	}
+
+	var ap barberBookingModels.Appointment
+	tx := s.DB.WithContext(ctx)
+
+	//  ดึง appointment เดิมมา
+	if err := tx.Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", id, tenantID).First(&ap).Error; err != nil {
+		return nil, fmt.Errorf("appointment not found")
+	}
+
+	//  ตรวจสอบว่า service ใหม่ถูกต้อง (ถ้ามีการแก้)
+	if input.ServiceID != 0 && input.ServiceID != ap.ServiceID {
+		var svc barberBookingModels.Service
+		if err := tx.Where("id = ? AND tenant_id = ?", input.ServiceID, tenantID).First(&svc).Error; err != nil {
+			return nil, fmt.Errorf("service not found or access denied")
+		}
+		if svc.Duration <= 0 {
+			return nil, fmt.Errorf("duration must be > 0")
+		}
+		ap.ServiceID = input.ServiceID
+		ap.EndTime = input.StartTime.Add(time.Duration(svc.Duration) * time.Minute)
+	}
+
+	//  ตรวจสอบ barber ใหม่ (ถ้ามีการเปลี่ยน)
+	if input.BarberID != nil {
+		var barber barberBookingModels.Barber
+		if err := tx.Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", *input.BarberID, tenantID).First(&barber).Error; err != nil {
+			return nil, fmt.Errorf("barber not found or access denied")
+		}
+		if input.BranchID != 0 && barber.BranchID != input.BranchID {
+			return nil, fmt.Errorf("barber mismatched branch")
+		}
+
+		available, err := s.checkBarberAvailabilityTx(tx, tenantID, *input.BarberID, input.StartTime, ap.EndTime)
+		if err != nil {
+			return nil, fmt.Errorf("check barber availability failed: %w", err)
+		}
+		if !available {
+			return nil, fmt.Errorf("barber is not available during this time")
+		}
+		ap.BarberID = input.BarberID
+	}
+
+	//  อัปเดตฟิลด์ทั่วไป
+	if !input.StartTime.IsZero() {
+		ap.StartTime = input.StartTime
+	}
+	if input.Status != "" {
+		ap.Status = input.Status
+	}
+	ap.UpdatedAt = time.Now()
+
+	//  Save
+	if err := tx.Save(&ap).Error; err != nil {
+		return nil, fmt.Errorf("failed to update appointment: %w", err)
+	}
+
+	return &ap, nil
+}
+
+
 
 
 

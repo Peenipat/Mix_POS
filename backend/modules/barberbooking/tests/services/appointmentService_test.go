@@ -628,4 +628,85 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.NotContains(t, barbers, barberID)
 	})
 
+	t.Run("UpdateAppointment_Success", func(t *testing.T) {
+		// สร้างนัดหมายเดิม
+		start := time.Now().Add(1 * time.Hour)
+		end := start.Add(30 * time.Minute)
+		ap := barberBookingModels.Appointment{
+			TenantID:   tenantID,
+			ServiceID:  serviceID,
+			CustomerID: customerID,
+			StartTime:  start,
+			EndTime:    end,
+			Status:     barberBookingModels.StatusPending,
+		}
+		err := db.Create(&ap).Error
+		assert.NoError(t, err)
+	
+		// ข้อมูลใหม่
+		newStart := start.Add(1 * time.Hour)
+		updateInput := &barberBookingModels.Appointment{
+			StartTime: newStart,
+			Status:    barberBookingModels.StatusConfirmed,
+		}
+	
+		// เรียกอัปเดต
+		updated, err := svc.UpdateAppointment(ctx, ap.ID, tenantID, updateInput)
+		assert.NoError(t, err)
+		assert.Equal(t, newStart, updated.StartTime)
+		assert.Equal(t, barberBookingModels.StatusConfirmed, updated.Status)
+	})
+	
+	t.Run("UpdateAppointment_NotFound_ShouldFail", func(t *testing.T) {
+		updateInput := &barberBookingModels.Appointment{
+			Status: barberBookingModels.StatusConfirmed,
+		}
+		_, err := svc.UpdateAppointment(ctx, 99999, tenantID, updateInput)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "appointment not found")
+	})
+	
+	t.Run("UpdateAppointment_BarberUnavailable_ShouldFail", func(t *testing.T) {
+		// สร้าง barber ใหม่
+		barberID := uint(8888)
+		db.Create(&barberBookingModels.Barber{
+			ID:       barberID,
+			TenantID: tenantID,
+			BranchID: 1,
+			UserID:   8888,
+		})
+	
+		// สร้างนัดที่ชนกัน
+		start := time.Now().Add(4 * time.Hour)
+		end := start.Add(30 * time.Minute)
+		db.Create(&barberBookingModels.Appointment{
+			TenantID:   tenantID,
+			ServiceID:  serviceID,
+			CustomerID: customerID,
+			BarberID:   &barberID,
+			StartTime:  start,
+			EndTime:    end,
+			Status:     barberBookingModels.StatusConfirmed,
+		})
+	
+		// สร้างอีกนัด
+		ap := barberBookingModels.Appointment{
+			TenantID:   tenantID,
+			ServiceID:  serviceID,
+			CustomerID: customerID,
+			StartTime:  start.Add(1 * time.Hour),
+			EndTime:    start.Add(1*time.Hour + 30*time.Minute),
+		}
+		db.Create(&ap)
+	
+		// พยายามอัปเดตให้นัดนั้นใช้ barber เดิมที่ไม่ว่าง
+		updateInput := &barberBookingModels.Appointment{
+			BarberID: &barberID,
+			StartTime: start,
+		}
+		_, err := svc.UpdateAppointment(ctx, ap.ID, tenantID, updateInput)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not available")
+	})
+
 }

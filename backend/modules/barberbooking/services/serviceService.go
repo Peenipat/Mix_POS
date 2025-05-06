@@ -18,10 +18,10 @@ func NewServiceService(db *gorm.DB) *ServiceService {
 
 func validateServiceInput(svc *barberBookingModels.Service) error {
 	if len(svc.Name) < 2 || len(svc.Name) > 100 {
-		return errors.New("name must be 2–100 characters")
+		return errors.New("name must be 2 - 100 characters")
 	}
 	if svc.Duration <= 0 || svc.Duration > 240 {
-		return errors.New("duration must be 1–240 minutes")
+		return errors.New("duration must be 1 - 240 minutes")
 	}
 	if svc.Price < 0 || svc.Price > 100000 {
 		return errors.New("price must be between 0 and 100,000")

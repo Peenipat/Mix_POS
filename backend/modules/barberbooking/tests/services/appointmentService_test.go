@@ -470,4 +470,74 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Equal(t, 1, failureCount, "Exactly one request should fail due to conflict")
 	})
 
+	t.Run("CheckBarberAvailability_Available", func(t *testing.T) {
+		ctx := context.Background()
+
+		start := time.Now().Add(15 * time.Hour)
+		end := start.Add(30 * time.Minute)
+
+		// ไม่มีการจองคิวซ้อน → ต้องว่าง
+		available, err := svc.CheckBarberAvailability(ctx, tenantID, barberID, start, end)
+		assert.NoError(t, err)
+		assert.True(t, available)
+	})
+
+	t.Run("CheckBarberAvailability_Overlap_ShouldReturnFalse", func(t *testing.T) {
+		ctx := context.Background()
+
+		// สร้างคิวที่ block เวลาไว้ก่อน
+		start := time.Now().Add(16 * time.Hour)
+		end := start.Add(30 * time.Minute)
+		_ = db.Create(&barberBookingModels.Appointment{
+			TenantID:   tenantID,
+			ServiceID:  serviceID,
+			CustomerID: customerID,
+			BarberID:   &barberID,
+			StartTime:  start,
+			EndTime:    end,
+			Status:     barberBookingModels.StatusConfirmed,
+		})
+
+		// ลองเช็ค availability ที่ซ้อนกับคิวนี้
+		conflictStart := start.Add(10 * time.Minute)
+		conflictEnd := conflictStart.Add(30 * time.Minute)
+
+		available, err := svc.CheckBarberAvailability(ctx, tenantID, barberID, conflictStart, conflictEnd)
+		assert.NoError(t, err)
+		assert.False(t, available)
+	})
+
+	t.Run("CheckBarberAvailability_WithCompletedAppointment_ShouldReturnTrue", func(t *testing.T) {
+		ctx := context.Background()
+
+		start := time.Now().Add(17 * time.Hour)
+		end := start.Add(30 * time.Minute)
+
+		// เพิ่มคิวสถานะ completed → ไม่ควร block เวลา
+		_ = db.Create(&barberBookingModels.Appointment{
+			TenantID:   tenantID,
+			ServiceID:  serviceID,
+			CustomerID: customerID,
+			BarberID:   &barberID,
+			StartTime:  start,
+			EndTime:    end,
+			Status:     barberBookingModels.StatusComplete,
+		})
+
+		available, err := svc.CheckBarberAvailability(ctx, tenantID, barberID, start, end)
+		assert.NoError(t, err)
+		assert.True(t, available)
+	})
+	t.Run("CheckBarberAvailability_BarberNotFound_ShouldReturnFalse", func(t *testing.T) {
+		ctx := context.Background()
+		start := time.Now().Add(18 * time.Hour)
+		end := start.Add(30 * time.Minute)
+
+		available, err := svc.CheckBarberAvailability(ctx, 999, 999, start, end)
+		assert.NoError(t, err)
+		assert.False(t, available)
+	})
+
+
+
 }

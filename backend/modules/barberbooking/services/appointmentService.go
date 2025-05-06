@@ -18,22 +18,37 @@ func NewAppointmentService(db *gorm.DB) *appointmentService {
 	return &appointmentService{DB: db}
 }
 
+// checkBarberAvailabilityTx...
 func (s *appointmentService) checkBarberAvailabilityTx(tx *gorm.DB, tenantID, barberID uint, start, end time.Time) (bool, error) {
+	var barber barberBookingModels.Barber
+	if err := tx.Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", barberID, tenantID).
+		First(&barber).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil // ❗️ไม่เจอ barber = ไม่ว่าง
+		}
+		return false, err // error อื่น ๆ
+	}
+
+	// ตรวจสอบว่า barber มีการจองคิวช่วงเวลานี้หรือไม่
 	var count int64
 	err := tx.Model(&barberBookingModels.Appointment{}).
-		Where("tenant_id = ? AND barber_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
-			tenantID, barberID,
-			[]barberBookingModels.AppointmentStatus{
-				barberBookingModels.StatusPending,
-				barberBookingModels.StatusConfirmed,
-			},
-			end, start,
-		).Count(&count).Error
+		Where("tenant_id = ? AND barber_id = ? AND status IN ? AND deleted_at IS NULL", tenantID, barberID,
+			[]string{
+				string(barberBookingModels.StatusPending), 
+				string(barberBookingModels.StatusConfirmed)}).
+		Where("start_time < ? AND end_time > ?", end, start).
+		Count(&count).Error
 
 	if err != nil {
-		return false, fmt.Errorf("failed to check barber availability: %w", err)
+		return false, err
 	}
 	return count == 0, nil
+}
+
+
+func (s *appointmentService) CheckBarberAvailability(ctx context.Context, tenantID, barberID uint, start, end time.Time) (bool, error) {
+    tx := s.DB.WithContext(ctx)
+    return s.checkBarberAvailabilityTx(tx, tenantID, barberID, start, end)
 }
 
 func (s *appointmentService) CreateAppointment(ctx context.Context, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error) {

@@ -120,3 +120,34 @@ func (s *appointmentService) CreateAppointment(ctx context.Context, input *barbe
 
 	return result, err
 }
+
+func (s *appointmentService) GetAvailableBarbers(ctx context.Context, tenantID, branchID uint, start, end time.Time) ([]barberBookingModels.Barber, error) {
+	var barbers []barberBookingModels.Barber
+
+	activeStatuses := []barberBookingModels.AppointmentStatus{
+		barberBookingModels.StatusPending,
+		barberBookingModels.StatusConfirmed,
+		barberBookingModels.StatusRescheduled,
+	}
+
+	tx := s.DB.WithContext(ctx)
+
+	subQuery := tx.Model(&barberBookingModels.Appointment{}).
+		Select("barber_id").
+		Where(`
+			tenant_id = ?
+			AND barber_id IS NOT NULL
+			AND status IN ?
+			AND NOT (end_time <= ? OR start_time >= ?)
+		`, tenantID, activeStatuses, start, end)
+
+	err := tx.Model(&barberBookingModels.Barber{}).
+		Where("tenant_id = ? AND branch_id = ? AND id NOT IN (?)", tenantID, branchID, subQuery).
+		Find(&barbers).Error
+
+	return barbers, err
+}
+
+
+
+

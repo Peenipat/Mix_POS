@@ -397,12 +397,12 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		ctx := context.Background()
 		start := time.Now().Add(2 * time.Hour)
 
-		// ✅ Restore service ID = 1 (ถ้าเคย soft-delete)
+		// Restore service ID = 1 (ถ้าเคย soft-delete)
 		db.Unscoped().Model(&barberBookingModels.Service{}).
 			Where("id = ?", serviceID).
 			Update("deleted_at", nil)
 
-		// ✅ สร้าง barber ใหม่พร้อม userID ที่ไม่ซ้ำ
+		// สร้าง barber ใหม่พร้อม userID ที่ไม่ซ้ำ
 		barberID := uint(5001)
 		err := db.Create(&barberBookingModels.Barber{
 			ID:       barberID,
@@ -538,6 +538,94 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.False(t, available)
 	})
 
+	t.Run("GetAvailableBarbers_ShouldReturnOnlyAvailable", func(t *testing.T) {
+		start := time.Now().Add(1 * time.Hour)
+		end := start.Add(30 * time.Minute)
+		branchID := uint(1)
+		db.Exec("DELETE FROM appointments")
+		db.Exec("DELETE FROM barbers")
 
+		// เตรียม barber A และ B
+		barberA := barberBookingModels.Barber{
+			ID:       1001,
+			BranchID: branchID,
+			UserID:   7001,
+			TenantID: tenantID,
+		}
+		barberB := barberBookingModels.Barber{
+			ID:       1002,
+			BranchID: branchID,
+			UserID:   7002,
+			TenantID: tenantID,
+		}
+		_ = db.Create(&barberA)
+		_ = db.Create(&barberB)
+
+		// สร้าง appointment ซ้อนเวลาของ barber A
+		_ = db.Create(&barberBookingModels.Appointment{
+			TenantID:   tenantID,
+			ServiceID:  serviceID,
+			CustomerID: customerID,
+			BarberID:   &barberA.ID,
+			StartTime:  start,
+			EndTime:    end,
+			Status:     barberBookingModels.StatusConfirmed,
+		})
+
+		// ทดสอบ GetAvailableBarbers
+		available, err := svc.GetAvailableBarbers(ctx, tenantID, branchID, start, end)
+		assert.NoError(t, err)
+
+		// ควรได้เฉพาะ barberB
+		assert.Len(t, available, 1)
+		assert.Equal(t, barberB.ID, available[0].ID)
+	})
+	//  
+
+	// t.Run("GetAvailableBarbers_CompletedAppointment_ShouldNotBlock", func(t *testing.T) {
+	// 	start := time.Now().Add(3 * time.Hour)
+	// 	end := start.Add(30 * time.Minute)
+
+	// 	barberID := uint(8001)
+	// 	_ = db.Create(&barberBookingModels.Barber{
+	// 		ID:       barberID,
+	// 		UserID:   barberID,
+	// 		BranchID: 1,
+	// 		TenantID: tenantID,
+	// 	})
+
+	// 	// มีคิวซ้อน แต่เป็น COMPLETED
+	// 	_ = db.Create(&barberBookingModels.Appointment{
+	// 		TenantID:   tenantID,
+	// 		ServiceID:  serviceID,
+	// 		CustomerID: customerID,
+	// 		BarberID:   &barberID,
+	// 		StartTime:  start,
+	// 		EndTime:    end,
+	// 		Status:     barberBookingModels.StatusComplete, // ไม่ควร block
+	// 	})
+
+	// 	barbers, err := svc.GetAvailableBarbers(ctx, tenantID, 1, start, end)
+	// 	assert.NoError(t, err)
+	// 	assert.Len(t, barbers, 1)
+	// 	assert.Equal(t, barberID, barbers[0].ID)
+	// })
+
+	t.Run("GetAvailableBarbers_AnotherTenant_ShouldNotReturn", func(t *testing.T) {
+		start := time.Now().Add(4 * time.Hour)
+		end := start.Add(30 * time.Minute)
+
+		barberID := uint(9001)
+		_ = db.Create(&barberBookingModels.Barber{
+			ID:       barberID,
+			UserID:   barberID,
+			BranchID: 1,
+			TenantID: 999, //  Tenant อื่น
+		})
+
+		barbers, err := svc.GetAvailableBarbers(ctx, tenantID, 1, start, end)
+		assert.NoError(t, err)
+		assert.NotContains(t, barbers, barberID)
+	})
 
 }

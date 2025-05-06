@@ -20,7 +20,7 @@ func NewBarberService(db *gorm.DB) *BarberService {
 
 // CreateBarber creates a new barber
 func (s *BarberService) CreateBarber(ctx context.Context, barber *barberBookingModels.Barber) error {
-	// Validation
+	// Validation ID
 	if barber.BranchID == 0 {
 		return fmt.Errorf("branch_id is required")
 	}
@@ -28,15 +28,16 @@ func (s *BarberService) CreateBarber(ctx context.Context, barber *barberBookingM
 		return fmt.Errorf("user_id is required")
 	}
 
+
 	// ลบ record เดิมที่ถูก soft-delete ไปแล้ว (ถ้ามี user_id เดิม)
 	var existing barberBookingModels.Barber
 	err := s.DB.WithContext(ctx).
-		Unscoped().
+		Unscoped(). // (return DeleteAt != nil)
 		Where("user_id = ?", barber.UserID).
 		First(&existing).Error
 
 	if err == nil && existing.DeletedAt.Valid {
-		// ถ้ามีและถูก soft-delete → ลบทิ้งจริงก่อน
+		// ถ้ามีและถูก soft-delete → ลบทิ้งจริงก่อน (hard delete)
 		if err := s.DB.WithContext(ctx).Unscoped().Delete(&existing).Error; err != nil {
 			return fmt.Errorf("failed to purge existing deleted barber: %w", err)
 		}

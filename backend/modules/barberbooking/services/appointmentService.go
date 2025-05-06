@@ -14,6 +14,8 @@ type appointmentService struct {
 	DB *gorm.DB
 }
 
+
+
 func NewAppointmentService(db *gorm.DB) *appointmentService {
 	return &appointmentService{DB: db}
 }
@@ -34,7 +36,7 @@ func (s *appointmentService) checkBarberAvailabilityTx(tx *gorm.DB, tenantID, ba
 	err := tx.Model(&barberBookingModels.Appointment{}).
 		Where("tenant_id = ? AND barber_id = ? AND status IN ? AND deleted_at IS NULL", tenantID, barberID,
 			[]string{
-				string(barberBookingModels.StatusPending), 
+				string(barberBookingModels.StatusPending),
 				string(barberBookingModels.StatusConfirmed)}).
 		Where("start_time < ? AND end_time > ?", end, start).
 		Count(&count).Error
@@ -45,10 +47,9 @@ func (s *appointmentService) checkBarberAvailabilityTx(tx *gorm.DB, tenantID, ba
 	return count == 0, nil
 }
 
-
 func (s *appointmentService) CheckBarberAvailability(ctx context.Context, tenantID, barberID uint, start, end time.Time) (bool, error) {
-    tx := s.DB.WithContext(ctx)
-    return s.checkBarberAvailabilityTx(tx, tenantID, barberID, start, end)
+	tx := s.DB.WithContext(ctx)
+	return s.checkBarberAvailabilityTx(tx, tenantID, barberID, start, end)
 }
 
 func (s *appointmentService) CreateAppointment(ctx context.Context, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error) {
@@ -79,7 +80,6 @@ func (s *appointmentService) CreateAppointment(ctx context.Context, input *barbe
 		endTime := startTime.Add(time.Duration(service.Duration) * time.Minute)
 		input.EndTime = endTime
 
-		
 		// 3. ถ้ามี barber → ตรวจสอบ availability
 		if input.BarberID != nil {
 			// ตรวจสอบ barber และ branch
@@ -91,7 +91,7 @@ func (s *appointmentService) CreateAppointment(ctx context.Context, input *barbe
 			if barber.BranchID != input.BranchID {
 				return fmt.Errorf("barber not found or mismatched branch")
 			}
-		
+
 			// ตรวจสอบ availability
 			available, err := s.checkBarberAvailabilityTx(tx, input.TenantID, *input.BarberID, startTime, endTime)
 			if err != nil {
@@ -101,7 +101,6 @@ func (s *appointmentService) CreateAppointment(ctx context.Context, input *barbe
 				return fmt.Errorf("barber is not available during this time")
 			}
 		}
-		
 
 		// 4. ตั้งค่าข้อมูลและสร้าง appointment
 		if input.Status == "" {
@@ -211,7 +210,18 @@ func (s *appointmentService) UpdateAppointment(ctx context.Context, id uint, ten
 	return &ap, nil
 }
 
+func (s *appointmentService) GetByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error) {
+    var appt barberBookingModels.Appointment
+    // ดึงเฉพาะเรคคอร์ดที่ยังไม่ถูกลบ (deleted_at IS NULL)
+    err := s.DB.WithContext(ctx).
+        Where("id = ? AND deleted_at IS NULL", id).
+        First(&appt).Error
 
-
-
-
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, fmt.Errorf("appointment with ID %d not found", id)
+        }
+        return nil, fmt.Errorf("failed to fetch appointment: %w", err)
+    }
+    return &appt, nil
+}

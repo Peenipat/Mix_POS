@@ -43,6 +43,7 @@ func SeedAppointments(db *gorm.DB) error {
 			ServiceID:  service.ID,
 			BarberID:   &barber.ID,
 			CustomerID: customer.ID,
+			TenantID:	1,
 			StartTime:  time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 0, 0, 0, loc),
 			EndTime:    time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 30, 0, 0, loc),
 			Status:     bookingModels.StatusPending,
@@ -53,6 +54,7 @@ func SeedAppointments(db *gorm.DB) error {
 			ServiceID:  service.ID,
 			BarberID:   &barber.ID,
 			CustomerID: customer.ID,
+			TenantID:	1,
 			StartTime:  time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 30, 0, 0, loc),
 			EndTime:    time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 11, 0, 0, 0, loc),
 			Status:     bookingModels.StatusComplete,
@@ -66,6 +68,7 @@ func SeedAppointments(db *gorm.DB) error {
 			ServiceID:  appt.ServiceID,
 			BarberID:   appt.BarberID,
 			CustomerID: appt.CustomerID,
+			TenantID:	appt.TenantID,
 			StartTime:  appt.StartTime,
 		}
 		if err := db.Where(record).Assign(appt).FirstOrCreate(&record).Error; err != nil {

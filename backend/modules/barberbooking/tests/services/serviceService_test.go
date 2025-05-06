@@ -1,4 +1,4 @@
-package barberbookingtestService
+package barberbookingServiceTest
 
 import (
 	"testing"

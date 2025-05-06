@@ -52,6 +52,10 @@ func main() {
 
 	// Connect & migrate
 	database.ConnectDB()
+	if database.DB == nil {
+		log.Fatal("❌ GORM DB is nil. Cannot proceed.")
+	}
+	
 	database.DB.AutoMigrate(
 		// Core module: สร้างสิ่งที่เป็นรากก่อน
 		&coreModels.Tenant{},
@@ -104,8 +108,9 @@ func main() {
 		log.Fatalf("seed tenant_users failed: %v", err)
 	}
 
+	tenantID := uint(1)
 	// 7) Seed Customers → เป็นลูกค้าจากภายนอก ไม่ต้องพึ่ง tenant_id
-	if err := seeds.SeedCustomers(database.DB); err != nil {
+	if err := seeds.SeedCustomers(database.DB,tenantID); err != nil {
 		log.Fatalf("seed customers failed: %v", err)
 	}
 

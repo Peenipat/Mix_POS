@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS barbers (
   id          SERIAL         PRIMARY KEY,               -- รหัสอัตโนมัติ
   branch_id   INT            NOT NULL,                  -- FK ไปยัง branches.id
   user_id     INT            NOT NULL UNIQUE,           -- FK ไปยัง users.id (ผูก 1:1 กับบัญชีผู้ใช้)
+  tenant_id   INT            NOT NULL, 
   created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่สร้างแถว
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่แก้ไขล่าสุด
   deleted_at  TIMESTAMPTZ    NULL,                      -- soft‐delete timestamp

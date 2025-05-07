@@ -75,7 +75,7 @@ func main() {
 		&bookingModels.Appointment{},
 		&bookingModels.AppointmentStatusLog{},
 		&bookingModels.AppointmentReview{},
-		&bookingModels.BarberWorkloads{},
+		&bookingModels.BarberWorkload{},
 	)
 
 	// 1) Seed Tenants → เพื่อให้มี tenant ใช้ใน Role, Branch, User

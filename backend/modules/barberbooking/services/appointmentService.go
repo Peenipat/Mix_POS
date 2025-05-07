@@ -357,5 +357,44 @@ func (s *appointmentService) RescheduleAppointment( ctx context.Context,appointm
 	return s.DB.WithContext(ctx).Save(&ap).Error
 }
 
+func (s *appointmentService) CalculateAppointmentEndTime(ctx context.Context, serviceID uint, startTime time.Time) (time.Time, error) {
+    var service barberBookingModels.Service
+    err := s.DB.WithContext(ctx).First(&service, serviceID).Error
+    if err != nil {
+        return time.Time{}, err
+    }
+
+	if service.Duration < 0 {
+		return time.Time{}, fmt.Errorf("invalid service duration")
+	}
+
+    duration := time.Duration(service.Duration) * time.Minute
+    endTime := startTime.Add(duration)
+    return endTime, nil
+}
+
+func (s *appointmentService) GetAppointmentsByBarber(ctx context.Context, barberID uint, start *time.Time, end *time.Time) ([]barberBookingModels.Appointment, error) {
+	var appointments []barberBookingModels.Appointment
+
+	query := s.DB.WithContext(ctx).Model(&barberBookingModels.Appointment{}).
+		Where("barber_id = ?", barberID)
+
+	if start != nil {
+		query = query.Where("start_time >= ?", *start)
+	}
+	if end != nil {
+		query = query.Where("end_time <= ?", *end)
+	}
+
+	err := query.Order("start_time ASC").Find(&appointments).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return appointments, nil
+}
+
+
+
 
 

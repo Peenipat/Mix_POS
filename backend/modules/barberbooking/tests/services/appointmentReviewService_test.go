@@ -331,7 +331,7 @@ func TestAppointmentReviewService_CRUD(t *testing.T) {
 			Comment:       "to be deleted",
 		}
 		err := db.Create(&review).Error
-		assert.NoError(t, err) // ✅ ป้องกัน ID = 0
+		assert.NoError(t, err) // ป้องกัน ID = 0
 
 		// 🔥 ทดสอบลบโดย user ผิด
 		err = svc.DeleteReview(ctx, review.ID, 9999, string(coreModels.RoleNameUser))
@@ -379,7 +379,7 @@ func TestAppointmentReviewService_CRUD(t *testing.T) {
 		assert.NoError(t, err)
 
 		review := barberBookingModels.AppointmentReview{
-			AppointmentID: ap.ID, // ✅ ไม่ใช้เลขเดา 888
+			AppointmentID: ap.ID, 
 			CustomerID:    ptrUint(1),
 			Rating:        5,
 			Comment:       "unknown role จะลบ",
@@ -392,4 +392,79 @@ func TestAppointmentReviewService_CRUD(t *testing.T) {
 		assert.Contains(t, err.Error(), "not authorized")
 	})
 
+	t.Run("GetAverageRatingByBarber_Success", func(t *testing.T) {
+        barberID := uint(1)
+    
+        // Seed barber 
+        barber := barberBookingModels.Barber{
+            ID:       barberID,
+            BranchID: 1,
+            TenantID: 1,
+            UserID:   101, // สมมุติ ID ผู้ใช้
+        }
+        err := db.Create(&barber).Error
+        assert.NoError(t, err)
+    
+        // Appointment 1
+        ap1 := barberBookingModels.Appointment{
+            BranchID:   1,
+            TenantID:   1,
+            ServiceID:  1,
+            CustomerID: 1,
+            BarberID:   &barberID,
+            StartTime:  time.Now().Add(1 * time.Hour),
+            EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
+            Status:     barberBookingModels.StatusComplete,
+        }
+        err = db.Create(&ap1).Error
+        assert.NoError(t, err)
+        assert.NotZero(t, ap1.ID)
+    
+        //  Review 1
+        rv1 := barberBookingModels.AppointmentReview{
+            AppointmentID: ap1.ID,
+            CustomerID:    ptrUint(1),
+            Rating:        4,
+            Comment:       "ดี",
+        }
+        assert.NoError(t, db.Create(&rv1).Error)
+    
+        //  Appointment 2
+        ap2 := barberBookingModels.Appointment{
+            BranchID:   1,
+            TenantID:   1,
+            ServiceID:  1,
+            CustomerID: 1,
+            BarberID:   &barberID,
+            StartTime:  time.Now().Add(2 * time.Hour),
+            EndTime:    time.Now().Add(2*time.Hour + 30*time.Minute),
+            Status:     barberBookingModels.StatusComplete,
+        }
+        err = db.Create(&ap2).Error
+        assert.NoError(t, err)
+        assert.NotZero(t, ap2.ID)
+    
+        //  Review 2
+        rv2 := barberBookingModels.AppointmentReview{
+            AppointmentID: ap2.ID,
+            CustomerID:    ptrUint(1),
+            Rating:        5,
+            Comment:       "เยี่ยม",
+        }
+        assert.NoError(t, db.Create(&rv2).Error)
+    
+        //  Run test
+        avg, err := svc.GetAverageRatingByBarber(ctx, barberID)
+        assert.NoError(t, err)
+        assert.InEpsilon(t, 4.5, avg, 0.01) // (4+5)/2 = 4.5
+    })
+    
+
+	t.Run("GetAverageRatingByBarber_NoReview", func(t *testing.T) {
+		barberID := uint(99) // ไม่มีรีวิวเลย
+		avg, err := svc.GetAverageRatingByBarber(ctx, barberID)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.0, avg)
+	})
 }
+

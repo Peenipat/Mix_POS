@@ -6,6 +6,7 @@ import (
 	"time"
 	"errors"
 	"strings"
+	"database/sql"
 
 	"gorm.io/gorm"
 
@@ -51,7 +52,7 @@ func (s *AppointmentReviewService) CreateReview(ctx context.Context, review *bar
 	}
 
 	// 2. Validate appointment exists and is completed
-	appt, err := s.appointmentService.GetByID(ctx, review.AppointmentID)
+	appt, err := s.appointmentService.GetAppointmentByID(ctx, review.AppointmentID)
 	if err != nil {
 		return nil, fmt.Errorf("appointment lookup failed: %w", err)
 	}
@@ -156,4 +157,24 @@ func (s *AppointmentReviewService) DeleteReview(ctx context.Context, reviewID ui
 	// 🧼 Soft delete
 	return s.DB.WithContext(ctx).Delete(&review).Error
 }
+
+func (s *AppointmentReviewService) GetAverageRatingByBarber(ctx context.Context, barberID uint) (float64, error) {
+	var avg sql.NullFloat64
+
+	err := s.DB.WithContext(ctx).
+		Table("appointment_reviews").
+		Select("AVG(appointment_reviews.rating)").
+		Joins("JOIN appointments ON appointment_reviews.appointment_id = appointments.id").
+		Where("appointments.barber_id = ? AND appointment_reviews.deleted_at IS NULL AND appointments.deleted_at IS NULL", barberID).
+		Scan(&avg).Error
+
+	if err != nil {
+		return 0, err
+	}
+	if !avg.Valid {
+		return 0, nil // คืน 0 ถ้า NULL (ไม่มีรีวิว)
+	}
+	return avg.Float64, nil
+}
+
 

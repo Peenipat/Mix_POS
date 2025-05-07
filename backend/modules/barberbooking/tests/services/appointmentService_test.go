@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 	"os"
 
+	barberBookingDto "myapp/modules/barberbooking/dto"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingService "myapp/modules/barberbooking/services"
 )
@@ -59,6 +60,16 @@ func setupTestAppointmentDB(t *testing.T) *gorm.DB {
 		BranchID: 1,
 		UserID:   1001,
 		TenantID: 1,
+	})
+
+	db.Create(&barberBookingModels.Appointment{
+		TenantID:   1,
+		BranchID:   1,
+		ServiceID:  1,
+		CustomerID: 1,
+		StartTime:  time.Now().Add(1 * time.Hour),
+		EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
+		Status:     barberBookingModels.StatusPending,
 	})
 
 	return db
@@ -580,7 +591,7 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Len(t, available, 1)
 		assert.Equal(t, barberB.ID, available[0].ID)
 	})
-	//  
+	//
 
 	// t.Run("GetAvailableBarbers_CompletedAppointment_ShouldNotBlock", func(t *testing.T) {
 	// 	start := time.Now().Add(3 * time.Hour)
@@ -642,21 +653,21 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		}
 		err := db.Create(&ap).Error
 		assert.NoError(t, err)
-	
+
 		// ข้อมูลใหม่
 		newStart := start.Add(1 * time.Hour)
 		updateInput := &barberBookingModels.Appointment{
 			StartTime: newStart,
 			Status:    barberBookingModels.StatusConfirmed,
 		}
-	
+
 		// เรียกอัปเดต
 		updated, err := svc.UpdateAppointment(ctx, ap.ID, tenantID, updateInput)
 		assert.NoError(t, err)
 		assert.Equal(t, newStart, updated.StartTime)
 		assert.Equal(t, barberBookingModels.StatusConfirmed, updated.Status)
 	})
-	
+
 	t.Run("UpdateAppointment_NotFound_ShouldFail", func(t *testing.T) {
 		updateInput := &barberBookingModels.Appointment{
 			Status: barberBookingModels.StatusConfirmed,
@@ -665,7 +676,7 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "appointment not found")
 	})
-	
+
 	t.Run("UpdateAppointment_BarberUnavailable_ShouldFail", func(t *testing.T) {
 		// สร้าง barber ใหม่
 		barberID := uint(8888)
@@ -675,7 +686,7 @@ func TestAppointmentService_CRUD(t *testing.T) {
 			BranchID: 1,
 			UserID:   8888,
 		})
-	
+
 		// สร้างนัดที่ชนกัน
 		start := time.Now().Add(4 * time.Hour)
 		end := start.Add(30 * time.Minute)
@@ -688,7 +699,7 @@ func TestAppointmentService_CRUD(t *testing.T) {
 			EndTime:    end,
 			Status:     barberBookingModels.StatusConfirmed,
 		})
-	
+
 		// สร้างอีกนัด
 		ap := barberBookingModels.Appointment{
 			TenantID:   tenantID,
@@ -698,10 +709,10 @@ func TestAppointmentService_CRUD(t *testing.T) {
 			EndTime:    start.Add(1*time.Hour + 30*time.Minute),
 		}
 		db.Create(&ap)
-	
+
 		// พยายามอัปเดตให้นัดนั้นใช้ barber เดิมที่ไม่ว่าง
 		updateInput := &barberBookingModels.Appointment{
-			BarberID: &barberID,
+			BarberID:  &barberID,
 			StartTime: start,
 		}
 		_, err := svc.UpdateAppointment(ctx, ap.ID, tenantID, updateInput)
@@ -709,4 +720,271 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Contains(t, err.Error(), "not available")
 	})
 
+	t.Run("CancelAppointment_Success", func(t *testing.T) {
+		barber := barberBookingModels.Barber{
+			ID:       1,
+			TenantID: 1,
+			BranchID: 1,
+			UserID:   101,
+		}
+		assert.NoError(t, db.Create(&barber).Error)
+
+		ap := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			BarberID:   ptrUint(1),
+			StartTime:  time.Now().Add(2 * time.Hour),
+			EndTime:    time.Now().Add(2*time.Hour + 30*time.Minute),
+			Status:     barberBookingModels.StatusConfirmed,
+		}
+		assert.NoError(t, db.Create(&ap).Error)
+		assert.NotZero(t, ap.ID)
+
+		err := svc.CancelAppointment(ctx, ap.ID, 123) // actorUserID = 123
+		assert.NoError(t, err)
+
+		var updated barberBookingModels.Appointment
+		assert.NoError(t, db.First(&updated, ap.ID).Error)
+		assert.Equal(t, barberBookingModels.StatusCancelled, updated.Status)
+		assert.Equal(t, uint(123), *updated.UserID)
+	})
+
+	t.Run("CancelAppointment_NotFound", func(t *testing.T) {
+		err := svc.CancelAppointment(ctx, 99999, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("CancelAppointment_AlreadyCancelled", func(t *testing.T) {
+		ap := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			Status:     barberBookingModels.StatusCancelled,
+			StartTime:  time.Now().Add(4 * time.Hour),
+			EndTime:    time.Now().Add(4*time.Hour + 30*time.Minute),
+		}
+		assert.NoError(t, db.Create(&ap).Error)
+
+		err := svc.CancelAppointment(ctx, ap.ID, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be cancelled")
+	})
+
+	t.Run("CancelAppointment_AlreadyCompleted", func(t *testing.T) {
+		ap := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			Status:     barberBookingModels.StatusComplete,
+			StartTime:  time.Now().Add(-3 * time.Hour),
+			EndTime:    time.Now().Add(-2 * time.Hour),
+		}
+		assert.NoError(t, db.Create(&ap).Error)
+
+		err := svc.CancelAppointment(ctx, ap.ID, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be cancelled")
+	})
+
+	t.Run("GetAppointmentByID_Success", func(t *testing.T) {
+		// Seed appointment
+		ap := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			StartTime:  time.Now().Add(1 * time.Hour),
+			EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
+			Status:     barberBookingModels.StatusPending,
+		}
+		assert.NoError(t, db.Create(&ap).Error)
+		assert.NotZero(t, ap.ID)
+	
+		// Call GetByID
+		got, err := svc.GetAppointmentByID(ctx, ap.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, ap.ID, got.ID)
+		assert.Equal(t, ap.Status, got.Status)
+		assert.Equal(t, ap.StartTime.Unix(), got.StartTime.Unix())
+	})
+	
+	t.Run("GetAppointmentByID_NotFound", func(t *testing.T) {
+		_, err := svc.GetAppointmentByID(ctx, 999999)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("RescheduleAppointment_Success", func(t *testing.T) {
+		start := parseTimeToDateToday("13:00")
+		end := start.Add(30 * time.Minute)
+	
+		// สร้าง appointment เดิม
+		ap := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			BarberID:   ptrUint(1),
+			StartTime:  start,
+			EndTime:    end,
+			Status:     barberBookingModels.StatusConfirmed,
+		}
+		assert.NoError(t, db.Create(&ap).Error)
+		service := barberBookingModels.Service{
+			ID: 4,
+			TenantID: ap.TenantID,
+			Name:     "ตัดผมชาย",
+			Duration: 30,
+		}
+		assert.NoError(t, db.Create(&service).Error)
+		ap.ServiceID = service.ID // อัปเดต appointment ให้ชี้มาที่ ID ใหม่
+	
+		// สร้าง service ที่ใช้ระยะเวลา 30 นาที
+		
+		
+	
+		newStart := parseTimeToDateToday("15:00")
+		err := svc.RescheduleAppointment(ctx, ap.ID, newStart, 999) // 999 = actorUserID
+		assert.NoError(t, err)
+	
+		var updated barberBookingModels.Appointment
+		assert.NoError(t, db.First(&updated, ap.ID).Error)
+		assert.Equal(t, newStart.Unix(), updated.StartTime.Unix())
+		assert.Equal(t, newStart.Add(30*time.Minute).Unix(), updated.EndTime.Unix())
+		assert.Equal(t, uint(999), *updated.UserID)
+		assert.Equal(t, barberBookingModels.StatusConfirmed, updated.Status)
+	})
+	
+	t.Run("RescheduleAppointment_NotFound", func(t *testing.T) {
+		err := svc.RescheduleAppointment(ctx, 9999, time.Now(), 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+	
+	t.Run("RescheduleAppointment_AlreadyCompleted", func(t *testing.T) {
+		ap := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			BarberID:   ptrUint(1),
+			StartTime:  parseTimeToDateToday("10:00"),
+			EndTime:    parseTimeToDateToday("10:30"),
+			Status:     barberBookingModels.StatusComplete,
+		}
+		assert.NoError(t, db.Create(&ap).Error)
+	
+		err := svc.RescheduleAppointment(ctx, ap.ID, parseTimeToDateToday("14:00"), 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "completed or cancelled")
+	})
+	
+	t.Run("RescheduleAppointment_Conflict", func(t *testing.T) {
+		// appointment ที่ชนกับเวลาจะเลื่อน
+		existing := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			BarberID:   ptrUint(1),
+			StartTime:  parseTimeToDateToday("17:00"),
+			EndTime:    parseTimeToDateToday("17:30"),
+			Status:     barberBookingModels.StatusConfirmed,
+		}
+		assert.NoError(t, db.Create(&existing).Error)
+	
+		target := barberBookingModels.Appointment{
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1,
+			BarberID:   ptrUint(1),
+			StartTime:  parseTimeToDateToday("11:00"),
+			EndTime:    parseTimeToDateToday("11:30"),
+			Status:     barberBookingModels.StatusConfirmed,
+		}
+		assert.NoError(t, db.Create(&target).Error)
+	
+		// เวลาใหม่ชนกับ existing
+		err := svc.RescheduleAppointment(ctx, target.ID, parseTimeToDateToday("17:00"), 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "conflicts with another appointment")
+	})
+	
+	
+
+}
+func TestAppointmentService_ListAppointments(t *testing.T) {
+	ctx := context.Background()
+	db := setupTestAppointmentDB(t)
+
+	svc := barberBookingService.NewAppointmentService(db)
+
+	t.Run("List_ByTenantID_Only", func(t *testing.T) {
+		results, err := svc.ListAppointments(ctx, barberBookingDto.AppointmentFilter{
+			TenantID: 1,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, results)
+	})
+
+	t.Run("List_ByDateRange", func(t *testing.T) {
+		start := time.Date(2025, 4, 29, 0, 0, 0, 0, time.UTC) // จาก execution
+		end := time.Date(2025, 5, 13, 23, 59, 59, 0, time.UTC)
+
+		results, err := svc.ListAppointments(ctx, barberBookingDto.AppointmentFilter{
+			TenantID:  1,
+			StartDate: &start,
+			EndDate:   &end,
+		})
+		assert.NoError(t, err)
+		for _, ap := range results {
+			assert.True(t, ap.StartTime.After(start) || ap.StartTime.Equal(start))
+			assert.True(t, ap.EndTime.Before(end) || ap.EndTime.Equal(end))
+		}
+	})
+
+	t.Run("List_ByBarberID_AndStatus", func(t *testing.T) {
+		status := barberBookingModels.StatusConfirmed
+		barberID := uint(1)
+		results, err := svc.ListAppointments(ctx, barberBookingDto.AppointmentFilter{
+			TenantID: 1,
+			BarberID: &barberID,
+			Status:   &status,
+		})
+		assert.NoError(t, err)
+		for _, ap := range results {
+			assert.Equal(t, barberID, *ap.BarberID)
+			assert.Equal(t, status, ap.Status)
+		}
+	})
+
+	t.Run("List_WithPagination", func(t *testing.T) {
+		limit := 2
+		offset := 1
+		results, err := svc.ListAppointments(ctx, barberBookingDto.AppointmentFilter{
+			TenantID: 1,
+			Limit:    &limit,
+			Offset:   &offset,
+		})
+		assert.NoError(t, err)
+		assert.LessOrEqual(t, len(results), limit)
+	})
+
+	t.Run("List_WithSortByDesc", func(t *testing.T) {
+		sort := "start_time desc"
+		results, err := svc.ListAppointments(ctx, barberBookingDto.AppointmentFilter{
+			TenantID: 1,
+			SortBy:   &sort,
+		})
+		assert.NoError(t, err)
+		for i := 1; i < len(results); i++ {
+			assert.True(t, results[i-1].StartTime.After(results[i].StartTime) || results[i-1].StartTime.Equal(results[i].StartTime))
+		}
+	})
 }

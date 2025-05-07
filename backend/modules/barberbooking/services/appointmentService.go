@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingDto "myapp/modules/barberbooking/dto"
 )
 
 type appointmentService struct {
@@ -210,7 +211,7 @@ func (s *appointmentService) UpdateAppointment(ctx context.Context, id uint, ten
 	return &ap, nil
 }
 
-func (s *appointmentService) GetByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error) {
+func (s *appointmentService) GetAppointmentByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error) {
     var appt barberBookingModels.Appointment
     // ดึงเฉพาะเรคคอร์ดที่ยังไม่ถูกลบ (deleted_at IS NULL)
     err := s.DB.WithContext(ctx).
@@ -225,3 +226,136 @@ func (s *appointmentService) GetByID(ctx context.Context, id uint) (*barberBooki
     }
     return &appt, nil
 }
+
+func (s *appointmentService) ListAppointments(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingModels.Appointment, error) {
+	var appointments []barberBookingModels.Appointment
+
+	tx := s.DB.WithContext(ctx).Model(&barberBookingModels.Appointment{})
+
+	tx = tx.Where("tenant_id = ?", filter.TenantID)
+
+	if filter.BranchID != nil {
+		tx = tx.Where("branch_id = ?", *filter.BranchID)
+	}
+	if filter.BarberID != nil {
+		tx = tx.Where("barber_id = ?", *filter.BarberID)
+	}
+	if filter.CustomerID != nil {
+		tx = tx.Where("customer_id = ?", *filter.CustomerID)
+	}
+	if filter.Status != nil {
+		tx = tx.Where("status = ?", *filter.Status)
+	}
+	if filter.StartDate != nil {
+		tx = tx.Where("start_time >= ?", *filter.StartDate)
+	}
+	if filter.EndDate != nil {
+		tx = tx.Where("end_time <= ?", *filter.EndDate)
+	}
+
+	if err := tx.Order("start_time asc").Find(&appointments).Error; err != nil {
+		return nil, err
+	}
+
+	if filter.Limit != nil {
+		tx = tx.Limit(*filter.Limit)
+	}
+	if filter.Offset != nil {
+		tx = tx.Offset(*filter.Offset)
+	}
+
+	// Sorting
+	if filter.SortBy != nil && *filter.SortBy != "" {
+		tx = tx.Order(*filter.SortBy)
+	} else {
+		tx = tx.Order("start_time asc") // default sort
+	}
+
+	if err := tx.Find(&appointments).Error; err != nil {
+		return nil, err
+	}
+	return appointments, nil
+}
+
+func (s *appointmentService) CancelAppointment(ctx context.Context, appointmentID uint, actorUserID uint) error {
+	var ap barberBookingModels.Appointment
+
+	err := s.DB.WithContext(ctx).
+		Where("id = ?", appointmentID).
+		First(&ap).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("appointment with ID %d not found", appointmentID)
+		}
+		return err
+	}
+
+	//  ไม่อนุญาตให้ยกเลิกถ้าเป็น COMPLETED หรือ CANCELLED แล้ว
+	if ap.Status == barberBookingModels.StatusComplete || ap.Status == barberBookingModels.StatusCancelled {
+		return errors.New("appointment cannot be cancelled in its current status")
+	}
+
+	//  เปลี่ยนสถานะเป็น CANCELLED
+	ap.Status = barberBookingModels.StatusCancelled
+	ap.UpdatedAt = time.Now()
+	ap.UserID = &actorUserID // ใครบันทึกการยกเลิก
+
+	if err := s.DB.WithContext(ctx).Save(&ap).Error; err != nil {
+		return err
+	}
+
+	//  (Optional) log ไปยัง appointment_status_logs ในอนาคต
+
+	return nil
+}
+
+func (s *appointmentService) RescheduleAppointment( ctx context.Context,appointmentID uint,newStartTime time.Time,actorUserID uint,) error {
+	// 1. ดึง appointment
+	var ap barberBookingModels.Appointment
+	if err := s.DB.WithContext(ctx).
+		Preload("Service").
+		First(&ap, "id = ?", appointmentID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("appointment with ID %d not found", appointmentID)
+		}
+		return err
+	}
+
+	// 2. ตรวจสอบสถานะ
+	if ap.Status == barberBookingModels.StatusComplete || ap.Status == barberBookingModels.StatusCancelled {
+		return fmt.Errorf("cannot reschedule a completed or cancelled appointment")
+	}
+
+	// 3. ตรวจสอบการชน (simplified logic)
+	newEndTime := newStartTime.Add(time.Duration(ap.Service.Duration) * time.Minute)
+	var conflict int64
+	err := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Appointment{}).
+		Where("barber_id = ? AND branch_id = ? AND id != ? AND status IN ? AND start_time < ? AND end_time > ?",
+			ap.BarberID, ap.BranchID, ap.ID,
+			[]barberBookingModels.AppointmentStatus{
+				barberBookingModels.StatusPending,
+				barberBookingModels.StatusConfirmed,
+			},
+			newEndTime, newStartTime,
+		).Count(&conflict).Error
+	if err != nil {
+		return err
+	}
+	if conflict > 0 {
+		return fmt.Errorf("cannot reschedule: time slot conflicts with another appointment")
+	}
+
+	// 4. อัปเดตเวลาและผู้แก้ไข
+	ap.StartTime = newStartTime
+	ap.EndTime = newEndTime
+	ap.UserID = &actorUserID
+	ap.UpdatedAt = time.Now()
+	ap.Status = barberBookingModels.StatusConfirmed // หรือเก็บสถานะเดิมไว้ก็ได้
+
+	return s.DB.WithContext(ctx).Save(&ap).Error
+}
+
+
+

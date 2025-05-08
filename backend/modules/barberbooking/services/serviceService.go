@@ -4,6 +4,7 @@ package barberBookingService
 import (
 	"errors"
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 	"gorm.io/gorm"
 	"time"
 )
@@ -12,7 +13,7 @@ type ServiceService struct {
 	DB *gorm.DB
 }
 
-func NewServiceService(db *gorm.DB) *ServiceService {
+func NewServiceService(db *gorm.DB) barberBookingPort.IServiceService {
 	return &ServiceService{DB: db}
 }
 

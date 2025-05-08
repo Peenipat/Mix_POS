@@ -5,16 +5,15 @@ import (
 	"errors"
 
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 	"gorm.io/gorm"
 )
-
-
 
 type customerService struct {
 	db *gorm.DB
 }
 
-func NewCustomerService(db *gorm.DB) ICustomerService {
+func NewCustomerService(db *gorm.DB) barberBookingPort.ICustomerService {
 	return &customerService{db: db}
 }
 

@@ -4,17 +4,15 @@ import (
 	"context"
 	"time"
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 
 )
-
-
 
 type appointmentStatusLogService struct {
 	DB *gorm.DB
 }
 
-
-func NewAppointmentStatusLogService(db *gorm.DB) IAppointmentStatusLogService {
+func NewAppointmentStatusLogService(db *gorm.DB) barberBookingPort.IAppointmentStatusLogService {
 	return &appointmentStatusLogService{DB: db}
 }
 

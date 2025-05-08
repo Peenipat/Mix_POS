@@ -6,20 +6,21 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	barberbookingmodels "myapp/modules/barberbooking/models"
+	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 )
 
 type barberWorkloadService struct {
 	DB *gorm.DB
 }
 
-func NewBarberWorkloadService(db *gorm.DB) *barberWorkloadService {
+func NewBarberWorkloadService(db *gorm.DB) barberBookingPort.IbarberWorkload {
 	return &barberWorkloadService{DB: db}
 }
 
 // GetWorkloadByBarber: ดึง workload รายวันของช่าง
-func (s *barberWorkloadService) GetWorkloadByBarber(ctx context.Context, barberID uint, date time.Time) (*barberbookingmodels.BarberWorkload, error) {
-	var workload barberbookingmodels.BarberWorkload
+func (s *barberWorkloadService) GetWorkloadByBarber(ctx context.Context, barberID uint, date time.Time) (*barberBookingModels.BarberWorkload, error) {
+	var workload barberBookingModels.BarberWorkload
 	err := s.DB.WithContext(ctx).
 		Where("barber_id = ? AND strftime('%Y-%m-%d', date) = ?", barberID, date.Format("2006-01-02")).
 		First(&workload).Error
@@ -33,8 +34,8 @@ func (s *barberWorkloadService) GetWorkloadByBarber(ctx context.Context, barberI
 }
 
 // GetWorkloadByDate: ดึง workload ช่างทั้งหมดในวันนั้น
-func (s *barberWorkloadService) GetWorkloadByDate(ctx context.Context, date time.Time) ([]barberbookingmodels.BarberWorkload, error) {
-	var workloads []barberbookingmodels.BarberWorkload
+func (s *barberWorkloadService) GetWorkloadByDate(ctx context.Context, date time.Time) ([]barberBookingModels.BarberWorkload, error) {
+	var workloads []barberBookingModels.BarberWorkload
 	start := date.Truncate(24 * time.Hour)
 	end := start.Add(24 * time.Hour)
 
@@ -51,14 +52,14 @@ func (s *barberWorkloadService) UpsertBarberWorkload(ctx context.Context, barber
 	//  Truncate เวลาออกให้เหลือแค่วัน เพื่อความแม่นยำในการเปรียบเทียบ
 	date = date.Truncate(24 * time.Hour)
 
-	var workload barberbookingmodels.BarberWorkload
+	var workload barberBookingModels.BarberWorkload
 	err := s.DB.WithContext(ctx).
 		Where("barber_id = ? AND date = ?", barberID, date).
 		First(&workload).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// Insert ใหม่
-		workload = barberbookingmodels.BarberWorkload{
+		workload = barberBookingModels.BarberWorkload{
 			BarberID:          barberID,
 			Date:              date,
 			TotalAppointments: appointments,

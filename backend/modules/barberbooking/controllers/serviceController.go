@@ -1,23 +1,22 @@
 // barberbooking/controller/service_controller.go
-package controller
+package barberBookingController
 
 import (
 	"net/http"
 	"strconv"
 	"strings"
+	"github.com/gofiber/fiber/v2"
 
 	barberBookingModels "myapp/modules/barberbooking/models"
-	barberBookingService "myapp/modules/barberbooking/services"
+	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type ServiceController struct {
-	ServiceService barberBookingService.IServiceService
+	ServiceService barberBookingPort.IServiceService
 }
 
-func NewServiceController(svc barberBookingService.IServiceService) *ServiceController {
+func NewServiceController(svc barberBookingPort.IServiceService) *ServiceController {
 	return &ServiceController{
 		ServiceService: svc,
 	}

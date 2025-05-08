@@ -394,6 +394,30 @@ func (s *appointmentService) GetAppointmentsByBarber(ctx context.Context, barber
 	return appointments, nil
 }
 
+func (s *appointmentService) DeleteAppointment(ctx context.Context, appointmentID uint) error {
+	return s.DB.WithContext(ctx).
+		Delete(&barberBookingModels.Appointment{}, appointmentID).
+		Error
+}
+
+func (s *appointmentService) GetUpcomingAppointmentsByCustomer(ctx context.Context, customerID uint) (*barberBookingModels.Appointment, error) {
+	var appointment barberBookingModels.Appointment
+	err := s.DB.WithContext(ctx).
+		Where("customer_id = ? AND start_time > ? AND status IN ?", customerID, time.Now(), []string{
+			string(barberBookingModels.StatusPending),
+			string(barberBookingModels.StatusConfirmed),
+			string(barberBookingModels.StatusRescheduled),
+		}).
+		Order("start_time ASC").
+		First(&appointment).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil // ไม่มีคิวถัดไป
+	}
+	return &appointment, err
+}
+
+
 
 
 

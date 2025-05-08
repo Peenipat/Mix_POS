@@ -10,6 +10,7 @@ import (
 	"time"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingDto "myapp/modules/barberbooking/dto"
+	barberBookingPort "myapp/modules/barberbooking/port"
 
 )
 
@@ -17,13 +18,9 @@ type WorkingHourService struct {
 	DB *gorm.DB
 }
 
-
-
-func NewWorkingHourService(db *gorm.DB) *WorkingHourService {
+func NewWorkingHourService(db *gorm.DB) barberBookingPort.IWorkingHourService {
 	return &WorkingHourService{DB: db}
 }
-
-
 
 func (s *WorkingHourService) GetWorkingHours(ctx context.Context, branchID uint) ([]barberBookingModels.WorkingHour, error) {
 	var hours []barberBookingModels.WorkingHour
@@ -63,7 +60,6 @@ func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID ui
 	return tx.Commit().Error
 }
 
-
 func (s *WorkingHourService) GetBranchOpenStatus(ctx context.Context, branchID uint, weekday int, now time.Time) (bool, error) {
 	var wh barberBookingModels.WorkingHour
 	err := s.DB.WithContext(ctx).
@@ -82,7 +78,6 @@ func (s *WorkingHourService) GetBranchOpenStatus(ctx context.Context, branchID u
 	isOpen := now.After(start) && now.Before(end)
 	return isOpen, nil
 }
-
 
 func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID uint, input barberBookingDto.WorkingHourInput) error {
 	if input.Weekday < 0 || input.Weekday > 6 {

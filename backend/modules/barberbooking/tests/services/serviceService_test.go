@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	barberBookingServices "myapp/modules/barberbooking/services"
+	barberBookingPort "myapp/modules/barberBooking/port"
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingServices "myapp/modules/barberbooking/services"
 
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func setupTestDB(t *testing.T) (*gorm.DB, *barberBookingServices.ServiceService) {
+func setupTestDB(t *testing.T) (*gorm.DB, barberBookingPort.IServiceService) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})

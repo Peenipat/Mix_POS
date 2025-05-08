@@ -17,8 +17,7 @@ import (
 
 	barberBookingControllers "myapp/modules/barberbooking/controllers"
 	barberBookingModels "myapp/modules/barberbooking/models"
-	barberBookingServices "myapp/modules/barberbooking/services"
-	// "myapp/middlewares"
+	barberBookingPort "myapp/modules/barberbooking/port"
 
 	"net/http/httptest"
 
@@ -58,7 +57,7 @@ func (m *MockService) DeleteService(id uint) error {
 }
 
 // ---------- Test ----------
-func setupTestApp(mockSvc barberBookingServices.IServiceService) *fiber.App {
+func setupTestApp(mockSvc barberBookingPort.IServiceService) *fiber.App {
 	app := fiber.New()
 	controller := barberBookingControllers.NewServiceController(mockSvc)
 

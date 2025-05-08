@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingDto "myapp/modules/barberbooking/dto"
+	barberBookingPort "myapp/modules/barberbooking/port"
 )
 
 type appointmentService struct {
@@ -17,7 +18,7 @@ type appointmentService struct {
 
 
 
-func NewAppointmentService(db *gorm.DB) *appointmentService {
+func NewAppointmentService(db *gorm.DB) barberBookingPort.IAppointment {
 	return &appointmentService{DB: db}
 }
 

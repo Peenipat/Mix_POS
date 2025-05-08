@@ -109,8 +109,7 @@ func setupTestReviewDB(t *testing.T) *gorm.DB {
 func TestAppointmentReviewService_CRUD(t *testing.T) {
 	ctx := context.Background()
 	db := setupTestReviewDB(t)
-	x := barberBookingServices.NewAppointmentService(db)
-	svc := barberBookingServices.NewAppointmentReviewService(db, x)
+	svc := barberBookingServices.NewAppointmentReviewService(db)
 
 	t.Run("CreateReview_Success", func(t *testing.T) {
 		rev := &barberBookingModels.AppointmentReview{

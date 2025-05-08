@@ -8,13 +8,14 @@ import (
 
 	"gorm.io/gorm"
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 )
 
 type BarberService struct {
 	DB *gorm.DB
 }
 
-func NewBarberService(db *gorm.DB) *BarberService {
+func NewBarberService(db *gorm.DB) barberBookingPort.IBarber {
 	return &BarberService{DB: db}
 }
 
@@ -50,8 +51,6 @@ func (s *BarberService) CreateBarber(ctx context.Context, barber *barberBookingM
 	barber.UpdatedAt = time.Now()
 	return s.DB.WithContext(ctx).Create(barber).Error
 }
-
-
 
 // GetBarberByID fetches a single barber by ID
 func (s *BarberService) GetBarberByID(ctx context.Context, id uint) (*barberBookingModels.Barber, error) {

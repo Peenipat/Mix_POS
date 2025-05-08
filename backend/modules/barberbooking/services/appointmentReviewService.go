@@ -12,16 +12,22 @@ import (
 	"gorm.io/gorm"
 
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
 )
 
 // AppointmentReviewService handles creation and retrieval of appointment reviews.
-type AppointmentReviewService struct {
+type appointmentReviewService struct {
 	DB                 *gorm.DB
-	appointmentService *appointmentService
+	appointmentService barberBookingPort.IAppointment
 }
 
-func (s *AppointmentReviewService) GetByID(ctx context.Context, id uint) (*barberBookingModels.AppointmentReview, error) {
+// NewAppointmentReviewService constructs a new review service.
+// You can inject the existing AppointmentService to validate appointments.
+func NewAppointmentReviewService(db *gorm.DB) *appointmentReviewService {
+	return &appointmentReviewService{DB:db}
+}
+func (s *appointmentReviewService) GetByID(ctx context.Context, id uint) (*barberBookingModels.AppointmentReview, error) {
     var rev barberBookingModels.AppointmentReview
     err := s.DB.WithContext(ctx).
         Where("id = ? AND deleted_at IS NULL", id).
@@ -36,17 +42,8 @@ func (s *AppointmentReviewService) GetByID(ctx context.Context, id uint) (*barbe
     return &rev, nil
 }
 
-// NewAppointmentReviewService constructs a new review service.
-// You can inject the existing AppointmentService to validate appointments.
-func NewAppointmentReviewService(db *gorm.DB, apptSvc *appointmentService) *AppointmentReviewService {
-	return &AppointmentReviewService{
-		DB:                 db,
-		appointmentService: apptSvc,
-	}
-}
-
 // CreateReview creates a new review for a completed appointment.
-func (s *AppointmentReviewService) CreateReview(ctx context.Context, review *barberBookingModels.AppointmentReview) (*barberBookingModels.AppointmentReview, error) {
+func (s *appointmentReviewService) CreateReview(ctx context.Context, review *barberBookingModels.AppointmentReview) (*barberBookingModels.AppointmentReview, error) {
 	// 1. Ensure required fields are present
 	if review.AppointmentID == 0 || review.Rating < 1 || review.Rating > 5 {
 		return nil, fmt.Errorf("invalid review input: appointmentID and rating (1-5) are required")
@@ -75,7 +72,7 @@ func (s *AppointmentReviewService) CreateReview(ctx context.Context, review *bar
 }
 
 // (Optional) GetReviews fetches all reviews for a given appointment.
-func (s *AppointmentReviewService) GetReviews(ctx context.Context, appointmentID uint) ([]barberBookingModels.AppointmentReview, error) {
+func (s *appointmentReviewService) GetReviews(ctx context.Context, appointmentID uint) ([]barberBookingModels.AppointmentReview, error) {
 	var reviews []barberBookingModels.AppointmentReview
 	err := s.DB.WithContext(ctx).
 		Where("appointment_id = ? AND deleted_at IS NULL", appointmentID).
@@ -83,7 +80,7 @@ func (s *AppointmentReviewService) GetReviews(ctx context.Context, appointmentID
 	return reviews, err
 }
 
-func (s *AppointmentReviewService) UpdateReview(ctx context.Context, reviewID uint, input *barberBookingModels.AppointmentReview) (*barberBookingModels.AppointmentReview, error) {
+func (s *appointmentReviewService) UpdateReview(ctx context.Context, reviewID uint, input *barberBookingModels.AppointmentReview) (*barberBookingModels.AppointmentReview, error) {
 	if input.Rating < 1 || input.Rating > 5 {
 		return nil, errors.New("invalid rating: must be between 1 and 5")
 	}
@@ -108,7 +105,7 @@ func (s *AppointmentReviewService) UpdateReview(ctx context.Context, reviewID ui
 	return &existing, nil
 }
 
-func (s *AppointmentReviewService) GetReviewByAppointment(ctx context.Context, appointmentID uint) (*barberBookingModels.AppointmentReview, error) {
+func (s *appointmentReviewService) GetReviewByAppointment(ctx context.Context, appointmentID uint) (*barberBookingModels.AppointmentReview, error) {
 	var review barberBookingModels.AppointmentReview
 
 	err := s.DB.WithContext(ctx).
@@ -125,7 +122,7 @@ func (s *AppointmentReviewService) GetReviewByAppointment(ctx context.Context, a
 	return &review, nil
 }
 
-func (s *AppointmentReviewService) DeleteReview(ctx context.Context, reviewID uint, actorUserID uint, actorRole string) error {
+func (s *appointmentReviewService) DeleteReview(ctx context.Context, reviewID uint, actorUserID uint, actorRole string) error {
 	var review barberBookingModels.AppointmentReview
 
 	err := s.DB.WithContext(ctx).
@@ -159,7 +156,7 @@ func (s *AppointmentReviewService) DeleteReview(ctx context.Context, reviewID ui
 	return s.DB.WithContext(ctx).Delete(&review).Error
 }
 
-func (s *AppointmentReviewService) GetAverageRatingByBarber(ctx context.Context, barberID uint) (float64, error) {
+func (s *appointmentReviewService) GetAverageRatingByBarber(ctx context.Context, barberID uint) (float64, error) {
 	var avg sql.NullFloat64
 
 	err := s.DB.WithContext(ctx).

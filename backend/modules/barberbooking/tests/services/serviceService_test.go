@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	barberBookingPort "myapp/modules/barberBooking/port"
+	barberBookingPort "myapp/modules/barberbooking/port"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingServices "myapp/modules/barberbooking/services"
 

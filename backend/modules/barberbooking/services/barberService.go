@@ -62,7 +62,7 @@ func (s *BarberService) GetBarberByID(ctx context.Context, id uint) (*barberBook
 }
 
 // ListBarbers optionally filters by branch_id
-func (s *BarberService) ListBarbers(ctx context.Context, branchID *uint) ([]barberBookingModels.Barber, error) {
+func (s *BarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingModels.Barber, error) {
 	var barbers []barberBookingModels.Barber
 	query := s.DB.WithContext(ctx).Model(&barberBookingModels.Barber{})
 	if branchID != nil {

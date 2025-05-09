@@ -1,6 +1,9 @@
 package barberBookingModels
 
-import "time"
+import (
+	"time"
+	"gorm.io/gorm"
+)
 
 
 type Customer struct {
@@ -10,4 +13,6 @@ type Customer struct {
 	Phone     string    `gorm:"type:text"`    // optional
 	Email     string    `gorm:"type:text;index:idx_tenant_email,priority:2"` // Composite Index
 	CreatedAt time.Time `gorm:"autoCreateTime"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }

@@ -10,6 +10,7 @@ import (
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
+	helperFunc "myapp/modules/barberbooking"
 )
 
 type ServiceController struct {
@@ -77,14 +78,7 @@ var RolesCanManageService = []coreModels.RoleName{
 }
 
 // loop check role function
-func IsAuthorizedRole(role string, allowed []coreModels.RoleName) bool {
-	for _, r := range allowed {
-		if string(r) == role {
-			return true
-		}
-	}
-	return false
-}
+
 
 func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 	//  ตรวจสิทธิ์ผู้ใช้งาน
@@ -95,14 +89,14 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 			"message": "Unauthorized",
 		})
 	}
-	if !IsAuthorizedRole(roleStr, RolesCanManageService) {
+	if !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Permission denied",
 		})
 	}
 
-	// ✅ แปลง request body
+	//  แปลง request body
 	var payload barberBookingModels.Service
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -111,7 +105,7 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 		})
 	}
 
-	// ✅ ตรวจสอบความถูกต้องของข้อมูล
+	//  ตรวจสอบความถูกต้องของข้อมูล
 	payload.Name = strings.TrimSpace(payload.Name)
 	if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -120,16 +114,16 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 		})
 	}
 
-	// ✅ เรียก service
+	// เรียก service
 	if err := ctrl.ServiceService.CreateService(&payload); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to create service",
-			"error":   err.Error(),
+			"error":   "Can't careate service",
 		})
 	}
 
-	// ✅ ส่ง response สำเร็จ
+	//  ส่ง response สำเร็จ
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
 		"status":  "success",
 		"message": "Service created",
@@ -139,7 +133,7 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 	// 1. ตรวจสอบ role
 	roleStr, ok := c.Locals("role").(string)
-	if !ok || !IsAuthorizedRole(roleStr, RolesCanManageService) {
+	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Permission denied",
@@ -206,6 +200,13 @@ func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 }
 
 func (ctrl *ServiceController) DeleteService(c *fiber.Ctx) error {
+	roleStr, ok := c.Locals("role").(string)
+	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Permission denied",
+		})
+	}
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {

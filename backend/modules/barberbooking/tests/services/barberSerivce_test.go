@@ -60,7 +60,7 @@ func TestBarberService_CRUD(t *testing.T) {
 		_ = svc.CreateBarber(ctx, &barberBookingModels.Barber{BranchID: 3, UserID: 301})
 
 		branchID := uint(3)
-		barbers, err := svc.ListBarbers(ctx, &branchID) // ⬅️ แก้ตรงนี้ให้รับ *uint
+		barbers, err := svc.ListBarbersByBranch(ctx, &branchID) // ⬅️ แก้ตรงนี้ให้รับ *uint
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(barbers), 2)
 	})
@@ -113,7 +113,7 @@ func TestBarberService_CRUD(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		result, err := svc.ListBarbers(ctx, &branchID)
+		result, err := svc.ListBarbersByBranch(ctx, &branchID)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(result), 3)
 	})
@@ -188,7 +188,7 @@ func TestBarberService_CRUD(t *testing.T) {
 	t.Run("ListBarbers_Empty", func(t *testing.T) {
 		// ใช้ branch ใหม่ที่ยังไม่มี barber
 		branchID := uint(99)
-		barbers, err := svc.ListBarbers(ctx, &branchID)
+		barbers, err := svc.ListBarbersByBranch(ctx, &branchID)
 		assert.NoError(t, err)
 		assert.Len(t, barbers, 0, "ควรไม่มี barber ในสาขานี้")
 	})
@@ -202,7 +202,7 @@ func TestBarberService_CRUD(t *testing.T) {
 			})
 		}
 
-		barbers, err := svc.ListBarbers(ctx, &branchID)
+		barbers, err := svc.ListBarbersByBranch(ctx, &branchID)
 		assert.NoError(t, err)
 		assert.Len(t, barbers, 10, "ควรมี barber ทั้งหมด 10 คนในสาขานี้")
 	})

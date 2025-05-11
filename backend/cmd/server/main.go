@@ -159,6 +159,8 @@ func main() {
 		log.Fatalf("seed tenant modules failed: %v", err)
 	}
 
+	routes.SetupAuthRoutes(app)
+	admin.SetupAdminRoutes(app)
 	// Initialize Services & Controllers
 	logSvc := coreServices.NewSystemLogService(database.DB)
 	Core_controllers.InitSystemLogHandler(logSvc)
@@ -169,14 +171,17 @@ func main() {
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)
 	serviceController := bookingControllers.NewServiceController(serviceService)
+
+	customerService := bookingServices.NewCustomerService(database.DB)
+	customerController := bookingControllers.NewCustomerController(customerService) 
 	
 
 	bookingGroup := app.Group("/api/barberbooking")
 
 	// Register routes
 	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)
-	routes.SetupAuthRoutes(app)
-	admin.SetupAdminRoutes(app)
+	bookingRoutes.RegisterCustomerRoutes(bookingGroup,customerController)
+	
 
 	// Route api docs
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)

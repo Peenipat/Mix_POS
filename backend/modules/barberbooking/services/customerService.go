@@ -75,9 +75,9 @@ func validateCustomerInput(svc *barberBookingModels.Customer) error {
 	if len(svc.Name) < 2 || len(svc.Name) > 100 {
 		return errors.New("name must be 2 - 100 characters")
 	}
-	if svc.TenantID < 0 || svc.ID < 0 {
-		return errors.New("ID can't 0 ")
-	}
+	// if svc.TenantID < 0 || svc.ID < 0 {
+	// 	return errors.New("ID can't 0 ")
+	// }
 	return nil
 }
 // แก้ไขข้อมูลลูกค้า
@@ -97,7 +97,7 @@ func (s *customerService) UpdateCustomer(ctx context.Context, tenantID, customer
 	// ถ้าเจอแล้ว → อัปเดต
 	existing.Name = updateData.Name
 	existing.Phone = updateData.Phone
-	existing.TenantID = updateData.TenantID
+	existing.Email = updateData.Email
 	existing.UpdatedAt = time.Now()
 
 	if err := s.db.Save(&existing).Error; err != nil {

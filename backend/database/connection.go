@@ -7,15 +7,19 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"github.com/joho/godotenv"
 )
 
 var DB *gorm.DB
 
 func ConnectDB() {
-	// 1. ถ้ามี DATABASE_URL อยู่แล้ว ให้ใช้เลย
+	// Load .env file
+	if loadErr := godotenv.Load(".env"); loadErr != nil {
+		log.Println("⚠️ .env not found or not loaded:", loadErr)
+	}
+
 	dsn := os.Getenv("DATABASE_URL")
 
-	// 2. ถ้าไม่มีค่อยประกอบจากตัวแปร DB_HOST, DB_PORT, …
 	if dsn == "" {
 		host := os.Getenv("DB_HOST")
 		port := os.Getenv("DB_PORT")
@@ -28,15 +32,12 @@ func ConnectDB() {
 			sslmode = "disable"
 		}
 
-		// กำหนด DSN ตามรูปแบบที่ GORM/pg driver รองรับ
 		dsn = fmt.Sprintf(
 			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s search_path=public",
 			host, port, user, password, dbname, sslmode,
 		)
 	}
 
-	// 3. เปิด connection
-	
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("❌ failed to connect to database: %v", err)

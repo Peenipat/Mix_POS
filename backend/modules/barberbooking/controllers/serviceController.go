@@ -73,6 +73,7 @@ func (ctrl *ServiceController) GetServiceByID(c *fiber.Ctx) error {
 
 // Role ที่มีสิทธิที่จะ create , update , delete service
 var RolesCanManageService = []coreModels.RoleName{
+	coreModels.RoleNameSaaSSuperAdmin,
 	coreModels.RoleNameTenant,
 	coreModels.RoleNameTenantAdmin,
 }
@@ -81,7 +82,7 @@ var RolesCanManageService = []coreModels.RoleName{
 
 
 func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
-	//  ตรวจสิทธิ์ผู้ใช้งาน
+	// ตรวจสิทธิ์ผู้ใช้งาน
 	roleStr, ok := c.Locals("role").(string)
 	if !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -96,7 +97,7 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 		})
 	}
 
-	//  แปลง request body
+	// แปลง request body
 	var payload barberBookingModels.Service
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -105,7 +106,17 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 		})
 	}
 
-	//  ตรวจสอบความถูกต้องของข้อมูล
+	// ดึง tenant_id จาก Locals แล้วกำหนดให้ payload
+	tenantID, ok := c.Locals("tenant_id").(uint)
+	if !ok || tenantID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid tenant ID",
+		})
+	}
+	payload.TenantID = tenantID
+
+	// ตรวจสอบความถูกต้องของข้อมูล
 	payload.Name = strings.TrimSpace(payload.Name)
 	if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -119,16 +130,17 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to create service",
-			"error":   "Can't careate service",
+			"error":   err.Error(),
 		})
 	}
 
-	//  ส่ง response สำเร็จ
-	return c.Status(http.StatusCreated).JSON(fiber.Map{
+	// ส่ง response สำเร็จ
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":  "success",
 		"message": "Service created",
 	})
 }
+
 
 func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 	// 1. ตรวจสอบ role

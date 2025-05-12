@@ -174,6 +174,9 @@ func main() {
 
 	customerService := bookingServices.NewCustomerService(database.DB)
 	customerController := bookingControllers.NewCustomerController(customerService) 
+
+	barberService := bookingServices.NewBarberService(database.DB)
+	barberController := bookingControllers.NewBarberController(barberService)
 	
 
 	bookingGroup := app.Group("/api/barberbooking")
@@ -181,6 +184,7 @@ func main() {
 	// Register routes
 	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)
 	bookingRoutes.RegisterCustomerRoutes(bookingGroup,customerController)
+	bookingRoutes.RegisterBarberRoutes(bookingGroup,barberController)
 	
 
 	// Route api docs

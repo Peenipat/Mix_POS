@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 	"strings"
-
 	"gorm.io/gorm"
 
 	barberBookingModels "myapp/modules/barberbooking/models"
@@ -20,10 +19,14 @@ func NewUnavailabilityService(db *gorm.DB) barberBookingPort.IUnavailabilitySeri
 }
 
 // CreateUnavailability creates a new unavailability entry
+
+
 func (s *UnavailabilityService) CreateUnavailability(ctx context.Context, input *barberBookingModels.Unavailability) (*barberBookingModels.Unavailability, error) {
 	var existing barberBookingModels.Unavailability
-	err := s.DB.WithContext(ctx).Where("date = ? AND barber_id = ? AND branch_id = ?", input.Date, input.BarberID, input.BranchID).
+	err := s.DB.WithContext(ctx).
+		Where("date = ? AND barber_id = ? AND branch_id = ?", input.Date, input.BarberID, input.BranchID).
 		First(&existing).Error
+
 	if err == nil {
 		return nil, errors.New("unavailability already exists for this date")
 	}
@@ -32,13 +35,15 @@ func (s *UnavailabilityService) CreateUnavailability(ctx context.Context, input 
 	}
 
 	if err := s.DB.WithContext(ctx).Create(&input).Error; err != nil {
-        if strings.Contains(err.Error(), "duplicate key") {
-            return nil, errors.New("unavailability already exists for this date")
-        }
-        return nil, err
-    }
+		if strings.Contains(err.Error(), "duplicate") {
+			return nil, errors.New("unavailability already exists for this date")
+		}
+		return nil, err
+	}
+
 	return input, nil
 }
+
 
 // GetUnavailabilitiesByBranch returns all unavailabilities for a specific branch within a date range
 func (s *UnavailabilityService) GetUnavailabilitiesByBranch(ctx context.Context, branchID uint, from, to time.Time) ([]barberBookingModels.Unavailability, error) {

@@ -177,6 +177,9 @@ func main() {
 
 	barberService := bookingServices.NewBarberService(database.DB)
 	barberController := bookingControllers.NewBarberController(barberService)
+
+	unavailabilityService := bookingServices.NewUnavailabilityService(database.DB)
+	unavailabilityController := bookingControllers.NewUnavailabilityController(unavailabilityService)
 	
 
 	bookingGroup := app.Group("/api/barberbooking")
@@ -185,6 +188,7 @@ func main() {
 	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)
 	bookingRoutes.RegisterCustomerRoutes(bookingGroup,customerController)
 	bookingRoutes.RegisterBarberRoutes(bookingGroup,barberController)
+	bookingRoutes.RegisterUnavailabilityRoute(bookingGroup,unavailabilityController)
 	
 
 	// Route api docs

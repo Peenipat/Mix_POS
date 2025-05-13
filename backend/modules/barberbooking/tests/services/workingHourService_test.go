@@ -93,33 +93,9 @@ func TestWorkingHourService(t *testing.T) {
 		assert.Equal(t, 1, results[1].Weekday)
 	})
 
-	t.Run("GetBranchOpenStatus_OpenNow", func(t *testing.T) {
-		err := db.Create(&barberBookingModels.WorkingHour{
-			BranchID:  1,
-			Weekday:   2,
-			StartTime: parseTimeToDateToday("09:00"),
-			EndTime:   parseTimeToDateToday("18:00"),
-		}).Error
-		assert.NoError(t, err)
-		
-		now := time.Date(2025, 5, 7, 10, 30, 0, 0, time.UTC) // Wednesday
-		isOpen, err := svc.GetBranchOpenStatus(ctx, 1, 2, now)
-		assert.NoError(t, err)
-		assert.True(t, isOpen)
-	})
+	
 
-	t.Run("GetBranchOpenStatus_ClosedNow", func(t *testing.T) {
-		now := time.Date(2025, 5, 7, 23, 0, 0, 0, time.UTC) // Late night
-		isOpen, err := svc.GetBranchOpenStatus(ctx, 1, 2, now)
-		assert.NoError(t, err)
-		assert.False(t, isOpen)
-	})
-
-	t.Run("GetBranchOpenStatus_NoRecord", func(t *testing.T) {
-		isOpen, err := svc.GetBranchOpenStatus(ctx, 1, 6, time.Now()) // Sunday with no data
-		assert.NoError(t, err)
-		assert.False(t, isOpen)
-	})
+	
 
 	t.Run("UpdateWorkingHours_InvalidWeekday_Fail", func(t *testing.T) {
 		input := []barberBookingDto.WorkingHourInput{
@@ -134,45 +110,6 @@ func TestWorkingHourService(t *testing.T) {
 		results, err := svc.GetWorkingHours(ctx, 9999) // ใช้ branchID ที่ไม่มี
 		assert.NoError(t, err)
 		assert.Len(t, results, 0)
-	})
-
-	t.Run("GetBranchOpenStatus_SoftDeleted_Fail", func(t *testing.T) {
-		now := parseTimeToDateToday("10:00")
-		// สร้างแล้ว soft delete
-		wh := barberBookingModels.WorkingHour{
-			BranchID:  1,
-			Weekday:   int(now.Weekday()),
-			StartTime: parseTimeToDateToday("09:00"),
-			EndTime:   parseTimeToDateToday("18:00"),
-		}
-		assert.NoError(t, db.Create(&wh).Error)
-		assert.NoError(t, db.Delete(&wh).Error) // soft delete
-	
-		isOpen, err := svc.GetBranchOpenStatus(ctx, 1, int(now.Weekday()), now)
-		assert.NoError(t, err)
-		assert.False(t, isOpen) // เพราะถูกลบแล้ว
-	})
-
-	t.Run("GetBranchOpenStatus_ZeroDuration_False", func(t *testing.T) {
-		now := parseTimeToDateToday("12:00")
-		weekday := int(now.Weekday())
-	
-		// ลบของเดิม (hard delete)
-		_ = db.Unscoped().
-			Where("branch_id = ? AND weekday = ?", 1, weekday).
-			Delete(&barberBookingModels.WorkingHour{})
-	
-		wh := barberBookingModels.WorkingHour{
-			BranchID:  1,
-			Weekday:   weekday,
-			StartTime: parseTimeToDateToday("12:00"),
-			EndTime:   parseTimeToDateToday("12:00"),
-		}
-		assert.NoError(t, db.Create(&wh).Error)
-	
-		isOpen, err := svc.GetBranchOpenStatus(ctx, 1, weekday, now)
-		assert.NoError(t, err)
-		assert.False(t, isOpen)
 	})
 
 	t.Run("CreateWorkingHours_Success", func(t *testing.T) {

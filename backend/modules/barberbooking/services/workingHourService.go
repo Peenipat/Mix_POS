@@ -3,11 +3,10 @@ package barberBookingService
 
 import (
 	"context"
-	"errors"
+	
 	"fmt"
 	"gorm.io/gorm"
 	"strings"
-	"time"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingDto "myapp/modules/barberbooking/dto"
 	barberBookingPort "myapp/modules/barberbooking/port"
@@ -60,24 +59,7 @@ func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID ui
 	return tx.Commit().Error
 }
 
-func (s *WorkingHourService) GetBranchOpenStatus(ctx context.Context, branchID uint, weekday int, now time.Time) (bool, error) {
-	var wh barberBookingModels.WorkingHour
-	err := s.DB.WithContext(ctx).
-		Where("branch_id = ? AND weekday = ?", branchID, weekday).
-		First(&wh).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil // ไม่มีข้อมูลถือว่าปิด
-		}
-		return false, err
-	}
 
-	start := time.Date(now.Year(), now.Month(), now.Day(), wh.StartTime.Hour(), wh.StartTime.Minute(), 0, 0, now.Location())
-	end := time.Date(now.Year(), now.Month(), now.Day(), wh.EndTime.Hour(), wh.EndTime.Minute(), 0, 0, now.Location())
-
-	isOpen := now.After(start) && now.Before(end)
-	return isOpen, nil
-}
 
 func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID uint, input barberBookingDto.WorkingHourInput) error {
 	if input.Weekday < 0 || input.Weekday > 6 {

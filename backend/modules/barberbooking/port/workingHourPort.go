@@ -1,8 +1,7 @@
 package barberBookingPort
 
 import(
-	"context"
-	"time"
+	"context"	
 	barberBookingDto "myapp/modules/barberbooking/dto"
 	barberBookingModels "myapp/modules/barberbooking/models"
 )
@@ -10,6 +9,5 @@ import(
 type IWorkingHourService interface{
 	GetWorkingHours(ctx context.Context, branchID uint) ([]barberBookingModels.WorkingHour, error) 
 	UpdateWorkingHours(ctx context.Context, branchID uint, input []barberBookingDto.WorkingHourInput) error
-	GetBranchOpenStatus(ctx context.Context, branchID uint, weekday int, now time.Time) (bool, error)
 	CreateWorkingHours(ctx context.Context, branchID uint, input barberBookingDto.WorkingHourInput) error
 }

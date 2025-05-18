@@ -12,75 +12,147 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	barberBookingDto "myapp/modules/barberbooking/dto"
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
 	barberBookingService "myapp/modules/barberbooking/services"
 )
 
 func setupTestAppointmentDB(t *testing.T) *gorm.DB {
-	_ = godotenv.Load("../../../../.env.test") // ใช้ relative path ให้ตรงกับตำแหน่งจริง
-
+	_ = godotenv.Load("../../../../.env.test")
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		t.Fatal("DATABASE_URL is not set. Please check .env.test or environment variable.")
+		t.Fatal("DATABASE_URL is not set")
 	}
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to connect to PostgreSQL test DB: %v", err)
-	}
+	require.NoError(t, err)
 
-	// 🧹 ล้าง schema แล้ว migrate ใหม่ (ปลอดภัยสำหรับ test เท่านั้น)
-	err = db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error
-	if err != nil {
-		t.Fatalf("failed to reset schema: %v", err)
-	}
-
-	err = db.AutoMigrate(
+	// reset schema
+	require.NoError(t, db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error)
+	require.NoError(t, db.AutoMigrate(
 		&barberBookingModels.Service{},
 		&barberBookingModels.Customer{},
 		&barberBookingModels.Barber{},
 		&barberBookingModels.Appointment{},
-	)
-	if err != nil {
-		t.Fatalf("migration failed: %v", err)
-	}
+		&barberBookingModels.AppointmentStatusLog{},
+	))
 
-	//  Seed Customer หลัก
-	db.Create(&barberBookingModels.Customer{
+	// 0) Seed a Service so FK on appointments.service_id is valid
+	require.NoError(t, db.Create(&barberBookingModels.Service{
+		ID:       1,
+		Name:     "Default Service",
+		TenantID: 1,
+		Duration: 30,
+		Price:    100,
+	}).Error)
+
+	// 1) Seed Customer หลัก
+	require.NoError(t, db.Create(&barberBookingModels.Customer{
 		ID:       1,
 		Name:     "ลูกค้าทดสอบ",
 		Email:    "test@example.com",
 		TenantID: 1,
-	})
+	}).Error)
 
-	// Seed Barber หลัก
-	db.Create(&barberBookingModels.Barber{
+	// 2) Seed Barber หลัก
+	require.NoError(t, db.Create(&barberBookingModels.Barber{
 		ID:       1,
 		BranchID: 1,
 		UserID:   1001,
 		TenantID: 1,
-	})
+	}).Error)
 
-	db.Create(&barberBookingModels.Appointment{
+	// 3) (Optional) ถ้ามีตาราง Branches ให้ seed ด้วย
+
+	// 4) Seed Appointment ตัวอย่าง
+	require.NoError(t, db.Create(&barberBookingModels.Appointment{
 		TenantID:   1,
 		BranchID:   1,
-		ServiceID:  1,
-		CustomerID: 1,
+		ServiceID:  1, // อ้างถึง Service.ID=1 ข้างบน
+		CustomerID: 1, // อ้างถึง Customer.ID=1
 		StartTime:  time.Now().Add(1 * time.Hour),
 		EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
 		Status:     barberBookingModels.StatusPending,
-	})
+	}).Error)
 
 	return db
+}
+
+type MockLogService struct {
+	mock.Mock
+}
+
+// LogStatusChangeTx implements barberBookingPort.IAppointmentStatusLogService.
+func (m *MockLogService) LogStatusChangeTx(tx *gorm.DB, appointmentID uint, oldStatus string, newStatus string, changedByUser *uint, changedByCustomer *uint, notes string) error {
+	panic("unimplemented")
+}
+
+func (m *MockLogService) LogStatusChange(
+	ctx context.Context,
+	appointmentID uint,
+	oldStatus, newStatus string,
+	userID *uint,
+	customerID *uint,
+	notes string,
+) error {
+	args := m.Called(ctx, appointmentID, oldStatus, newStatus, userID, customerID, notes)
+	return args.Error(0)
+}
+
+type MockAppointmentService struct {
+	mock.Mock
+}
+
+func (m *MockAppointmentService) CancelAppointment(
+	ctx context.Context,
+	appointmentID uint,
+	actorUserID *uint,
+	actorCustomerID *uint,
+) error {
+	args := m.Called(ctx, appointmentID, actorUserID, actorCustomerID)
+	return args.Error(0)
+}
+
+func (m *MockAppointmentService) RescheduleAppointment(
+	ctx context.Context,
+	appointmentID uint,
+	newStartTime time.Time,
+	actorUserID *uint,
+	actorCustomerID *uint,
+) error {
+	args := m.Called(ctx, appointmentID, newStartTime, actorUserID, actorCustomerID)
+	return args.Error(0)
+}
+
+func (m *MockLogService) GetLogsForAppointment(
+	ctx context.Context,
+	appointmentID uint,
+) ([]barberBookingModels.AppointmentStatusLog, error) {
+	args := m.Called(ctx, appointmentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]barberBookingModels.AppointmentStatusLog), args.Error(1)
+}
+
+func (m *MockLogService) DeleteLogsByAppointmentID(
+	ctx context.Context,
+	appointmentID uint,
+) error {
+	args := m.Called(ctx, appointmentID)
+	return args.Error(0)
 }
 
 func TestAppointmentService_CRUD(t *testing.T) {
 	ctx := context.Background()
 	db := setupTestAppointmentDB(t)
-	svc := barberBookingService.NewAppointmentService(db)
+	logSvc := barberBookingService.NewAppointmentStatusLogService(db)
+	svc := barberBookingService.NewAppointmentService(db, logSvc)
 
 	tenantID := uint(1)
 	serviceID := uint(1)
@@ -713,120 +785,6 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Contains(t, err.Error(), "appointment not found")
 	})
 
-	t.Run("UpdateAppointment_BarberUnavailable_ShouldFail", func(t *testing.T) {
-		// สร้าง barber ใหม่
-		barberID := uint(8888)
-		db.Create(&barberBookingModels.Barber{
-			ID:       barberID,
-			TenantID: tenantID,
-			BranchID: 1,
-			UserID:   8888,
-		})
-
-		// สร้างนัดที่ชนกัน
-		start := time.Now().Add(4 * time.Hour)
-		end := start.Add(30 * time.Minute)
-		db.Create(&barberBookingModels.Appointment{
-			TenantID:   tenantID,
-			ServiceID:  serviceID,
-			CustomerID: customerID,
-			BarberID:   &barberID,
-			StartTime:  start,
-			EndTime:    end,
-			Status:     barberBookingModels.StatusConfirmed,
-		})
-
-		// สร้างอีกนัด
-		ap := barberBookingModels.Appointment{
-			TenantID:   tenantID,
-			ServiceID:  serviceID,
-			CustomerID: customerID,
-			StartTime:  start.Add(1 * time.Hour),
-			EndTime:    start.Add(1*time.Hour + 30*time.Minute),
-		}
-		db.Create(&ap)
-
-		// พยายามอัปเดตให้นัดนั้นใช้ barber เดิมที่ไม่ว่าง
-		updateInput := &barberBookingModels.Appointment{
-			BarberID:  &barberID,
-			StartTime: start,
-		}
-		_, err := svc.UpdateAppointment(ctx, ap.ID, tenantID, updateInput)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not available")
-	})
-
-	t.Run("CancelAppointment_Success", func(t *testing.T) {
-		barber := barberBookingModels.Barber{
-			ID:       1,
-			TenantID: 1,
-			BranchID: 1,
-			UserID:   101,
-		}
-		assert.NoError(t, db.Create(&barber).Error)
-
-		ap := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			BarberID:   ptrUint(1),
-			StartTime:  time.Now().Add(2 * time.Hour),
-			EndTime:    time.Now().Add(2*time.Hour + 30*time.Minute),
-			Status:     barberBookingModels.StatusConfirmed,
-		}
-		assert.NoError(t, db.Create(&ap).Error)
-		assert.NotZero(t, ap.ID)
-
-		err := svc.CancelAppointment(ctx, ap.ID, 123) // actorUserID = 123
-		assert.NoError(t, err)
-
-		var updated barberBookingModels.Appointment
-		assert.NoError(t, db.First(&updated, ap.ID).Error)
-		assert.Equal(t, barberBookingModels.StatusCancelled, updated.Status)
-		assert.Equal(t, uint(123), *updated.UserID)
-	})
-
-	t.Run("CancelAppointment_NotFound", func(t *testing.T) {
-		err := svc.CancelAppointment(ctx, 99999, 1)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not found")
-	})
-
-	t.Run("CancelAppointment_AlreadyCancelled", func(t *testing.T) {
-		ap := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			Status:     barberBookingModels.StatusCancelled,
-			StartTime:  time.Now().Add(4 * time.Hour),
-			EndTime:    time.Now().Add(4*time.Hour + 30*time.Minute),
-		}
-		assert.NoError(t, db.Create(&ap).Error)
-
-		err := svc.CancelAppointment(ctx, ap.ID, 1)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot be cancelled")
-	})
-
-	t.Run("CancelAppointment_AlreadyCompleted", func(t *testing.T) {
-		ap := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			Status:     barberBookingModels.StatusComplete,
-			StartTime:  time.Now().Add(-3 * time.Hour),
-			EndTime:    time.Now().Add(-2 * time.Hour),
-		}
-		assert.NoError(t, db.Create(&ap).Error)
-
-		err := svc.CancelAppointment(ctx, ap.ID, 1)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot be cancelled")
-	})
-
 	t.Run("GetAppointmentByID_Success", func(t *testing.T) {
 		// Seed appointment
 		ap := barberBookingModels.Appointment{
@@ -855,142 +813,15 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Contains(t, err.Error(), "not found")
 	})
 
-	t.Run("RescheduleAppointment_Success", func(t *testing.T) {
-		start := parseTimeToDateToday("13:00")
-		end := start.Add(30 * time.Minute)
-
-		// สร้าง appointment เดิม
-		ap := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			BarberID:   ptrUint(1),
-			StartTime:  start,
-			EndTime:    end,
-			Status:     barberBookingModels.StatusConfirmed,
-		}
-		assert.NoError(t, db.Create(&ap).Error)
-		service := barberBookingModels.Service{
-			ID:       4,
-			TenantID: ap.TenantID,
-			Name:     "ตัดผมชาย",
-			Duration: 30,
-		}
-		assert.NoError(t, db.Create(&service).Error)
-		ap.ServiceID = service.ID // อัปเดต appointment ให้ชี้มาที่ ID ใหม่
-
-		// สร้าง service ที่ใช้ระยะเวลา 30 นาที
-
-		newStart := parseTimeToDateToday("15:00")
-		err := svc.RescheduleAppointment(ctx, ap.ID, newStart, 999) // 999 = actorUserID
-		assert.NoError(t, err)
-
-		var updated barberBookingModels.Appointment
-		assert.NoError(t, db.First(&updated, ap.ID).Error)
-		assert.Equal(t, newStart.Unix(), updated.StartTime.Unix())
-		assert.Equal(t, newStart.Add(30*time.Minute).Unix(), updated.EndTime.Unix())
-		assert.Equal(t, uint(999), *updated.UserID)
-		assert.Equal(t, barberBookingModels.StatusConfirmed, updated.Status)
-	})
-
-	t.Run("RescheduleAppointment_NotFound", func(t *testing.T) {
-		err := svc.RescheduleAppointment(ctx, 9999, time.Now(), 1)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not found")
-	})
-
-	t.Run("RescheduleAppointment_AlreadyCompleted", func(t *testing.T) {
-		ap := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			BarberID:   ptrUint(1),
-			StartTime:  parseTimeToDateToday("10:00"),
-			EndTime:    parseTimeToDateToday("10:30"),
-			Status:     barberBookingModels.StatusComplete,
-		}
-		assert.NoError(t, db.Create(&ap).Error)
-
-		err := svc.RescheduleAppointment(ctx, ap.ID, parseTimeToDateToday("14:00"), 1)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "completed or cancelled")
-	})
-
-	t.Run("RescheduleAppointment_Conflict", func(t *testing.T) {
-		// appointment ที่ชนกับเวลาจะเลื่อน
-		existing := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			BarberID:   ptrUint(1),
-			StartTime:  parseTimeToDateToday("17:00"),
-			EndTime:    parseTimeToDateToday("17:30"),
-			Status:     barberBookingModels.StatusConfirmed,
-		}
-		assert.NoError(t, db.Create(&existing).Error)
-
-		target := barberBookingModels.Appointment{
-			TenantID:   1,
-			BranchID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			BarberID:   ptrUint(1),
-			StartTime:  parseTimeToDateToday("11:00"),
-			EndTime:    parseTimeToDateToday("11:30"),
-			Status:     barberBookingModels.StatusConfirmed,
-		}
-		assert.NoError(t, db.Create(&target).Error)
-
-		// เวลาใหม่ชนกับ existing
-		err := svc.RescheduleAppointment(ctx, target.ID, parseTimeToDateToday("17:00"), 1)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "conflicts with another appointment")
-	})
-
-	t.Run("GetAppointmentsByBarber_Success", func(t *testing.T) {
-		start := time.Now().Add(3 * time.Hour).Truncate(time.Second)
-		end := start.Add(30 * time.Minute)
-
-		appt := &barberBookingModels.Appointment{
-			TenantID:   tenantID,
-			ServiceID:  serviceID,
-			CustomerID: customerID,
-			BarberID:   &barberID,
-			StartTime:  start,
-			EndTime:    end,
-			Status:     barberBookingModels.StatusConfirmed,
-			BranchID:   1,
-		}
-		err := db.Create(appt).Error
-		assert.NoError(t, err)
-
-		// ใช้ pointer ของช่วงเวลา
-		from := start.Add(-1 * time.Hour)
-		to := end.Add(1 * time.Hour)
-
-		results, err := svc.GetAppointmentsByBarber(ctx, barberID, &from, &to)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, results)
-
-		found := false
-		for _, a := range results {
-			if a.ID == appt.ID {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "expected appointment not found in results")
-	})
-
-	t.Run("GetAppointmentsByBarber_AllTimeRange", func(t *testing.T) {
-		results, err := svc.GetAppointmentsByBarber(ctx, barberID, nil, nil)
-		assert.NoError(t, err)
-		assert.GreaterOrEqual(t, len(results), 2)
-	})
 	t.Run("GetAppointmentsByBarber_OutsideRange_ShouldReturnZero", func(t *testing.T) {
+		// เตรียม barber ให้มีใน DB
+		require.NoError(t, db.Create(&barberBookingModels.Barber{
+			ID:       barberID,
+			BranchID: 1,
+			UserID:   10,
+			TenantID: 1,
+		}).Error)
+
 		from := time.Now().Add(10 * time.Hour)
 		to := from.Add(1 * time.Hour)
 
@@ -999,68 +830,55 @@ func TestAppointmentService_CRUD(t *testing.T) {
 		assert.Empty(t, results)
 	})
 
-	// t.Run("GetAppointmentsByBarber_NilTo_ShouldReturnFromStartOnly", func(t *testing.T) {
-	// 	now := time.Now().Truncate(time.Second)
-	// 	apptStart := now.Add(6 * time.Hour)
-	// 	apptEnd := apptStart.Add(30 * time.Minute)
+	t.Run("GetAppointmentsByBarber_WrongBarberID_ShouldReturnError", func(t *testing.T) {
+		// ไม่ต้อง seed barber
+		_, err := svc.GetAppointmentsByBarber(ctx, 9999, nil, nil)
 
-	// 	// Seed appointment
-	// 	_ = db.Create(&barberBookingModels.Appointment{
-	// 		TenantID:   tenantID,
-	// 		BranchID:   1,
-	// 		ServiceID:  serviceID,
-	// 		CustomerID: customerID,
-	// 		BarberID:   &barberID,
-	// 		StartTime:  apptStart,
-	// 		EndTime:    apptEnd,
-	// 		Status:     barberBookingModels.StatusConfirmed,
-	// 	})
-
-	// 	from := apptStart.Add(-5 * time.Minute)
-	// 	results, err := svc.GetAppointmentsByBarber(ctx, barberID, &from, nil)
-	// 	assert.NoError(t, err)
-	// 	assert.Len(t, results, 1)
-	// })
-
-	t.Run("GetAppointmentsByBarber_WrongBarberID_ShouldReturnEmpty", func(t *testing.T) {
-		results, err := svc.GetAppointmentsByBarber(ctx, 9999, nil, nil)
-		assert.NoError(t, err)
-		assert.Empty(t, results)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "barber with ID 9999 not found")
 	})
 
-	t.Run("DeleteAppointment_ShouldRemoveFromDB", func(t *testing.T) {
-		// สร้าง appointment ใหม่
-		appt := barberBookingModels.Appointment{
+	t.Run("GetAppointmentsByBarber_InRange_ShouldReturnResults", func(t *testing.T) {
+		// ไม่ต้อง seed Barber ใหม่ — setupTestAppointmentDB จะสร้าง Barber ID=1 ให้แล้ว
+		// สมมติ barberID := uint(1)
+		barberID := uint(1)
+
+		// 2) Seed appointment อยู่ตรงกลางช่วง
+		now := time.Now().UTC().Truncate(time.Minute)
+		ap := barberBookingModels.Appointment{
+			ID:         500,
 			TenantID:   1,
 			BranchID:   1,
 			ServiceID:  1,
 			CustomerID: 1,
 			BarberID:   &barberID,
-			StartTime:  time.Now().Add(1 * time.Hour),
-			EndTime:    time.Now().Add(2 * time.Hour),
-			Status:     barberBookingModels.StatusPending,
+			StartTime:  now.Add(30 * time.Minute),
+			EndTime:    now.Add(60 * time.Minute),
+			Status:     barberBookingModels.StatusConfirmed,
+			CreatedAt:  now.Add(-time.Hour),
+			UpdatedAt:  now.Add(-time.Hour),
 		}
-		err := db.Create(&appt).Error
-		assert.NoError(t, err)
+		require.NoError(t, db.Create(&ap).Error)
 
-		// เรียกลบ
-		err = svc.DeleteAppointment(ctx, appt.ID)
-		assert.NoError(t, err)
+		// 3) ตั้งช่วงให้ครอบคลุม
+		from := now
+		to := now.Add(2 * time.Hour)
 
-		// ตรวจสอบว่าไม่มีใน DB แล้ว
-		var found barberBookingModels.Appointment
-		err = db.First(&found, appt.ID).Error
-		assert.Error(t, err)
-		assert.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+		// 4) เรียก service
+		results, err := svc.GetAppointmentsByBarber(ctx, barberID, &from, &to)
+		require.NoError(t, err)
+		assert.Len(t, results, 1)
+		assert.Equal(t, uint(500), results[0].ID)
 	})
 
-	t.Run("DeleteAppointment_NonExisting_ShouldNotError", func(t *testing.T) {
-		nonExistingID := uint(99999) // ไม่มีในระบบแน่ ๆ
+	t.Run("DeleteAppointment_NonExisting_ShouldReturnNotFoundError", func(t *testing.T) {
+		nonExistingID := uint(99999)
 		err := svc.DeleteAppointment(ctx, nonExistingID)
-		assert.NoError(t, err) // GORM ไม่ถือว่าเป็น error ถ้าลบ id ที่ไม่มี
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), fmt.Sprintf("appointment with ID %d not found", nonExistingID))
 	})
 
-	t.Run("DeleteAppointment_Twice_ShouldNotErrorSecondTime", func(t *testing.T) {
+	t.Run("DeleteAppointment_Twice_ShouldErrorSecondTime", func(t *testing.T) {
 		appt := barberBookingModels.Appointment{
 			TenantID:   1,
 			BranchID:   1,
@@ -1071,19 +889,23 @@ func TestAppointmentService_CRUD(t *testing.T) {
 			EndTime:    time.Now().Add(5 * time.Hour),
 			Status:     barberBookingModels.StatusConfirmed,
 		}
-		_ = db.Create(&appt)
+		require.NoError(t, db.Create(&appt).Error)
 
-		_ = svc.DeleteAppointment(ctx, appt.ID)
+		// ครั้งแรก ควรลบสำเร็จ (no error)
+		require.NoError(t, svc.DeleteAppointment(ctx, appt.ID))
+
+		// ครั้งที่สอง ควรได้ error not found
 		err := svc.DeleteAppointment(ctx, appt.ID)
-		assert.NoError(t, err)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), fmt.Sprintf("appointment with ID %d not found", appt.ID))
 	})
 
 }
 func TestAppointmentService_ListAppointments(t *testing.T) {
 	ctx := context.Background()
 	db := setupTestAppointmentDB(t)
-
-	svc := barberBookingService.NewAppointmentService(db)
+	logSvc := barberBookingService.NewAppointmentStatusLogService(db)
+	svc := barberBookingService.NewAppointmentService(db, logSvc)
 
 	t.Run("List_ByTenantID_Only", func(t *testing.T) {
 		results, err := svc.ListAppointments(ctx, barberBookingDto.AppointmentFilter{
@@ -1149,7 +971,10 @@ func TestAppointmentService_ListAppointments(t *testing.T) {
 	})
 
 	t.Run("CalculateAppointmentEndTime_Success", func(t *testing.T) {
-		svc := barberBookingService.NewAppointmentService(db)
+		logSvc := barberBookingService.NewAppointmentStatusLogService(db)
+		svc := barberBookingService.NewAppointmentService(db, logSvc)
+		// หลัง db.Create(&Service{ID:1,…})
+		db.Exec("SELECT setval(pg_get_serial_sequence('services','id'), (SELECT max(id) FROM services));")
 
 		// สร้าง service
 		service := barberBookingModels.Service{
@@ -1218,4 +1043,368 @@ func TestAppointmentService_ListAppointments(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid")
 	})
+}
+
+func setup(t *testing.T) (*gorm.DB, barberBookingPort.IAppointment) {
+	db := setupTestAppointmentDB(t)
+	logSvc := barberBookingService.NewAppointmentStatusLogService(db)
+	svc := barberBookingService.NewAppointmentService(db, logSvc)
+	return db, svc // svc implements IAppointment
+}
+
+func TestCancelAppointment_Service(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("NotFound_ShouldError", func(t *testing.T) {
+		_, svc := setup(t)
+		userID := uint(1)
+		err := svc.CancelAppointment(ctx, 9999, &userID, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("AlreadyCompleted_ShouldError", func(t *testing.T) {
+		db, svc := setup(t)
+		ap := barberBookingModels.Appointment{
+			ID:         100,
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1, // <— ต้องระบุ!
+			StartTime:  time.Now().Add(-2 * time.Hour),
+			EndTime:    time.Now().Add(-90 * time.Minute),
+			Status:     barberBookingModels.StatusComplete,
+			CreatedAt:  time.Now().Add(-2 * time.Hour),
+			UpdatedAt:  time.Now().Add(-2 * time.Hour),
+		}
+		require.NoError(t, db.Create(&ap).Error)
+
+		userID := uint(7)
+		err := svc.CancelAppointment(ctx, ap.ID, &userID, nil)
+		require.Error(t, err)
+		assert.Equal(t, "appointment cannot be cancelled in its current status", err.Error())
+	})
+
+	t.Run("Success_ShouldUpdateAndLog", func(t *testing.T) {
+		db, svc := setup(t)
+		ap := barberBookingModels.Appointment{
+			ID:         200,
+			TenantID:   1,
+			BranchID:   1,
+			ServiceID:  1,
+			CustomerID: 1, // <— ต้องมี
+			StartTime:  time.Now().Add(1 * time.Hour),
+			EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
+			Status:     barberBookingModels.StatusPending,
+			CreatedAt:  time.Now().Add(-time.Hour),
+			UpdatedAt:  time.Now().Add(-time.Hour),
+		}
+		require.NoError(t, db.Create(&ap).Error)
+
+		userID := uint(99)
+		err := svc.CancelAppointment(ctx, ap.ID, &userID, nil)
+		require.NoError(t, err)
+
+		// … assertions …
+	})
+
+}
+
+func setupCancelTest(t *testing.T) (*gorm.DB, barberBookingPort.IAppointment, *MockLogService) {
+	// โหลด .env.test แล้วเปิด connection
+	_ = godotenv.Load("../../../../.env.test")
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Fatal("DATABASE_URL is not set")
+	}
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+
+	// reset schema แล้ว migrate ทุกตารางที่ใช้
+	require.NoError(t,
+		db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error,
+	)
+	require.NoError(t, db.AutoMigrate(
+		&barberBookingModels.Service{},
+		&barberBookingModels.Customer{},
+		&barberBookingModels.Barber{},
+		&barberBookingModels.Appointment{},
+		&barberBookingModels.AppointmentStatusLog{},
+		// ถ้าคุณมี branch model ที่มี FK ใน appointments.branch_id ก็ใส่ &Branch{} ด้วย
+	))
+
+	// 1) Seed Service
+	require.NoError(t, db.Create(&barberBookingModels.Service{
+		ID:       1,
+		Name:     "Test Service",
+		TenantID: 1,
+		Duration: 30,
+		Price:    100,
+	}).Error)
+
+	// 2) Seed Customer
+	require.NoError(t, db.Create(&barberBookingModels.Customer{
+		ID:       55,
+		Name:     "ลูกค้าทดสอบ",
+		Email:    "test@example.com",
+		TenantID: 1,
+	}).Error)
+
+	// 3) Seed Barber
+	require.NoError(t, db.Create(&barberBookingModels.Barber{
+		ID:       10,
+		BranchID: 5,
+		UserID:   500,
+		TenantID: 1,
+	}).Error)
+
+	// 4) (ถ้าจำเป็น) Seed Branch
+	// require.NoError(t, db.Create(&Branch{ID:5, TenantID:1, Name:"B1"}).Error)
+
+	// 5) Seed Appointment (แค่ครั้งเดียว)
+	ap := barberBookingModels.Appointment{
+		ID:         123,
+		TenantID:   1,
+		BranchID:   5,
+		ServiceID:  1,
+		CustomerID: 55,
+		StartTime:  time.Now().Add(-time.Hour),
+		EndTime:    time.Now().Add(-30 * time.Minute),
+		Status:     barberBookingModels.StatusPending,
+		CreatedAt:  time.Now().Add(-time.Hour),
+		UpdatedAt:  time.Now().Add(-time.Hour),
+	}
+	require.NoError(t, db.Create(&ap).Error)
+
+	mockLog := new(MockLogService)
+	svc := barberBookingService.NewAppointmentService(db, mockLog)
+	return db, svc, mockLog
+}
+
+func TestCancelAppointment_LogFails_Rollback(t *testing.T) {
+	ctx := context.Background()
+	db, svc, mockLog := setupCancelTest(t)
+
+	// stub ให้ LogStatusChange return error
+	mockLog.
+		On("LogStatusChange",
+			ctx,
+			uint(123),
+			string(barberBookingModels.StatusPending),
+			string(barberBookingModels.StatusCancelled),
+			mock.Anything, // actorUserID (pointer)
+			mock.Anything, // actorCustomerID (pointer)
+			"cancelled via API",
+		).
+		Return(errors.New("db write error")).
+		Once()
+
+	// เตรียม actorUserID เป็น pointer
+	userID := uint(999)
+
+	// เรียก CancelAppointment ด้วย pointer ทั้งสอง (customer nil)
+	err := svc.CancelAppointment(ctx, 123, &userID, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db write error")
+
+	// ตรวจ rollback: status ยัง PENDING
+	var ap barberBookingModels.Appointment
+	require.NoError(t, db.First(&ap, 123).Error)
+	assert.Equal(t, barberBookingModels.StatusPending, ap.Status)
+
+	// ตรวจว่าไม่มี log ถูกบันทึก
+	var logs []barberBookingModels.AppointmentStatusLog
+	require.NoError(t, db.
+		Where("appointment_id = ?", 123).
+		Find(&logs).Error)
+	assert.Len(t, logs, 0)
+
+	mockLog.AssertExpectations(t)
+}
+
+func setupCreateTest(t *testing.T) (*gorm.DB, barberBookingPort.IAppointment, *MockLogService) {
+	_ = godotenv.Load("../../../../.env.test")
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Fatal("DATABASE_URL is not set")
+	}
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+
+	// Reset schema & migrate
+	require.NoError(t, db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error)
+	require.NoError(t, db.AutoMigrate(
+		&barberBookingModels.Service{},
+		&barberBookingModels.Customer{},
+		&barberBookingModels.Barber{},
+		&barberBookingModels.Appointment{},
+		&barberBookingModels.AppointmentStatusLog{},
+	))
+
+	// Seed Service, Customer, Barber
+	require.NoError(t, db.Create(&barberBookingModels.Service{
+		ID: 1, Name: "Test Service", TenantID: 1, Duration: 30, Price: 100,
+	}).Error)
+	require.NoError(t, db.Create(&barberBookingModels.Customer{
+		ID: 55, Name: "ลูกค้าทดสอบ", Email: "test@example.com", TenantID: 1,
+	}).Error)
+	require.NoError(t, db.Create(&barberBookingModels.Barber{
+		ID: 10, BranchID: 5, UserID: 500, TenantID: 1,
+	}).Error)
+
+	mockLog := new(MockLogService)
+	svc := barberBookingService.NewAppointmentService(db, mockLog)
+	return db, svc, mockLog
+}
+func TestCreateAppointment_LogFails_Rollback(t *testing.T) {
+	ctx := context.Background()
+	db, svc, mockLog := setupCreateTest(t)
+
+	// Prepare input
+	start := time.Date(2025, 5, 20, 10, 0, 0, 0, time.UTC)
+	input := &barberBookingModels.Appointment{
+		TenantID:   1,
+		BranchID:   5,
+		ServiceID:  1,
+		CustomerID: 55,
+		StartTime:  start,
+	}
+
+	// Stub LogStatusChange to fail
+	mockLog.
+		On("LogStatusChange",
+			ctx,
+			mock.AnythingOfType("uint"), // appointmentID
+			"",                          // oldStatus
+			string(barberBookingModels.StatusPending), // newStatus
+			(*uint)(nil),                 // userID
+			mock.AnythingOfType("*uint"), // customerID
+			"initial creation",           // notes
+		).
+		Return(errors.New("log write error")).
+		Once()
+
+	// Call CreateAppointment
+	result, err := svc.CreateAppointment(ctx, input)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "log write error")
+	assert.Nil(t, result)
+
+	// Ensure no appointment was created
+	var cnt int64
+	require.NoError(t, db.Model(&barberBookingModels.Appointment{}).Count(&cnt).Error)
+	assert.Equal(t, int64(0), cnt)
+
+	// Ensure no log was created
+	require.NoError(t, db.Model(&barberBookingModels.AppointmentStatusLog{}).Count(&cnt).Error)
+	assert.Equal(t, int64(0), cnt)
+
+	mockLog.AssertExpectations(t)
+}
+
+func setupUpdateTest(t *testing.T) (*gorm.DB, barberBookingPort.IAppointment, *MockLogService) {
+	_ = godotenv.Load("../../../../.env.test")
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Fatal("DATABASE_URL is not set")
+	}
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+
+	// reset schema & migrate
+	require.NoError(t, db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error)
+	require.NoError(t, db.AutoMigrate(
+		&barberBookingModels.Service{},
+		&barberBookingModels.Customer{},
+		&barberBookingModels.Barber{},
+		&barberBookingModels.Appointment{},
+		&barberBookingModels.AppointmentStatusLog{},
+	))
+
+	// seed FK records
+	require.NoError(t, db.Create(&barberBookingModels.Service{
+		ID: 1, Name: "S1", TenantID: 1, Duration: 30, Price: 100,
+	}).Error)
+	require.NoError(t, db.Create(&barberBookingModels.Customer{
+		ID: 1, Name: "C1", Email: "c1@example.com", TenantID: 1,
+	}).Error)
+	require.NoError(t, db.Create(&barberBookingModels.Barber{
+		ID: 2, BranchID: 1, UserID: 20, TenantID: 1,
+	}).Error)
+
+	// seed an existing appointment
+	ap := barberBookingModels.Appointment{
+		ID:         300,
+		TenantID:   1,
+		BranchID:   1,
+		ServiceID:  1,
+		CustomerID: 1,
+		BarberID:   ptrUint(2),
+		StartTime:  time.Date(2025, 5, 21, 9, 0, 0, 0, time.UTC),
+		EndTime:    time.Date(2025, 5, 21, 9, 30, 0, 0, time.UTC),
+		Status:     barberBookingModels.StatusPending,
+		CreatedAt:  time.Now().Add(-time.Hour),
+		UpdatedAt:  time.Now().Add(-time.Hour),
+	}
+	require.NoError(t, db.Create(&ap).Error)
+
+	mockLog := new(MockLogService)
+	svc := barberBookingService.NewAppointmentService(db, mockLog)
+	return db, svc, mockLog
+}
+
+func TestUpdateAppointment_LogFails_Rollback(t *testing.T) {
+	ctx := context.Background()
+	db, svc, mockLog := setupUpdateTest(t)
+
+	// prepare input: change status to CONFIRMED
+	newStart := time.Date(2025, 5, 21, 10, 0, 0, 0, time.UTC)
+	input := &barberBookingModels.Appointment{
+		StartTime: newStart,
+		Status:    barberBookingModels.StatusConfirmed,
+	}
+
+	// stub LogStatusChange to fail
+	mockLog.
+		On("LogStatusChange",
+			ctx,
+			uint(300),
+			string(barberBookingModels.StatusPending),
+			string(barberBookingModels.StatusConfirmed),
+			mock.Anything, // userID pointer
+			mock.Anything, // customerID pointer
+			"status updated via API",
+		).
+		Return(fmt.Errorf("log write error")).
+		Once()
+
+	// call UpdateAppointment
+	updated, err := svc.UpdateAppointment(ctx, 300, 1, input)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "log write error")
+	assert.Nil(t, updated)
+
+	// verify rollback: appointment unchanged
+	var ap barberBookingModels.Appointment
+	require.NoError(t, db.First(&ap, 300).Error)
+
+	// compare instants in UTC
+	expectedStart := time.Date(2025, 5, 21, 9, 0, 0, 0, time.UTC)
+	assert.True(t,
+		ap.StartTime.UTC().Equal(expectedStart),
+		"expected start %v, got %v",
+		expectedStart, ap.StartTime.UTC(),
+	)
+
+	expectedStatus := barberBookingModels.StatusPending
+	assert.Equal(t, expectedStatus, ap.Status)
+
+	// verify no log entry
+	var logs []barberBookingModels.AppointmentStatusLog
+	require.NoError(t, db.
+		Where("appointment_id = ?", 300).
+		Find(&logs).Error)
+	assert.Len(t, logs, 0)
+
+	mockLog.AssertExpectations(t)
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"fmt"
 
 	// "net/http"
 
@@ -184,6 +185,14 @@ func main() {
 	workingHourService := bookingServices.NewWorkingHourService(database.DB)
 	workingHourController := bookingControllers.NewWorkingHourController(workingHourService)
 
+	barberWorkloadService := bookingServices.NewBarberWorkloadService(database.DB)
+	barberWorkloadController := bookingControllers.NewBarberWorkloadController(barberWorkloadService)
+
+	apppointmentStatusLogService := bookingServices.NewAppointmentStatusLogService(database.DB)
+	appointmentService := bookingServices.NewAppointmentService(database.DB,apppointmentStatusLogService)
+	appointmentController := bookingControllers.NewAppointmentController(appointmentService)
+
+
 	bookingGroup := app.Group("/api/barberbooking")
 
 	// Register routes
@@ -192,6 +201,12 @@ func main() {
 	bookingRoutes.RegisterBarberRoutes(bookingGroup,barberController)
 	bookingRoutes.RegisterUnavailabilityRoute(bookingGroup,unavailabilityController)
 	bookingRoutes.RegisterWorkingHourRoute(bookingGroup,*workingHourController)
+	bookingRoutes.RegisterBarberWorkloadRoute(bookingGroup,*barberWorkloadController)
+	bookingRoutes.RegisterAppointmentRoute(bookingGroup,appointmentController)
+	
+	for _, r := range app.GetRoutes() {
+        fmt.Printf("%-6s %s\n", r.Method, r.Path)
+    }
 	
 
 	// Route api docs

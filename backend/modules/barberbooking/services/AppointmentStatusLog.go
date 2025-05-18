@@ -1,16 +1,17 @@
 package barberBookingService
+
 import (
-	"gorm.io/gorm"
 	"context"
-	"time"
+	"gorm.io/gorm"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
-
+	"time"
 )
 
 type appointmentStatusLogService struct {
 	DB *gorm.DB
 }
+
 
 func NewAppointmentStatusLogService(db *gorm.DB) barberBookingPort.IAppointmentStatusLogService {
 	return &appointmentStatusLogService{DB: db}

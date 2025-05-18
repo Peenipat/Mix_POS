@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
+	barberBookingDto "myapp/modules/barberbooking/dto"
 )
 
 type barberWorkloadService struct {
@@ -21,9 +22,10 @@ func NewBarberWorkloadService(db *gorm.DB) barberBookingPort.IbarberWorkload {
 // GetWorkloadByBarber: ดึง workload รายวันของช่าง
 func (s *barberWorkloadService) GetWorkloadByBarber(ctx context.Context, barberID uint, date time.Time) (*barberBookingModels.BarberWorkload, error) {
 	var workload barberBookingModels.BarberWorkload
-	err := s.DB.WithContext(ctx).
-		Where("barber_id = ? AND strftime('%Y-%m-%d', date) = ?", barberID, date.Format("2006-01-02")).
-		First(&workload).Error
+	err := s.DB.
+    WithContext(ctx).
+    Where("barber_id = ? AND DATE(date) = ?", barberID, date.Format("2006-01-02")).
+    First(&workload).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // not found is not an error
@@ -33,20 +35,46 @@ func (s *barberWorkloadService) GetWorkloadByBarber(ctx context.Context, barberI
 	return &workload, nil
 }
 
-// GetWorkloadByDate: ดึง workload ช่างทั้งหมดในวันนั้น
-func (s *barberWorkloadService) GetWorkloadByDate(ctx context.Context, date time.Time) ([]barberBookingModels.BarberWorkload, error) {
-	var workloads []barberBookingModels.BarberWorkload
-	start := date.Truncate(24 * time.Hour)
-	end := start.Add(24 * time.Hour)
+func (s *barberWorkloadService) GetWorkloadSummaryByBranch(
+    ctx context.Context,
+    date time.Time,
+    tenantID uint,
+    branchID uint,
+) ([]barberBookingDto.BranchWorkloadSummary, error) {
+    start := date.Truncate(24 * time.Hour)
+    end := start.Add(24 * time.Hour)
 
-	err := s.DB.WithContext(ctx).
-		Where("date >= ? AND date < ?", start, end).
-		Find(&workloads).Error
-	if err != nil {
-		return nil, err
-	}
-	return workloads, nil
+    var sums []barberBookingDto.BranchWorkloadSummary
+    query := s.DB.WithContext(ctx).
+        Table("branches br").
+        Select(
+            `br.tenant_id,
+             br.id AS branch_id,
+             COUNT(DISTINCT bw.barber_id) AS num_worked,
+             COUNT(b.id) AS total_barbers`,
+        ).
+        Joins("JOIN barbers b ON b.branch_id = br.id").
+        Joins(`LEFT JOIN barber_workloads bw
+               ON bw.barber_id = b.id
+              AND bw.date >= ?
+              AND bw.date < ?`, start, end)
+
+    // Apply tenant filter if provided
+    if tenantID != 0 {
+        query = query.Where("br.tenant_id = ?", tenantID)
+    }
+    // Apply branch filter if provided
+    if branchID != 0 {
+        query = query.Where("br.id = ?", branchID)
+    }
+
+    query = query.Group("br.tenant_id, br.id").Scan(&sums)
+    if query.Error != nil {
+        return nil, query.Error
+    }
+    return sums, nil
 }
+
 
 func (s *barberWorkloadService) UpsertBarberWorkload(ctx context.Context, barberID uint, date time.Time, appointments int, hours int) error {
 	//  Truncate เวลาออกให้เหลือแค่วัน เพื่อความแม่นยำในการเปรียบเทียบ
@@ -71,7 +99,7 @@ func (s *barberWorkloadService) UpsertBarberWorkload(ctx context.Context, barber
 	}
 
 	// Update
-	workload.TotalAppointments = appointments
-	workload.TotalHours = hours
+	workload.TotalAppointments += appointments
+	workload.TotalHours += hours
 	return s.DB.WithContext(ctx).Save(&workload).Error
 }

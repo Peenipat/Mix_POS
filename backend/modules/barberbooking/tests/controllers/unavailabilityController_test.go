@@ -1,4 +1,4 @@
-package barberBookingControllers
+package barberBookingControllers_test
 
 import (
 	// "errors"

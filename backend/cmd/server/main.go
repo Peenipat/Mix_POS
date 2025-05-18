@@ -192,6 +192,8 @@ func main() {
 	appointmentService := bookingServices.NewAppointmentService(database.DB,apppointmentStatusLogService)
 	appointmentController := bookingControllers.NewAppointmentController(appointmentService)
 
+	appointmentStatusLogController := bookingControllers.NewAppointmentStatusLogController(apppointmentStatusLogService)
+
 
 	bookingGroup := app.Group("/api/barberbooking")
 
@@ -203,6 +205,7 @@ func main() {
 	bookingRoutes.RegisterWorkingHourRoute(bookingGroup,*workingHourController)
 	bookingRoutes.RegisterBarberWorkloadRoute(bookingGroup,*barberWorkloadController)
 	bookingRoutes.RegisterAppointmentRoute(bookingGroup,appointmentController)
+	bookingRoutes.RegisterAppointmentStatusLogRoute(bookingGroup,appointmentStatusLogController)
 	
 	for _, r := range app.GetRoutes() {
         fmt.Printf("%-6s %s\n", r.Method, r.Path)

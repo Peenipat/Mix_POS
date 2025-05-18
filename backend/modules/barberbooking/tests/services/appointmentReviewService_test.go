@@ -17,94 +17,77 @@ import (
 )
 
 func setupTestReviewDB(t *testing.T) *gorm.DB {
-	_ = godotenv.Load("../../../../.env.test")
+    // โหลด .env.test
+    _ = godotenv.Load("../../../../.env.test")
 
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		t.Fatal("DATABASE_URL is not set")
-	}
+    dsn := os.Getenv("DATABASE_URL")
+    if dsn == "" {
+        t.Fatal("DATABASE_URL is not set")
+    }
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("could not connect to test DB: %v", err)
-	}
+    // เปิด connection ด้วย postgres driver
+    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil {
+        t.Fatalf("could not connect to test DB: %v", err)
+    }
 
-	if err := db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error; err != nil {
-		t.Fatalf("reset schema failed: %v", err)
-	}
+    // รีเซ็ต public schema ให้ว่าง
+    if err := db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").Error; err != nil {
+        t.Fatalf("reset schema failed: %v", err)
+    }
 
-	if err := db.AutoMigrate(
-		&barberBookingModels.Service{},
-		&barberBookingModels.Customer{},
-		&coreModels.Branch{},
-		&barberBookingModels.Appointment{},
-		&barberBookingModels.AppointmentReview{},
-	); err != nil {
-		t.Fatalf("migrate failed: %v", err)
-	}
+    // สร้างตารางตามโมเดลที่ต้องการ
+    if err := db.AutoMigrate(
+        &barberBookingModels.Service{},
+        &barberBookingModels.Customer{},
+        &coreModels.Branch{},
+        &barberBookingModels.Appointment{},
+        &barberBookingModels.AppointmentReview{},
+    ); err != nil {
+        t.Fatalf("migrate failed: %v", err)
+    }
 
-	db.Create(&coreModels.Tenant{
-		ID:   1,
-		Name: "Tenant ทดสอบ",
-	})
-	// Seed branch
-	db.Create(&coreModels.Branch{
-		ID:       1,
-		TenantID: 1,
-		Name:     "สาขาทดสอบ",
-	})
+    // Seed ข้อมูลพื้นฐาน
+    db.Create(&coreModels.Tenant{ID: 1, Name: "Tenant ทดสอบ"})
+    db.Create(&coreModels.Branch{ID: 1, TenantID: 1, Name: "สาขาทดสอบ"})
+    db.Create(&barberBookingModels.Customer{ID: 1, Name: "ลูกค้าทดสอบ", Email: "review@example.com", TenantID: 1})
+    db.Create(&barberBookingModels.Service{ID: 1, TenantID: 1, Name: "ตัดผมชาย", Price: 200, Duration: 30})
 
-	// Seed customer
-	db.Create(&barberBookingModels.Customer{
-		ID:       1,
-		Name:     "ลูกค้าทดสอบ",
-		Email:    "review@example.com",
-		TenantID: 1,
-	})
+    // สร้าง Appointment สองตัว สถานะ Completed
+    ap1 := barberBookingModels.Appointment{
+        BranchID:   1,
+        TenantID:   1,
+        ServiceID:  1,
+        CustomerID: 1,
+        StartTime:  time.Now().Add(1 * time.Hour),
+        EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
+        Status:     barberBookingModels.StatusComplete,
+    }
+    db.Create(&ap1)
 
-	// Seed service
-	db.Create(&barberBookingModels.Service{
-		ID:       1,
-		TenantID: 1,
-		Name:     "ตัดผมชาย",
-		Price:    200,
-		Duration: 30,
-	})
+    ap2 := barberBookingModels.Appointment{
+        BranchID:   1,
+        TenantID:   1,
+        ServiceID:  1,
+        CustomerID: 1,
+        StartTime:  time.Now().Add(3 * time.Hour),
+        EndTime:    time.Now().Add(3*time.Hour + 30*time.Minute),
+        Status:     barberBookingModels.StatusComplete,
+    }
+    db.Create(&ap2)
 
-	// Seed appointment
-	ap := barberBookingModels.Appointment{
-		BranchID:   1,
-		TenantID:   1,
-		ServiceID:  1,
-		CustomerID: 1,
-		StartTime:  time.Now().Add(1 * time.Hour),
-		EndTime:    time.Now().Add(1*time.Hour + 30*time.Minute),
-		Status:     barberBookingModels.StatusComplete,
-	}
-	if err := db.Create(&ap).Error; err != nil {
-		t.Fatalf("seed appointment failed: %v", err)
-	}
+    // สร้าง Review ตัวอย่าง พร้อมระบุ CustomerID
+    db.Create(&barberBookingModels.AppointmentReview{
+        AppointmentID: ap2.ID,
+        CustomerID:    &ap2.CustomerID,  // <-- ตั้ง CustomerID ให้ชัดเจน
+        Rating:        3,
+        Comment:       "It was fine",
+    })
 
-	ap2 := barberBookingModels.Appointment{
-		BranchID:   1,
-		TenantID:   1,
-		ServiceID:  1,
-		CustomerID: 1,
-		StartTime:  time.Now().Add(3 * time.Hour),
-		EndTime:    time.Now().Add(3*time.Hour + 30*time.Minute),
-		Status:     barberBookingModels.StatusComplete,
-	}
-	_ = db.Create(&ap2)
-
-	review := &barberBookingModels.AppointmentReview{
-		AppointmentID: ap2.ID,
-		Rating:        3,
-		Comment:       "It was fine",
-	}
-	_ = db.Create(review)
-
-	return db
+    return db
 }
+
+
 
 func TestAppointmentReviewService_CRUD(t *testing.T) {
 	ctx := context.Background()
@@ -279,117 +262,9 @@ func TestAppointmentReviewService_CRUD(t *testing.T) {
 		assert.Contains(t, err.Error(), "review for appointment ID 99999 not found")
 	})
 
-	t.Run("DeleteReview_ByOwner_Success", func(t *testing.T) {
-		// สร้าง appointment ใหม่
-		ap := barberBookingModels.Appointment{
-			BranchID:   1,
-			TenantID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			StartTime:  time.Now().Add(8 * time.Hour),
-			EndTime:    time.Now().Add(8*time.Hour + 30*time.Minute),
-			Status:     barberBookingModels.StatusComplete,
-		}
-		_ = db.Create(&ap)
 
-		// สร้าง review โดย CustomerID = 1
-		review := barberBookingModels.AppointmentReview{
-			AppointmentID: ap.ID,
-			CustomerID:    ptrUint(1),
-			Rating:        5,
-			Comment:       "จะลบละ",
-		}
-		_ = db.Create(&review)
 
-		err := svc.DeleteReview(ctx, review.ID, 1, string(coreModels.RoleNameUser))
-		assert.NoError(t, err)
 
-		// ตรวจสอบว่าลบแล้วจริง (soft delete)
-		var check barberBookingModels.AppointmentReview
-		tx := db.Unscoped().First(&check, review.ID)
-		assert.NoError(t, tx.Error)
-		assert.NotNil(t, check.DeletedAt.Valid)
-	})
-
-	t.Run("DeleteReview_ByOtherUser_Fail", func(t *testing.T) {
-		// review เดิมยังค้างอยู่
-		ap := barberBookingModels.Appointment{
-			BranchID:   1,
-			TenantID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			StartTime:  time.Now().Add(8 * time.Hour),
-			EndTime:    time.Now().Add(8*time.Hour + 30*time.Minute),
-			Status:     barberBookingModels.StatusComplete,
-		}
-		_ = db.Create(&ap)
-		review := barberBookingModels.AppointmentReview{
-			AppointmentID: ap.ID,
-			CustomerID:    ptrUint(1),
-			Rating:        3,
-			Comment:       "to be deleted",
-		}
-		err := db.Create(&review).Error
-		assert.NoError(t, err) // ป้องกัน ID = 0
-
-		// 🔥 ทดสอบลบโดย user ผิด
-		err = svc.DeleteReview(ctx, review.ID, 9999, string(coreModels.RoleNameUser))
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not authorized")
-
-	})
-
-	t.Run("DeleteReview_ByAdmin_Success", func(t *testing.T) {
-		ap := barberBookingModels.Appointment{
-			BranchID:   1,
-			TenantID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			StartTime:  time.Now().Add(9 * time.Hour),
-			EndTime:    time.Now().Add(9*time.Hour + 30*time.Minute),
-			Status:     barberBookingModels.StatusComplete,
-		}
-		_ = db.Create(&ap)
-
-		review := barberBookingModels.AppointmentReview{
-			AppointmentID: ap.ID,
-			CustomerID:    ptrUint(1),
-			Rating:        5,
-			Comment:       "admin จะลบ",
-		}
-		_ = db.Create(&review)
-
-		err := svc.DeleteReview(ctx, review.ID, 42, string(coreModels.RoleNameBranchAdmin)) // admin ลบ
-		assert.NoError(t, err)
-	})
-
-	t.Run("DeleteReview_UnknownRole_Fail", func(t *testing.T) {
-
-		ap := barberBookingModels.Appointment{
-			BranchID:   1,
-			TenantID:   1,
-			ServiceID:  1,
-			CustomerID: 1,
-			StartTime:  time.Now().Add(6 * time.Hour),
-			EndTime:    time.Now().Add(6*time.Hour + 30*time.Minute),
-			Status:     barberBookingModels.StatusComplete,
-		}
-		err := db.Create(&ap).Error
-		assert.NoError(t, err)
-
-		review := barberBookingModels.AppointmentReview{
-			AppointmentID: ap.ID, 
-			CustomerID:    ptrUint(1),
-			Rating:        5,
-			Comment:       "unknown role จะลบ",
-		}
-		err = db.Create(&review).Error
-		assert.NoError(t, err)
-
-		err = svc.DeleteReview(ctx, review.ID, 1, "UNKNOWN_ROLE")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not authorized")
-	})
 
 	t.Run("GetAverageRatingByBarber_Success", func(t *testing.T) {
         barberID := uint(1)
@@ -465,5 +340,65 @@ func TestAppointmentReviewService_CRUD(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 0.0, avg)
 	})
+
+
 }
 
+
+func TestAppointmentReviewService_DeleteReview(t *testing.T) {
+    // Setup real test DB
+    db := setupTestReviewDB(t)
+    svc := barberBookingServices.NewAppointmentReviewService(db)
+
+    ctx := context.Background()
+
+    // Seed an additional review for testing
+    appt := &barberBookingModels.Appointment{
+        BranchID:   1,
+        TenantID:   1,
+        ServiceID:  1,
+        CustomerID: 1,
+        StartTime:  time.Now().Add(2 * time.Hour),
+        EndTime:    time.Now().Add(2*time.Hour + 30*time.Minute),
+        Status:     barberBookingModels.StatusComplete,
+    }
+    assert.NoError(t, db.Create(appt).Error)
+    rev := &barberBookingModels.AppointmentReview{
+        AppointmentID: appt.ID,
+        CustomerID:    &appt.CustomerID,
+        Rating:        4,
+        Comment:       "Test delete",
+    }
+    assert.NoError(t, db.Create(rev).Error)
+
+    t.Run("NotFound_ShouldReturnError", func(t *testing.T) {
+        err := svc.DeleteReview(ctx, 9999, 1)
+        assert.EqualError(t, err, "review with ID 9999 not found")
+    })
+
+    t.Run("UnauthorizedCustomer_ShouldReturnError", func(t *testing.T) {
+        // rev.ID exists but customer_id is 1; pass another
+        err := svc.DeleteReview(ctx, rev.ID, 2)
+        assert.EqualError(t, err, "you are not authorized to delete this review")
+    })
+
+	t.Run("SuccessfulDelete_ShouldRemoveRecord", func(t *testing.T) {
+		// 1) Grab the seeded review (there’s exactly one)
+		var seeded barberBookingModels.AppointmentReview
+		if err := db.First(&seeded).Error; err != nil {
+			t.Fatalf("could not find seeded review: %v", err)
+		}
+	
+		// 2) Delete by its real ID and customer ID
+		err := svc.DeleteReview(ctx, seeded.ID, *seeded.CustomerID)
+		assert.NoError(t, err)
+	
+		// 3) Verify soft-delete: Unscoped .First on that ID must return a non-zero DeletedAt
+		var check barberBookingModels.AppointmentReview
+		res := db.Unscoped().First(&check, seeded.ID)
+		assert.NoError(t, res.Error)
+		assert.False(t, check.DeletedAt.Time.IsZero(),
+			"Expected DeletedAt to be non-zero after delete")
+	})
+	
+}

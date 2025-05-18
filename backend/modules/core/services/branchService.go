@@ -36,7 +36,6 @@ func (s *BranchService) CreateBranch(branch *coreModels.Branch) error {
 	return nil
 }
 
-
 // Read All
 func (s *BranchService) GetAllBranches(tenantID uint) ([]coreModels.Branch, error) {
 	var branches []coreModels.Branch

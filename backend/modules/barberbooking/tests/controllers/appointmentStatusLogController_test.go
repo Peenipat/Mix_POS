@@ -28,12 +28,8 @@ func (m *MockLogService) LogStatusChange(ctx context.Context, appointmentID uint
 }
 
 func (m *MockLogService) GetLogsForAppointment(ctx context.Context, appointmentID uint) ([]models.AppointmentStatusLog, error) {
-    args := m.Called(ctx, appointmentID)
-    var logs []models.AppointmentStatusLog
-    if v := args.Get(0); v != nil {
-        logs = v.([]models.AppointmentStatusLog)
-    }
-    return logs, args.Error(1)
+	args := m.Called(ctx, appointmentID)
+	return args.Get(0).([]models.AppointmentStatusLog), args.Error(1)
 }
 
 func (m *MockLogService) DeleteLogsByAppointmentID(ctx context.Context, appointmentID uint) error {
@@ -74,7 +70,7 @@ func TestGetAppointmentLogs(t *testing.T) {
 
 		mockSvc.
 			On("GetLogsForAppointment", mock.Anything, uint(42)).
-			Return(nil, errors.New("db down"))
+			Return([]models.AppointmentStatusLog(nil), errors.New("db down"))
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/appointments/42/logs", nil)
 		resp, _ := app.Test(req)

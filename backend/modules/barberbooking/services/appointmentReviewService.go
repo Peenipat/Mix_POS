@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"time"
 	"errors"
-	"strings"
 	"database/sql"
 
 	"gorm.io/gorm"
 
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
-	coreModels "myapp/modules/core/models"
 )
 
 // AppointmentReviewService handles creation and retrieval of appointment reviews.
@@ -33,6 +31,7 @@ func (s *appointmentReviewService) GetByID(ctx context.Context, id uint) (*barbe
         Where("id = ? AND deleted_at IS NULL", id).
         First(&rev).Error
 
+		
     if err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             return nil, fmt.Errorf("review with ID %d not found", id)
@@ -105,6 +104,7 @@ func (s *appointmentReviewService) UpdateReview(ctx context.Context, reviewID ui
 	return &existing, nil
 }
 
+// (Optional)
 func (s *appointmentReviewService) GetReviewByAppointment(ctx context.Context, appointmentID uint) (*barberBookingModels.AppointmentReview, error) {
 	var review barberBookingModels.AppointmentReview
 
@@ -122,39 +122,35 @@ func (s *appointmentReviewService) GetReviewByAppointment(ctx context.Context, a
 	return &review, nil
 }
 
-func (s *appointmentReviewService) DeleteReview(ctx context.Context, reviewID uint, actorUserID uint, actorRole string) error {
-	var review barberBookingModels.AppointmentReview
 
-	err := s.DB.WithContext(ctx).
-		Where("id = ?", reviewID).
-		First(&review).Error
+func (s *appointmentReviewService) DeleteReview(
+    ctx context.Context,
+    reviewID uint,
+    actorCustomerID uint,
+) error {
+    // 1. โหลดรีวิวจาก DB
+    var review barberBookingModels.AppointmentReview
+    if err := s.DB.WithContext(ctx).
+        Where("id = ? AND deleted_at IS NULL", reviewID).
+        First(&review).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return fmt.Errorf("review with ID %d not found", reviewID)
+        }
+        return fmt.Errorf("failed fetching review: %w", err)
+    }
 
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("review with ID %d not found", reviewID)
-		}
-		return err
-	}
+    // 2. เช็คว่า actorCustomerID เป็นเจ้าของรีวิว
+    if review.CustomerID == nil || *review.CustomerID != actorCustomerID {
+        return errors.New("you are not authorized to delete this review")
+    }
 
-	// 🛡️ Check Permission
-	switch strings.ToUpper(actorRole) {
-	case string(coreModels.RoleNameUser):
-		// USER ต้องเป็นเจ้าของ review (customer_id)
-		if review.CustomerID == nil || *review.CustomerID != actorUserID {
-			return errors.New("you are not authorized to delete this review")
-		}
-
-	case string(coreModels.RoleNameBranchAdmin),string(coreModels.RoleNameSaaSSuperAdmin):
-		// ADMIN สามารถลบได้ทุกรีวิว
-		// เพิ่มกรณี role เพิ่มเติมได้ที่นี่
-
-	default:
-		return fmt.Errorf("role %s is not authorized to delete reviews", actorRole)
-	}
-
-	// 🧼 Soft delete
-	return s.DB.WithContext(ctx).Delete(&review).Error
+    // 3. Soft delete
+    if err := s.DB.WithContext(ctx).Delete(&review).Error; err != nil {
+        return fmt.Errorf("failed deleting review: %w", err)
+    }
+    return nil
 }
+
 
 func (s *appointmentReviewService) GetAverageRatingByBarber(ctx context.Context, barberID uint) (float64, error) {
 	var avg sql.NullFloat64
@@ -174,5 +170,7 @@ func (s *appointmentReviewService) GetAverageRatingByBarber(ctx context.Context,
 	}
 	return avg.Float64, nil
 }
+
+
 
 

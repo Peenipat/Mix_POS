@@ -54,7 +54,7 @@ func main() {
 	// Connect & migrate
 	database.ConnectDB()
 	if database.DB == nil {
-		log.Fatal("❌ GORM DB is nil. Cannot proceed.")
+		log.Fatal("GORM DB is nil. Cannot proceed.")
 	}
 	
 	database.DB.AutoMigrate(

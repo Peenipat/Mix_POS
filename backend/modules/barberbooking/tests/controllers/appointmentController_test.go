@@ -1,4 +1,4 @@
-package barberBookingControllers
+package barberBookingControllers_test
 
 import (
 	"context"
@@ -1719,4 +1719,4 @@ func TestDeleteAppointment_Controller(t *testing.T) {
 }
 
 
-func ptrUint(u uint) *uint { return &u }
+

@@ -38,6 +38,7 @@ func setupTestReviewDB(t *testing.T) *gorm.DB {
 
     // สร้างตารางตามโมเดลที่ต้องการ
     if err := db.AutoMigrate(
+		&barberBookingModels.Barber{},
         &barberBookingModels.Service{},
         &barberBookingModels.Customer{},
         &coreModels.Branch{},
@@ -74,6 +75,7 @@ func setupTestReviewDB(t *testing.T) *gorm.DB {
         EndTime:    time.Now().Add(3*time.Hour + 30*time.Minute),
         Status:     barberBookingModels.StatusComplete,
     }
+
     db.Create(&ap2)
 
     // สร้าง Review ตัวอย่าง พร้อมระบุ CustomerID
@@ -97,9 +99,11 @@ func TestAppointmentReviewService_CRUD(t *testing.T) {
 	t.Run("CreateReview_Success", func(t *testing.T) {
 		rev := &barberBookingModels.AppointmentReview{
 			AppointmentID: 1,
+			CustomerID:    ptrUint(1), 
 			Rating:        5,
 			Comment:       "Great service!",
 		}
+		
 		got, err := svc.CreateReview(ctx, rev)
 		assert.NoError(t, err)
 		assert.NotZero(t, got.ID)

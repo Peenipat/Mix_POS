@@ -48,15 +48,6 @@ func setupTestWorkingHourDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// func parseTime(s string) time.Time {
-// 	t, err := time.Parse("15:04", s)
-// 	if err != nil {
-// 		panic(fmt.Sprintf("invalid time format: %s", s))
-// 	}
-// 	// คืน time แบบมีวันที่ dummy (1970-01-01) เพื่อเปรียบเทียบชั่วโมง/นาทีอย่างเดียว
-// 	return t
-// }
-
 func parseTimeToDateToday(s string) time.Time {
 	t, err := time.Parse("15:04", s)
 	if err != nil {
@@ -73,6 +64,28 @@ func TestWorkingHourService(t *testing.T) {
 	db := setupTestWorkingHourDB(t)
 	svc := barberBookingServices.NewWorkingHourService(db)
 
+	tenant := coreModels.Tenant{
+        ID:       1,
+        Name:     "TestTenant",
+        Domain:   "test.local",
+        IsActive: true,
+        // หาก struct มีฟิลด์อื่น เช่น CreatedAt, ก็ควรใส่ default หรือเว้นไว้
+    }
+    if err := db.Create(&tenant).Error; err != nil {
+        t.Fatalf("failed to create tenant: %v", err)
+    }
+
+    // 2) สร้าง Branch ที่อ้างถึง TenantID=1
+	addr := "123 Test St."
+    branch := coreModels.Branch{
+        ID:       1,
+        TenantID: tenant.ID,
+        Name:     "Test Branch",
+        Address:  &addr,
+    }
+    if err := db.Create(&branch).Error; err != nil {
+        t.Fatalf("failed to create branch: %v", err)
+    }
 	t.Run("UpdateWorkingHours_Success", func(t *testing.T) {
 		input := []barberBookingDto.WorkingHourInput{
 			{Weekday: 0, StartTime: parseTimeToDateToday("09:00"), EndTime: parseTimeToDateToday("18:00")},
@@ -128,16 +141,22 @@ func TestWorkingHourService(t *testing.T) {
 	})
 	
 	t.Run("CreateWorkingHours_Duplicate", func(t *testing.T) {
-		// สร้างซ้ำวันเดิม
-		input := barberBookingDto.WorkingHourInput{
-			Weekday:   3,
-			StartTime: parseTimeToDateToday("10:00"),
-			EndTime:   parseTimeToDateToday("18:00"),
-		}
-		err := svc.CreateWorkingHours(ctx, 1, input)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "already exists")
-	})
+        input := barberBookingDto.WorkingHourInput{
+            Weekday:   3,
+            StartTime: parseTimeToDateToday("10:00"),
+            EndTime:   parseTimeToDateToday("18:00"),
+        }
+
+        // 1) สร้าง entry แรก
+        if err := svc.CreateWorkingHours(ctx, branch.ID, input); err != nil {
+            t.Fatalf("expected first insert to succeed, got error: %v", err)
+        }
+
+        // 2) สร้างซ้ำอีกครั้ง → ควร error "already exists"
+        err := svc.CreateWorkingHours(ctx, branch.ID, input)
+        assert.Error(t, err)
+        assert.Contains(t, err.Error(), "already exists")
+    })
 	
 	t.Run("CreateWorkingHours_InvalidWeekday", func(t *testing.T) {
 		input := barberBookingDto.WorkingHourInput{

@@ -86,12 +86,6 @@ func (m *MockReviewService) GetByID(ctx context.Context, id uint) (*models.Appoi
 // setup Fiber app with authorization middleware and route
 func setupAppointmentReviewApp(mockSvc *MockReviewService) *fiber.App {
 	app := fiber.New()
-	// middleware: extract "Role" header into Locals("role")
-	app.Use(func(c *fiber.Ctx) error {
-		role := c.Get("Role", "")
-		c.Locals("role", role)
-		return c.Next()
-	})
 	ctrl := barberBookingController.NewAppointmentReviewController(mockSvc)
 	app.Get("/tenants/:tenant_id/reviews/:review_id", ctrl.GetReviewByID)
 
@@ -117,31 +111,11 @@ func TestGetReviewByID(t *testing.T) {
 		UpdatedAt:     time.Now(),
 	}
 
-	t.Run("NoRole_Returns403", func(t *testing.T) {
-		mockSvc := new(MockReviewService)
-		app := setupAppointmentReviewApp(mockSvc)
-
-		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/7", nil)
-		resp, _ := app.Test(req)
-		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-	})
-
-	t.Run("WrongRole_Returns403", func(t *testing.T) {
-		mockSvc := new(MockReviewService)
-		app := setupAppointmentReviewApp(mockSvc)
-
-		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/7", nil)
-		req.Header.Set("Role", "GUEST")
-		resp, _ := app.Test(req)
-		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-	})
-
 	t.Run("InvalidTenantID_Returns400", func(t *testing.T) {
 		mockSvc := new(MockReviewService)
 		app := setupAppointmentReviewApp(mockSvc)
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/abc/reviews/7", nil)
-		req.Header.Set("Role", string(barberBookingController.RolesCanManageAppointmentReview[1]))
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -151,7 +125,6 @@ func TestGetReviewByID(t *testing.T) {
 		app := setupAppointmentReviewApp(mockSvc)
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/xyz", nil)
-		req.Header.Set("Role",string(barberBookingController.RolesCanManageAppointmentReview[1]))
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -162,7 +135,6 @@ func TestGetReviewByID(t *testing.T) {
 		app := setupAppointmentReviewApp(mockSvc)
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/0", nil)
-		req.Header.Set("Role", string(barberBookingController.RolesCanManageAppointmentReview[1]))
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -175,7 +147,6 @@ func TestGetReviewByID(t *testing.T) {
 
 		app := setupAppointmentReviewApp(mockSvc)
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/9", nil)
-		req.Header.Set("Role", string(barberBookingController.RolesCanManageAppointmentReview[1]))
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		mockSvc.AssertExpectations(t)
@@ -189,7 +160,6 @@ func TestGetReviewByID(t *testing.T) {
 
 		app := setupAppointmentReviewApp(mockSvc)
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/5", nil)
-		req.Header.Set("Role", string(barberBookingController.RolesCanManageAppointmentReview[1]))
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 		mockSvc.AssertExpectations(t)
@@ -203,7 +173,6 @@ func TestGetReviewByID(t *testing.T) {
 	
 		app := setupAppointmentReviewApp(mockSvc)
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/reviews/7", nil)
-		req.Header.Set("Role", string(barberBookingController.RolesCanManageAppointmentReview[1]))
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	

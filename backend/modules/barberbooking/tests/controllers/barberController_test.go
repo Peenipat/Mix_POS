@@ -103,7 +103,7 @@ func TestCreateBarber(t *testing.T) {
 
 	t.Run("InvalidBody_ShouldReturn400", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/barbers", strings.NewReader("invalid-json"))
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -116,7 +116,7 @@ func TestCreateBarber(t *testing.T) {
 		mockSvc.On("CreateBarber", mock.Anything, mock.AnythingOfType("*barberBookingModels.Barber")).Return(nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/barbers", strings.NewReader(payload))
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 
@@ -138,18 +138,9 @@ func TestGetBarberByID(t *testing.T) {
 	mockSvc := new(MockBarberService)
 	app := setupBarberTestApp(mockSvc)
 
-	t.Run("PermissionDenied_ShouldReturn403", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/barbers/1", nil)
-		req.Header.Set("X-Mock-Role", "USER")
-		resp, err := app.Test(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-	})
-
 	t.Run("BarberNotFound_ShouldReturn404", func(t *testing.T) {
 		mockSvc.On("GetBarberByID", mock.Anything, uint(1)).Return(nil, nil)
 		req := httptest.NewRequest(http.MethodGet, "/barbers/1", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -161,7 +152,6 @@ func TestGetBarberByID(t *testing.T) {
 		mockSvc.On("GetBarberByID", mock.Anything, uint(1)).Return(mockBarber, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/barbers/1", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -183,14 +173,6 @@ func TestListBarbersByBranch(t *testing.T) {
 	mockSvc := new(MockBarberService)
 	app := setupBarberTestApp(mockSvc)
 
-	t.Run("PermissionDenied_ShouldReturn403", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/branches/1/barbers", nil)
-		req.Header.Set("X-Mock-Role", "USER")
-		resp, err := app.Test(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-	})
-
 	t.Run("Success_ShouldReturnBarberList", func(t *testing.T) {
 		branchID := uint(1)
 		mockList := []barberBookingModels.Barber{
@@ -201,7 +183,6 @@ func TestListBarbersByBranch(t *testing.T) {
 		mockSvc.On("ListBarbersByBranch", mock.Anything, &branchID).Return(mockList, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/branches/1/barbers", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -234,7 +215,7 @@ func TestUpdateBarber(t *testing.T) {
 
 	t.Run("InvalidBody_ShouldReturn400", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/barbers/1", strings.NewReader("invalid-json"))
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -245,7 +226,7 @@ func TestUpdateBarber(t *testing.T) {
 		mockSvc.On("GetBarberByID", mock.Anything, uint(1)).Return(nil, nil)
 
 		req := httptest.NewRequest(http.MethodPut, "/barbers/1", strings.NewReader(`{"branch_id": 2}`))
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -261,7 +242,7 @@ func TestUpdateBarber(t *testing.T) {
 		mockSvc.On("UpdateBarber", mock.Anything, uint(1), mock.Anything).Return(updated, nil)
 
 		req := httptest.NewRequest(http.MethodPut, "/barbers/1", strings.NewReader(`{"branch_id": 2}`))
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -294,8 +275,8 @@ func TestGetBarberByUser(t *testing.T) {
 		
 	
 		req := httptest.NewRequest(http.MethodGet, "/users/1/barber", nil)
-		req.RequestURI = "/users/1/barber" // <-- สำคัญ!
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.RequestURI = "/users/1/barber"
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -322,7 +303,7 @@ func TestGetBarberByUser(t *testing.T) {
 
 	t.Run("InvalidID_ShouldReturn400", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users/abc/barber", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -332,7 +313,7 @@ func TestGetBarberByUser(t *testing.T) {
 		mockSvc.On("GetBarberByUser", mock.Anything, uint(1)).Return(nil, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/users/1/barber", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -356,7 +337,7 @@ func TestListBarbersByTenant(t *testing.T) {
 
 	t.Run("InvalidID_ShouldReturn400", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tenants/abc/barbers", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -366,7 +347,7 @@ func TestListBarbersByTenant(t *testing.T) {
 		mockSvc.On("ListBarbersByTenant", mock.Anything, uint(1)).Return([]barberBookingModels.Barber{}, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/barbers", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -380,7 +361,7 @@ func TestListBarbersByTenant(t *testing.T) {
 		mockSvc.On("ListBarbersByTenant", mock.Anything, uint(1)).Return(barbers, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/barbers", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role",string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -413,7 +394,7 @@ func TestDeleteBarber(t *testing.T) {
 
 	t.Run("InvalidID_ShouldReturn400", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/barbers/abc", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -423,7 +404,7 @@ func TestDeleteBarber(t *testing.T) {
 		mockSvc.On("DeleteBarber", mock.Anything, uint(1)).Return(assert.AnError)
 
 		req := httptest.NewRequest(http.MethodDelete, "/barbers/1", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role",string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -434,7 +415,7 @@ func TestDeleteBarber(t *testing.T) {
 		mockSvc.On("DeleteBarber", mock.Anything, uint(1)).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, "/barbers/1", nil)
-		req.Header.Set("X-Mock-Role", "SAAS_SUPER_ADMIN")
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

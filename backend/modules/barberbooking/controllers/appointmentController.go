@@ -562,7 +562,6 @@ func (ctrl *AppointmentController) GetAppointmentsByBarber(c *fiber.Ctx) error {
 
 
 var RolesCanManageAppointment = []coreModels.RoleName{
-	coreModels.RoleNameSaaSSuperAdmin,
 	coreModels.RoleNameTenant,
 	coreModels.RoleNameTenantAdmin,
 }

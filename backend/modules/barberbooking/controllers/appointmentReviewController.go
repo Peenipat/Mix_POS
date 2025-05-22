@@ -9,7 +9,6 @@ import (
 	helperFunc "myapp/modules/barberbooking"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
-	coreModels "myapp/modules/core/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -22,24 +21,8 @@ func NewAppointmentReviewController(svc barberBookingPort.IAppointmentReview) *A
     return &AppointmentReviewController{ReviewService: svc}
 }
 
-var RolesCanManageAppointmentReview = []coreModels.RoleName{
-	coreModels.RoleNameSaaSSuperAdmin,
-	coreModels.RoleNameTenantAdmin,
-	coreModels.RoleNameTenant,
-	coreModels.RoleNameBranchAdmin,
-}
-
 // GET /tenants/:tenant_id/reviews/:review_id
 func (ctrl *AppointmentReviewController) GetReviewByID(c *fiber.Ctx) error {
-    // 0. Authorization: ตรวจสอบ role ก่อน (ถ้าต้องการ)
-    roleVal := c.Locals("role")
-    roleStr, ok := roleVal.(string)
-    if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageBarber) {
-        return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Permission denied",
-        })
-    }
 
     // 1. Parse tenant_id (เพื่อ consistency)
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {

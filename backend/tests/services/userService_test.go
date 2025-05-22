@@ -293,3 +293,4 @@ func Test_GetAllUser_limitData(t *testing.T) {
 	assert.Equal(t, "User2", result[1].Username)
 	assert.Equal(t, "User3", result[2].Username)
 }
+

@@ -97,7 +97,6 @@ func CreateUserFromAdmin(input Core_userDto.CreateUserInput) error {
     return nil
 }
 
-
 func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
     return database.DB.Transaction(func(tx *gorm.DB) error {
         var user coreModels.User
@@ -140,7 +139,6 @@ func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
         return nil
     })
 }
-
 
 func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error) {
 	var users []coreModels.User

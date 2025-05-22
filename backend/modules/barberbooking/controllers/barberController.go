@@ -20,12 +20,7 @@ func NewBarberController(svc barberBookingPort.IBarber) *BarberController {
 	}
 }
 
-var RolesCanManageBarber = []coreModels.RoleName{
-	coreModels.RoleNameSaaSSuperAdmin,
-	coreModels.RoleNameTenantAdmin,
-	coreModels.RoleNameTenant,
-	coreModels.RoleNameBranchAdmin,
-}
+
 
 //public 
 func (ctrl *BarberController) GetBarberByID(c *fiber.Ctx) error {
@@ -91,7 +86,11 @@ func (ctrl *BarberController) ListBarbersByBranch(c *fiber.Ctx) error{
 	})
 }
 
-
+var RolesCanManageBarber = []coreModels.RoleName{
+	coreModels.RoleNameTenantAdmin,
+	coreModels.RoleNameTenant,
+	coreModels.RoleNameBranchAdmin,
+}
 func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageBarber) {
@@ -123,8 +122,6 @@ func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
 	})
 
 }
-
-
 
 func (ctrl *BarberController) UpdateBarber(c *fiber.Ctx) error{
 	roleStr,ok := c.Locals("role").(string)
@@ -240,9 +237,13 @@ func (ctrl *BarberController) GetBarberByUser(c *fiber.Ctx) error{
 	})	
 }
 
+var RoleCanGetBarberByTenant = []coreModels.RoleName{
+	coreModels.RoleNameTenantAdmin,
+	coreModels.RoleNameTenant,
+}
 func (ctrl *BarberController) ListBarbersByTenant(c *fiber.Ctx) error{
 	roleStr,ok := c.Locals("role").(string)
-	if !ok || !helperFunc.IsAuthorizedRole(roleStr,RolesCanManageBarber){
+	if !ok || !helperFunc.IsAuthorizedRole(roleStr,RoleCanGetBarberByTenant){
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":"error",
 			"message":"Permission denied",

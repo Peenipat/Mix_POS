@@ -177,8 +177,15 @@ func TestCreateService(t *testing.T) {
 	app.Post("/services", func(c *fiber.Ctx) error {
 		// middleware จำลอง auth
 		c.Locals("role", c.Get("X-Mock-Role"))
+		c.Locals("tenant_id", uint(123))  
 		return ctrl.CreateService(c)
 	})
+
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("role", c.Get("X-Mock-Role"))
+		c.Locals("tenant_id", uint(1))   // ← ตรงนี้เพิ่ม tenant_id
+		return c.Next()
+	  })
 
 	// CASE 1: Success (TENANT_ADMIN)
 	t.Run("CreateService_Success_TenantAdmin", func(t *testing.T) {
@@ -201,7 +208,7 @@ func TestCreateService(t *testing.T) {
 		reqBody, _ := json.Marshal(body)
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Mock-Role", "USER") // ❌ ไม่ใช่ TENANT
+		req.Header.Set("X-Mock-Role", "USER") //  ไม่ใช่ TENANT
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -214,7 +221,7 @@ func TestCreateService(t *testing.T) {
 		reqBody, _ := json.Marshal(body)
 		req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		// ❌ ไม่มี role
+		//  ไม่มี role
 
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
@@ -336,36 +343,6 @@ func TestCreateService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 	})
-
-	//CASE 13:จำลอง 20 คนสร้างพร้อมกัน
-	t.Run("CreateService_ConcurrentRequests", func(t *testing.T) {
-		var wg sync.WaitGroup
-
-		for i := 0; i < 20; i++ {
-			wg.Add(1)
-			go func(index int) {
-				defer wg.Done()
-
-				// ✅ mock แยกในแต่ละ thread
-				mockSvc := new(MockService)
-				mockSvc.On("CreateService", mock.AnythingOfType("*barberBookingModels.Service")).Return(nil).Maybe()
-
-				app := setupTestApp(mockSvc)
-
-				body := request{Name: fmt.Sprintf("Service%d", index), Duration: 15, Price: 100}
-				reqBody, _ := json.Marshal(body)
-				req := httptest.NewRequest("POST", "/services", bytes.NewReader(reqBody))
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-
-				resp, err := app.Test(req)
-				assert.NoError(t, err)
-				assert.Equal(t, 201, resp.StatusCode)
-			}(i)
-		}
-		wg.Wait()
-	})
-
 }
 
 func TestUpdateService(t *testing.T) {

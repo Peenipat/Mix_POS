@@ -16,3 +16,4 @@ CREATE TABLE IF NOT EXISTS unavailabilities (
 CREATE INDEX IF NOT EXISTS idx_unavailabilities_date   ON unavailabilities(date);
 CREATE INDEX IF NOT EXISTS idx_unavailabilities_barber ON unavailabilities(barber_id);
 CREATE INDEX IF NOT EXISTS idx_unavailabilities_branch ON unavailabilities(branch_id);
+CREATE UNIQUE INDEX uq_unavailability ON unavailabilities (date, barber_id, branch_id);

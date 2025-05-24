@@ -23,7 +23,7 @@ func SeedBarberWorkloads(db *gorm.DB) error {
 	for _, b := range barbers {
 		for i := 0; i < 3; i++ { // ย้อนหลัง 3 วัน
 			date := today.AddDate(0, 0, -i)
-			workload := bookingModels.BarberWorkloads{
+			workload := bookingModels.BarberWorkload{
 				BarberID:          b.ID,
 				Date:              date,
 				TotalAppointments: 3 + i,   // จำลองจำนวนนัด

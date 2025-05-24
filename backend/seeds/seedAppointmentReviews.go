@@ -1,44 +1,54 @@
 package seeds
 
 import (
-	"errors"
-	"time"
+    "errors"
+    "time"
 
-	"gorm.io/gorm"
-
-	bookingModels "myapp/modules/barberbooking/models"
+    "gorm.io/gorm"
+    models "myapp/modules/barberbooking/models"
 )
 
 func SeedAppointmentReviews(db *gorm.DB) error {
-	// 1. โหลด Appointment ที่มีสถานะ Completed
-	var appointments []bookingModels.Appointment
-	if err := db.Where("status = ?", bookingModels.StatusComplete).Limit(5).Find(&appointments).Error; err != nil {
-		return errors.New("failed to find appointments: " + err.Error())
-	}
-	if len(appointments) == 0 {
-		return errors.New("no completed appointments found")
-	}
+    reviews := []models.AppointmentReview{
+        // … ตัวอย่าง reviews ที่จะ seed
+    }
 
-	// 2. สร้าง Seed Data ของ Review
-	for i, appt := range appointments {
-		review := bookingModels.AppointmentReview{
-			AppointmentID: appt.ID,
-			CustomerID:    &appt.CustomerID,
-			Rating:        4 + i%2, // สลับระหว่าง 4 และ 5
-			Comment:       "ขอบคุณสำหรับบริการดี ๆ",
-			CreatedAt:     time.Now(),
-		}
+    for _, r := range reviews {
+        // ตรวจสอบก่อนว่า appointment นั้นมีอยู่จริงหรือไม่
+        var appt models.Appointment
+        if err := db.First(&appt, r.AppointmentID).Error; err != nil {
+            if errors.Is(err, gorm.ErrRecordNotFound) {
+                // ไม่มี appointment → ข้ามเคสนี้
+                continue
+            }
+            return err
+        }
 
-		// ตรวจสอบว่ามี review อยู่แล้วหรือยัง
-		var existing bookingModels.AppointmentReview
-		if err := db.Where("appointment_id = ?", appt.ID).First(&existing).Error; err == nil {
-			continue // มีอยู่แล้ว → ข้าม
-		}
+        // ลองดูว่ามี review เดิมหรือยัง
+        var existing models.AppointmentReview
+        err := db.Where("appointment_id = ?", r.AppointmentID).
+            First(&existing).Error
 
-		if err := db.Create(&review).Error; err != nil {
-			return err
-		}
-	}
+        now := time.Now()
+        r.CreatedAt = now
+        r.UpdatedAt = now
 
-	return nil
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            // ยังไม่มี → insert ใหม่
+            if err := db.Create(&r).Error; err != nil {
+                return err
+            }
+        } else if err != nil {
+            return err
+        } else {
+            // มีอยู่แล้ว → update fields แล้ว save
+            existing.Rating = r.Rating
+            existing.Comment = r.Comment
+            existing.UpdatedAt = now
+            if err := db.Save(&existing).Error; err != nil {
+                return err
+            }
+        }
+    }
+    return nil
 }

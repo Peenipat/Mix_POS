@@ -8,8 +8,9 @@ import (
 
 // Service แทนบริการต่างๆ (เช่น ตัดผม สระผม ไดร์)
 type Service struct {
-	ID          uint           `gorm:"primaryKey" json:"id"`
+	ID          uint           `gorm:"primaryKey;autoIncrement"`
 	Name        string         `gorm:"type:varchar(100);not null" json:"name"`
+	TenantID    uint           `gorm:"not null;index" json:"tenant_id"`
 	Duration    int            `gorm:"not null" json:"duration"`    // ระยะเวลาโดยประมาณ
 	Price       float64        `gorm:"not null" json:"price"`       // ราคาบริการ
 	CreatedAt   time.Time      `json:"created_at"`

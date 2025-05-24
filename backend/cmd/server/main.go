@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -27,11 +28,10 @@ import (
 	bookingModels "myapp/modules/barberbooking/models"
 	bookingRoutes "myapp/modules/barberbooking/routes"
 	bookingServices "myapp/modules/barberbooking/services"
-	Core_controllers "myapp/modules/core/controllers"
-	"myapp/modules/core/models"
-	"myapp/modules/core/services"
-	"myapp/routes"
-	"myapp/routes/admin"
+	coreControllers "myapp/modules/core/controllers"
+	coreRoutes "myapp/modules/core/routes"
+	coreModels "myapp/modules/core/models"
+	coreServices "myapp/modules/core/services"
 	"myapp/seeds"
 )
 
@@ -52,6 +52,10 @@ func main() {
 
 	// Connect & migrate
 	database.ConnectDB()
+	if database.DB == nil {
+		log.Fatal("GORM DB is nil. Cannot proceed.")
+	}
+
 	database.DB.AutoMigrate(
 		// Core module: สร้างสิ่งที่เป็นรากก่อน
 		&coreModels.Tenant{},
@@ -71,7 +75,7 @@ func main() {
 		&bookingModels.Appointment{},
 		&bookingModels.AppointmentStatusLog{},
 		&bookingModels.AppointmentReview{},
-		&bookingModels.BarberWorkloads{},
+		&bookingModels.BarberWorkload{},
 	)
 
 	// 1) Seed Tenants → เพื่อให้มี tenant ใช้ใน Role, Branch, User
@@ -79,14 +83,14 @@ func main() {
 		log.Fatalf("failed to seed tenants: %v", err)
 	}
 
-	// 2) Seed Roles → ต้องใช้ TenantID (บาง role อาจเป็น per-tenant)
-	if err := seeds.SeedRoles(database.DB); err != nil {
-		log.Fatalf("failed to seed roles: %v", err)
-	}
-
-	// 3) Seed Modules → ระบบรองรับ feature ของ tenant (tenant_modules จะตามมาภายหลัง)
+	// 2) Seed Modules → ระบบรองรับ feature ของ tenant (tenant_modules จะตามมาภายหลัง)
 	if err := seeds.SeedModules(database.DB); err != nil {
 		log.Fatalf("seed modules failed: %v", err)
+	}
+
+	// 3) Seed Roles → ต้องใช้ TenantID (บาง role อาจเป็น per-tenant)
+	if err := seeds.SeedRoles(database.DB); err != nil {
+		log.Fatalf("failed to seed roles: %v", err)
 	}
 
 	// 4) Seed Branches → ใช้ tenant_id
@@ -104,8 +108,9 @@ func main() {
 		log.Fatalf("seed tenant_users failed: %v", err)
 	}
 
+	tenantID := uint(1)
 	// 7) Seed Customers → เป็นลูกค้าจากภายนอก ไม่ต้องพึ่ง tenant_id
-	if err := seeds.SeedCustomers(database.DB); err != nil {
+	if err := seeds.SeedCustomers(database.DB, tenantID); err != nil {
 		log.Fatalf("seed customers failed: %v", err)
 	}
 
@@ -154,24 +159,78 @@ func main() {
 		log.Fatalf("seed tenant modules failed: %v", err)
 	}
 
-	// Initialize Services & Controllers
-	logSvc := services.NewSystemLogService(database.DB)
-	Core_controllers.InitSystemLogHandler(logSvc)
+	userService := coreServices.NewUserService(database.DB)
+	userController := coreControllers.NewUserController(userService)
 
-	authSvc := services.NewAuthService(database.DB, logSvc)
-	Core_controllers.InitAuthHandler(authSvc, logSvc)
+	tenantService := coreServices.NewTenantService(database.DB)
+	tenantController := coreControllers.NewTenantController(tenantService)
+
+	tenantUserService := coreServices.NewTenantUserService(database.DB)
+	tenantUserController := coreControllers.NewTenantUserController(tenantUserService)
+
+	coreGroup := app.Group("/api/v1/core")
+	coreRoutes.RegisterUserRoutes(coreGroup,userController)
+	coreRoutes.RegisterTenantRoutes(coreGroup,tenantController)
+	coreRoutes.RegisterTenantUserRoutes(coreGroup,tenantUserController)
+	
+	adminGroup := app.Group("/api/v1/admin")
+	coreRoutes.RegisterAdminRoutes(adminGroup,userController)
+	coreRoutes.SetupAuthRoutes(adminGroup,userController)
+
+
+
+
+	logSvc := coreServices.NewSystemLogService(database.DB)
+	coreControllers.InitSystemLogHandler(logSvc)
+
+	authSvc := coreServices.NewAuthService(database.DB, logSvc)
+	coreControllers.InitAuthHandler(authSvc, logSvc)
+
+	branchService := coreServices.NewBranchService(database.DB) 
+	branchController := coreControllers.NewBranchController(branchService)
+
+	coreRoutes.RegisterBranchRoutes(app,branchController)
 
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)
 	serviceController := bookingControllers.NewServiceController(serviceService)
-	
+
+	customerService := bookingServices.NewCustomerService(database.DB)
+	customerController := bookingControllers.NewCustomerController(customerService)
+
+	barberService := bookingServices.NewBarberService(database.DB)
+	barberController := bookingControllers.NewBarberController(barberService)
+
+	unavailabilityService := bookingServices.NewUnavailabilityService(database.DB)
+	unavailabilityController := bookingControllers.NewUnavailabilityController(unavailabilityService)
+
+	workingHourService := bookingServices.NewWorkingHourService(database.DB)
+	workingHourController := bookingControllers.NewWorkingHourController(workingHourService)
+
+	barberWorkloadService := bookingServices.NewBarberWorkloadService(database.DB)
+	barberWorkloadController := bookingControllers.NewBarberWorkloadController(barberWorkloadService)
+
+	apppointmentStatusLogService := bookingServices.NewAppointmentStatusLogService(database.DB)
+	appointmentService := bookingServices.NewAppointmentService(database.DB, apppointmentStatusLogService)
+	appointmentController := bookingControllers.NewAppointmentController(appointmentService)
+
+	appointmentStatusLogController := bookingControllers.NewAppointmentStatusLogController(apppointmentStatusLogService)
 
 	bookingGroup := app.Group("/api/barberbooking")
 
 	// Register routes
 	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)
-	routes.SetupAuthRoutes(app)
-	admin.SetupAdminRoutes(app)
+	bookingRoutes.RegisterCustomerRoutes(bookingGroup, customerController)
+	bookingRoutes.RegisterBarberRoutes(bookingGroup, barberController)
+	bookingRoutes.RegisterUnavailabilityRoute(bookingGroup, unavailabilityController)
+	bookingRoutes.RegisterWorkingHourRoute(bookingGroup, *workingHourController)
+	bookingRoutes.RegisterBarberWorkloadRoute(bookingGroup, *barberWorkloadController)
+	bookingRoutes.RegisterAppointmentRoute(bookingGroup, appointmentController)
+	bookingRoutes.RegisterAppointmentStatusLogRoute(bookingGroup, appointmentStatusLogController)
+
+	for _, r := range app.GetRoutes() {
+		fmt.Printf("%-6s %s\n", r.Method, r.Path)
+	}
 
 	// Route api docs
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)

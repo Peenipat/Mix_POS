@@ -50,17 +50,17 @@ func SeedUsers(db *gorm.DB) error {
     }
     data := []seed{
         // SaaS SuperAdmin (ไม่ผูกสาขา)
-        {"saas_admin", "saas_admin@yourdomain.com", "supersecret", roleSA.ID, nil},
+        {"saas_admin", "saas_admin@gmail.com", "12345678", roleSA.ID, nil},
         // Tenant Admin (ดูแลหลายสาขา)
-        {"tenant_admin", "tenant_admin@default.example.com", "tenantsecret", roleTA.ID, nil},
+        {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, nil},
         // Branch Admin (เฉพาะสาขา)
-        {"branch_admin", "branch_admin@default.example.com", "branchsecret", roleBA.ID, &branch.ID},
+        {"branch_admin", "branch_admin@gmail.com", "12345678", roleBA.ID, &branch.ID},
         // Assistant Manager
-        {"assistant_mgr", "assistant@default.example.com", "assistsecret", roleAM.ID, &branch.ID},
+        {"assistant_mgr", "assistant@gmail.com", "12345678", roleAM.ID, &branch.ID},
         // Staff
-        {"staff_user", "staff@default.example.com", "staffsecret", roleST.ID, &branch.ID},
+        {"staff_user", "staff@gmail.com", "12345678", roleST.ID, &branch.ID},
         // End-customer / general user
-        {"generic_user", "user@default.example.com", "usersecret", roleUS.ID, nil},
+        {"generic_user", "user@gmail.com", "12345678", roleUS.ID, nil},
     }
 
     now := time.Now()

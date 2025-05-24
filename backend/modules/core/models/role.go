@@ -20,11 +20,18 @@ const (
 
 type Role struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
-	TenantID    *uint          `gorm:"index;uniqueIndex:uq_roles_scope,priority:1" json:"tenant_id,omitempty"`     // รองรับ Global Role ถ้า null
-	ModuleName  *string        `gorm:"type:varchar(50);index;uniqueIndex:uq_roles_scope,priority:2" json:"module_name,omitempty"`
+
+	TenantID    *uint          `gorm:"index;uniqueIndex:uq_roles_scope,priority:1" json:"tenant_id,omitempty"`
+	Tenant      *Tenant        `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"tenant,omitempty"`
+
+	ModuleID    *uint          `gorm:"index;uniqueIndex:uq_roles_scope,priority:2" json:"module_id,omitempty"`
+	Module      *Module        `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"module,omitempty"`
+
 	Name        string         `gorm:"type:varchar(50);not null;uniqueIndex:uq_roles_scope,priority:3" json:"name"`
 	Description string         `gorm:"type:text" json:"description"`
+
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
+

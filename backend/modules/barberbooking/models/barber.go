@@ -10,6 +10,7 @@ type Barber struct {
 
 	BranchID  uint           `gorm:"not null;index" json:"branch_id"`
 	UserID    uint           `gorm:"not null;uniqueIndex" json:"user_id"`
+	TenantID  uint           `gorm:"not null"`
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

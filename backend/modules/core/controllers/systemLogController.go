@@ -15,10 +15,10 @@ import (
 )
 
 // logService เก็บ instance ของ SystemLogService
-var logService services.SystemLogService
+var logService coreServices.SystemLogService
 
 // InitSystemLogHandler ต้องเรียกก่อนผูก routes เพื่อ inject service เพื่อ ให้แยก controller และ service ออกจากกัน
-func InitSystemLogHandler(svc services.SystemLogService) {
+func InitSystemLogHandler(svc coreServices.SystemLogService) {
 	logService = svc
 }
 
@@ -83,7 +83,7 @@ func CreateLog(ctx *fiber.Ctx) error {
 func GetSystemLogs(ctx *fiber.Ctx) error {
 	page, _ := strconv.Atoi(ctx.Query("page", "1"))
 	limit, _ := strconv.Atoi(ctx.Query("limit", "20"))
-	filter := services.LogFilter{Page: page, Limit: limit}
+	filter := coreServices.LogFilter{Page: page, Limit: limit}
 
 	if v := ctx.Query("action"); v != "" {
 		filter.Action = &v

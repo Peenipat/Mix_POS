@@ -2,18 +2,33 @@ package coreServices
 
 import (
 	"errors"
+	"context"
 	"myapp/database"
 	"myapp/modules/core/models"
-	Core_authDto "myapp/modules/core/dto/auth"
-	Core_userDto "myapp/modules/core/dto/user"
+	corePort "myapp/modules/core/port"
 	"myapp/utils"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
-	// ตรวจซ้ำ email
+type UserService struct {
+	DB *gorm.DB
+}
+
+func NewUserService(db *gorm.DB) corePort.IUser {
+	return &UserService{DB: db}
+}
+
+var (
+    ErrUserNotFound       = errors.New("user not found")
+    ErrInvalidOldPassword = errors.New("old password is incorrect")
+)
+
+
+func (u *UserService) CreateUserFromRegister(input corePort.RegisterInput) error {
+
 	var existingUser coreModels.User
 	database.DB.Where("email = ?", input.Email).First(&existingUser)
 	if existingUser.ID != 0 {
@@ -25,7 +40,6 @@ func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
 		return errors.New("default role not found")
 	}
 
-	// hash password ด้วย bcrypt
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.New("failed to hash password")
@@ -38,14 +52,15 @@ func CreateUserFromRegister(input Core_authDto.RegisterInput) error {
 		RoleID:   role.ID,
 	}
 
-	// save user ลง database
 	if err := database.DB.Create(&user).Error; err != nil {
 		return errors.New("failed to create user")
 	}
 
 	return nil
 }
-func CreateUserFromAdmin(input Core_userDto.CreateUserInput) error {
+
+
+func (u *UserService) CreateUserFromAdmin(input corePort.CreateUserInput) error {
     // 1) ตรวจ email ซ้ำ
     var existing coreModels.User
     database.DB.Where("email = ?", input.Email).First(&existing)
@@ -97,7 +112,8 @@ func CreateUserFromAdmin(input Core_userDto.CreateUserInput) error {
     return nil
 }
 
-func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
+
+func (u *UserService) ChangeRoleFromAdmin(input corePort.ChangeRoleInput) error {
     return database.DB.Transaction(func(tx *gorm.DB) error {
         var user coreModels.User
 
@@ -140,15 +156,49 @@ func ChangeRoleFromAdmin(input Core_userDto.ChangeRoleInput) error {
     })
 }
 
-func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error) {
+func (u *UserService) ChangePassword(ctx context.Context, userID uint, oldPassword, newPassword string) error {
+    if userID == 0 {
+        return fmt.Errorf("user ID is required")
+    }
+
+    var user coreModels.User
+    if err := u.DB.WithContext(ctx).
+        Where("id = ?", userID).
+        First(&user).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return ErrUserNotFound
+        }
+        return fmt.Errorf("fetch user %d: %w", userID, err)
+    }
+
+    if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+        return ErrInvalidOldPassword
+    }
+
+    hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+    if err != nil {
+        return fmt.Errorf("hash new password: %w", err)
+    }
+
+    // 4) อัพเดตใน DB
+    if err := u.DB.WithContext(ctx).
+        Model(&user).
+        Update("password", string(hashed)).Error; err != nil {
+        return fmt.Errorf("update password: %w", err)
+    }
+
+    return nil
+}
+
+func (u *UserService) GetAllUsers(limit int, offset int) ([]corePort.UserInfoResponse, error) {
 	var users []coreModels.User
 	//ค้นหา user เช็ค limit และกำหนด offset
 	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil, err
 	}
 
-	result := utils.MapSlice(users, func(u coreModels.User) Core_authDto.UserInfoResponse {
-		return Core_authDto.UserInfoResponse{
+	result := utils.MapSlice(users, func(u coreModels.User) corePort.UserInfoResponse {
+		return corePort.UserInfoResponse{
 			ID:       u.ID,
 			Username: u.Username,
 			Email:    u.Email,
@@ -160,7 +210,7 @@ func GetAllUsers(limit int, offset int) ([]Core_authDto.UserInfoResponse, error)
 	return result, nil
 }
 
-func FilterUsersByRole(role string) ([]Core_authDto.UserInfoResponse, error) {
+func (u *UserService) FilterUsersByRole(role string) ([]corePort.UserInfoResponse, error) {
 	// Validate role ก่อน
 	validRoles := []coreModels.RoleName{
 		coreModels.RoleNameTenantAdmin,
@@ -188,9 +238,9 @@ func FilterUsersByRole(role string) ([]Core_authDto.UserInfoResponse, error) {
 	}
 
 	// Map เป็น UserResponse
-	var result []Core_authDto.UserInfoResponse
+	var result []corePort.UserInfoResponse
 	for _, u := range users {
-		result = append(result, Core_authDto.UserInfoResponse{
+		result = append(result, corePort.UserInfoResponse{
 			ID:       u.ID,
 			Username: u.Username,
 			Email:    u.Email,
@@ -201,3 +251,16 @@ func FilterUsersByRole(role string) ([]Core_authDto.UserInfoResponse, error) {
 
 	return result, nil
 }
+
+
+//ChangePassword เอาไว้ก่อน
+//Authenticate (ยืนยันรหัสผ่าน) เอาไว้ก่อน
+//ListUsers (ที่มี UserFilter) filter by role/branch/tenant
+// type UserFilter struct {
+//     RoleID   *uint
+//     BranchID *uint
+//     TenantID *uint  
+//     Active   *bool  
+//     Page     int
+//     PageSize int
+// }

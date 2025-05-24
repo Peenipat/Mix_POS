@@ -1,4 +1,4 @@
-package admin
+package coreRoutes
 
 import (
 	Core_controllers "myapp/modules/core/controllers"
@@ -7,12 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupAdminRoutes(app *fiber.App) {
-	adminGroup := app.Group("/admin", middlewares.RequireAuth(), middlewares.RequireSuperAdmin())
-	adminGroup.Post("/create_users", Core_controllers.CreateUserFromAdmin)
-	adminGroup.Put("/change_role", Core_controllers.ChangeUserRole)
-	adminGroup.Get("/users",Core_controllers.GetAllUsers)
-	adminGroup.Get("/user-by-role",Core_controllers.FilterUsersByRole)
+func RegisterAdminRoutes(router fiber.Router, ctrl *Core_controllers.UserController) {
+	adminGroup := router.Group("/admin", middlewares.RequireAuth(), middlewares.RequireSuperAdmin())
+	adminGroup.Post("/create_users", ctrl.CreateUserFromAdmin)
+	adminGroup.Put("/change_role", ctrl.ChangeUserRole)
+	adminGroup.Get("/users",ctrl.GetAllUsers)
+	adminGroup.Get("/user-by-role",ctrl.FilterUsersByRole)
 	
 	// adminGroup.Get("/system_logs", controllers.GetSystemLogs)
 	adminGroup.Post("/system_logs",           Core_controllers.CreateLog)

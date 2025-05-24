@@ -92,14 +92,9 @@ func TestGetAllBranches(t *testing.T) {
 	db := setupTestDB(t)
 	svc := coreServices.NewBranchService(db)
 
-	t.Run("TenantNotFound", func(t *testing.T) {
-		_, err := svc.GetAllBranches(999)
-		assert.ErrorIs(t, err, coreServices.ErrTenantNotFound)
-	})
-
 	t.Run("NoBranches", func(t *testing.T) {
 		// Tenant 2 has no branches
-		brs, err := svc.GetAllBranches(8)
+		brs, err := svc.GetAllBranches()
 		assert.NoError(t, err)
 		assert.NotNil(t, brs)
 		assert.Len(t, brs, 0)
@@ -115,7 +110,7 @@ func TestGetAllBranches(t *testing.T) {
 		assert.NoError(t, db.Create(&b2).Error)
 		assert.NoError(t, db.Create(&b3).Error)
 
-		brs, err := svc.GetAllBranches(1)
+		brs, err := svc.GetAllBranches()
 		assert.NoError(t, err)
 		// Expect order: newest first: B3, B2, B1
 		assert.Len(t, brs, 3)

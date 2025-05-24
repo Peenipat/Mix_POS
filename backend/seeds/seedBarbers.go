@@ -19,8 +19,8 @@ func SeedBarbers(db *gorm.DB) error {
 
     // 2) หา Users ที่เราต้องการให้เป็นช่าง (ตัวอย่าง: assistant_mgr + staff_user)
     emails := []string{
-        "assistant@default.example.com",
-        "staff@default.example.com",
+        "assistant@gmail.com",
+        "staff@gmail.com",
     }
     var users []coreModels.User
     if err := db.Where("email IN ?", emails).Find(&users).Error; err != nil {

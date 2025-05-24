@@ -13,7 +13,7 @@ import (
 
 type BranchPort interface {
 	CreateBranch(b *coreModels.Branch) error
-	GetAllBranches(tenantID uint) ([]coreModels.Branch, error)
+	GetAllBranches() ([]coreModels.Branch, error) // saas admin line
 	GetBranchByID(id uint) (*coreModels.Branch, error)
     UpdateBranch(*coreModels.Branch) error  
     DeleteBranch(uint) error 
@@ -83,30 +83,16 @@ func (s *BranchService) CreateBranch(branch *coreModels.Branch) error {
 }
 
 // Read All
-func (s *BranchService) GetAllBranches(tenantID uint) ([]coreModels.Branch, error) {
-    // 1) Verify tenant exists
-    var tenant coreModels.Tenant
-    if err := s.DB.First(&tenant, tenantID).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            return nil, ErrTenantNotFound
-        }
-        return nil, fmt.Errorf("error verifying tenant %d: %w", tenantID, err)
-    }
-
-    // 2) Fetch branches
+func (s *BranchService) GetAllBranches() ([]coreModels.Branch, error) {
     var branches []coreModels.Branch
     if err := s.DB.
-        Where("tenant_id = ?", tenantID).
         Order("created_at DESC").
         Find(&branches).Error; err != nil {
-        return nil, fmt.Errorf("%w: %s", ErrFetchBranchesFailed, err)
+        return nil, fmt.Errorf("%w: %v", ErrFetchBranchesFailed, err)
     }
-
-    // 3) Return empty slice rather than nil if none found
     if branches == nil {
         branches = make([]coreModels.Branch, 0)
     }
-
     return branches, nil
 }
 

@@ -18,17 +18,17 @@ import (
 type BranchController struct {
 	BranchService coreServices.BranchPort
 }
-
+func NewBranchController(svc coreServices.BranchPort) *BranchController {
+	return &BranchController{BranchService: svc}
+}
 var RolesCanManageBranch = []coreModels.RoleName{
 	coreModels.RoleNameSaaSSuperAdmin,
 	coreModels.RoleNameTenantAdmin,
 	coreModels.RoleNameTenant,
 }
 
-// NewBranchController creates a new BranchController with the provided service
-func NewBranchController(svc coreServices.BranchPort) *BranchController {
-	return &BranchController{BranchService: svc}
-}
+
+
 
 // CreateBranch handles POST /branches
 func (ctrl *BranchController) CreateBranch(c *fiber.Ctx) error {
@@ -82,8 +82,9 @@ func (ctrl *BranchController) CreateBranch(c *fiber.Ctx) error {
 	})
 }
 
+// Line SAAS_Admin
 func (ctrl *BranchController) GetBranches(c *fiber.Ctx) error {
-    // 1. Authorization (reuse same role guard as CreateBranch)
+    // 1. Authorization
     roleStr, ok := c.Locals("role").(string)
     if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageBranch) {
         return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -92,38 +93,22 @@ func (ctrl *BranchController) GetBranches(c *fiber.Ctx) error {
         })
     }
 
-    // 2. Extract tenant_id
-    tenantID, ok := c.Locals("tenant_id").(uint)
-    if !ok || tenantID == 0 {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+    // 2. Call global service (no tenant filter)
+    branches, err := ctrl.BranchService.GetAllBranches()
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "status":  "error",
-            "message": "Missing or invalid tenant ID",
+            "message": "Failed to fetch branches",
         })
     }
 
-    // 3. Call service 
-    branches, err := ctrl.BranchService.GetAllBranches(tenantID)
-    if err != nil {
-        switch err {
-        case coreServices.ErrTenantNotFound:
-            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-                "status":  "error",
-                "message": "Tenant not found",
-            })
-        default:
-            return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-                "status":  "error",
-                "message": "Failed to fetch branches",
-            })
-        }
-    }
-
-    // 4. Return data
+    // 3. Success
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
         "status": "success",
         "data":   branches,
     })
 }
+
 
 func (ctrl *BranchController) GetBranchByID(c *fiber.Ctx) error {
     // 1. Authorization

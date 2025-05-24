@@ -1,22 +1,26 @@
 // barberbooking/controller/service_controller.go
-package controller
+package barberBookingController
 
 import (
 	"net/http"
 	"strconv"
-	"time"
-
+	"strings"
 	"github.com/gofiber/fiber/v2"
-	barberBookingService "myapp/modules/barberbooking/services"
+
 	barberBookingModels "myapp/modules/barberbooking/models"
+	barberBookingPort "myapp/modules/barberbooking/port"
+	coreModels "myapp/modules/core/models"
+	helperFunc "myapp/modules/barberbooking"
 )
 
 type ServiceController struct {
-	ServiceService *barberBookingService.ServiceService
+	ServiceService barberBookingPort.IServiceService
 }
 
-func NewServiceController(svc *barberBookingService.ServiceService) *ServiceController {
-	return &ServiceController{ServiceService: svc}
+func NewServiceController(svc barberBookingPort.IServiceService) *ServiceController {
+	return &ServiceController{
+		ServiceService: svc,
+	}
 }
 
 func (ctrl *ServiceController) GetAllServices(c *fiber.Ctx) error {
@@ -67,26 +71,61 @@ func (ctrl *ServiceController) GetServiceByID(c *fiber.Ctx) error {
 	})
 }
 
+// Role ที่มีสิทธิที่จะ create , update , delete service
+var RolesCanManageService = []coreModels.RoleName{
+	coreModels.RoleNameSaaSSuperAdmin,
+	coreModels.RoleNameTenant,
+	coreModels.RoleNameTenantAdmin,
+}
+
+// loop check role function
+
 
 func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
+	// ตรวจสิทธิ์ผู้ใช้งาน
+	roleStr, ok := c.Locals("role").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized",
+		})
+	}
+	if !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Permission denied",
+		})
+	}
+
+	// แปลง request body
 	var payload barberBookingModels.Service
 	if err := c.BodyParser(&payload); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid request body",
 		})
 	}
 
-	if payload.Name == "" || payload.Duration <= 0 || payload.Price < 0 {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+	// ดึง tenant_id จาก Locals แล้วกำหนดให้ payload
+	tenantID, ok := c.Locals("tenant_id").(uint)
+	if !ok || tenantID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Invalid service data",
+			"message": "Invalid tenant ID",
+		})
+	}
+	payload.TenantID = tenantID
+
+	// ตรวจสอบความถูกต้องของข้อมูล
+	payload.Name = strings.TrimSpace(payload.Name)
+	if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid service input",
 		})
 	}
 
-	payload.CreatedAt = time.Now()
-	payload.UpdatedAt = time.Now()
-
+	// เรียก service
 	if err := ctrl.ServiceService.CreateService(&payload); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -95,48 +134,91 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusCreated).JSON(fiber.Map{
+	// ส่ง response สำเร็จ
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":  "success",
-		"message": "Service created successfully",
-		"data":    payload,
+		"message": "Service created",
 	})
 }
 
+
 func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
+	// 1. ตรวจสอบ role
+	roleStr, ok := c.Locals("role").(string)
+	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Permission denied",
+		})
+	}
+
+	// 2. อ่าน ID จาก path param
 	idParam := c.Params("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+	serviceID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil || serviceID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid service ID",
 		})
 	}
 
+	// 3. parse body
 	var payload barberBookingModels.Service
 	if err := c.BodyParser(&payload); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid request body",
 		})
 	}
 
-	updated, err := ctrl.ServiceService.UpdateService(uint(id), &payload)
+	// 4. validate
+	payload.Name = strings.TrimSpace(payload.Name)
+	if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid service input",
+		})
+	}
+
+	// 5. หา service เดิมก่อน (เผื่อไม่เจอ)
+	existingService, err := ctrl.ServiceService.GetServiceByID(uint(serviceID))
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Service not found",
+		})
+	}
+
+	// 6. อัปเดตค่าจาก payload
+	existingService.Name = payload.Name
+	existingService.Duration = payload.Duration
+	existingService.Price = payload.Price
+
+	// 7. call service
+	updatedService, err := ctrl.ServiceService.UpdateService(uint(serviceID), existingService)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to update service",
 			"error":   err.Error(),
 		})
 	}
 
-	return c.JSON(fiber.Map{
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "success",
 		"message": "Service updated",
-		"data":    updated,
+		"data":    updatedService,
 	})
 }
 
 func (ctrl *ServiceController) DeleteService(c *fiber.Ctx) error {
+	roleStr, ok := c.Locals("role").(string)
+	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Permission denied",
+		})
+	}
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {

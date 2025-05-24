@@ -1,13 +1,14 @@
+// pkg/seeds/seed_barbers.go
 package seeds
 
 import (
+    "gorm.io/gorm"
 	"time"
-
-	"gorm.io/gorm"
-	bookingModels "myapp/modules/barberbooking/models"
+    bookingModels "myapp/modules/barberbooking/models"
 )
 
-func SeedCustomers(db *gorm.DB) error {
+
+func SeedCustomers(db *gorm.DB, tenantID uint) error {
 	customers := []bookingModels.Customer{
 		{
 			Name:  "สมชาย ใจดี",
@@ -29,9 +30,11 @@ func SeedCustomers(db *gorm.DB) error {
 	now := time.Now()
 	for _, c := range customers {
 		record := bookingModels.Customer{
-			Email: c.Email,
+			TenantID: tenantID,
+			Email:    c.Email,
 		}
 		attrs := bookingModels.Customer{
+			TenantID:  tenantID,
 			Name:      c.Name,
 			Phone:     c.Phone,
 			CreatedAt: now,

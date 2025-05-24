@@ -11,11 +11,14 @@ import (
 type AppointmentStatus string
 
 const (
-	StatusPending   AppointmentStatus = "PENDING"
-	StatusConfirmed AppointmentStatus = "CONFIRMED"
-	StatusCancelled AppointmentStatus = "CANCELLED"
-	StatusComplete  AppointmentStatus = "COMPLETED"
+	StatusPending     AppointmentStatus = "PENDING"
+	StatusConfirmed   AppointmentStatus = "CONFIRMED"
+	StatusCancelled   AppointmentStatus = "CANCELLED"
+	StatusComplete    AppointmentStatus = "COMPLETED"
+	StatusNoShow      AppointmentStatus = "NO_SHOW"
+	StatusRescheduled AppointmentStatus = "RESCHEDULED"
 )
+
 type Appointment struct {
 	ID         uint              `gorm:"primaryKey" json:"id"`
 	BranchID   uint              `gorm:"index" json:"branch_id"`      // ไม่ preload branch
@@ -30,6 +33,7 @@ type Appointment struct {
 	Customer   Customer          `gorm:"foreignKey:CustomerID" json:"customer,omitempty"`
 
 	UserID     *uint             `gorm:"index" json:"user_id,omitempty"` // อ้าง user ที่สร้างคิว (ไม่มี FK)
+	TenantID   uint 			 `gorm:"not null;index" json:"tenant_id"`
 	StartTime  time.Time         `gorm:"not null" json:"start_time"`
 	EndTime    time.Time         `gorm:"not null" json:"end_time"`
 	Status     AppointmentStatus `gorm:"type:varchar(20);default:'PENDING'" json:"status"`

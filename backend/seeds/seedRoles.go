@@ -16,42 +16,46 @@ func SeedRoles(db *gorm.DB) error {
 		return fmt.Errorf("cannot find default tenant: %w", err)
 	}
 
-	moduleName := "barber_booking"
+	// หา module barber_booking
+	var bookingModule coreModels.Module
+	if err := db.Where("name = ?", "barber_booking").First(&bookingModule).Error; err != nil {
+		return fmt.Errorf("cannot find barber_booking module: %w", err)
+	}
+
 	roles := []coreModels.Role{
-        {
-            TenantID:    nil,
-            ModuleName:  nil,
-            Name:        string(coreModels.RoleNameSaaSSuperAdmin),
-            Description: "ผู้ดูแลระบบ SaaS ทั้งหมด",
-        },
+		{
+			TenantID:    nil,
+			ModuleID:    nil,
+			Name:        string(coreModels.RoleNameSaaSSuperAdmin),
+			Description: "ผู้ดูแลระบบ SaaS ทั้งหมด",
+		},
 		{
 			TenantID:    &defaultTenant.ID,
-			ModuleName:  &moduleName,
+			ModuleID:    &bookingModule.ID,
 			Name:        string(coreModels.RoleNameBranchAdmin),
 			Description: "หัวหน้าสาขา มีสิทธิ์จัดการข้อมูลในระบบจองคิวตัดผม",
 		},
 		{
 			TenantID:    &defaultTenant.ID,
-			ModuleName:  &moduleName,
+			ModuleID:    &bookingModule.ID,
 			Name:        string(coreModels.RoleNameAssistantManager),
 			Description: "รองหัวหน้า จัดการคิวและดูรายงาน",
 		},
 		{
 			TenantID:    &defaultTenant.ID,
-			ModuleName:  &moduleName,
+			ModuleID:    &bookingModule.ID,
 			Name:        string(coreModels.RoleNameStaff),
 			Description: "พนักงานประจำร้าน ดูคิว และแจ้งสถานะ",
 		},
-		// ตัวอย่าง role ทั่วไป
 		{
 			TenantID:    &defaultTenant.ID,
-			ModuleName:  nil,
+			ModuleID:    nil, // ใช้งานได้กับทุก module ของ tenant นี้
 			Name:        string(coreModels.RoleNameTenantAdmin),
 			Description: "ผู้ดูแลร้านค้า สามารถจัดการผู้ใช้และสาขา",
 		},
 		{
 			TenantID:    &defaultTenant.ID,
-			ModuleName:  nil,
+			ModuleID:    nil,
 			Name:        string(coreModels.RoleNameUser),
 			Description: "ผู้ใช้งานทั่วไป",
 		},
@@ -60,9 +64,9 @@ func SeedRoles(db *gorm.DB) error {
 	now := time.Now()
 	for _, r := range roles {
 		record := coreModels.Role{
-			Name:       r.Name,
-			TenantID:   r.TenantID,
-			ModuleName: r.ModuleName,
+			Name:     r.Name,
+			TenantID: r.TenantID,
+			ModuleID: r.ModuleID,
 		}
 		attrs := coreModels.Role{
 			Description: r.Description,
@@ -76,3 +80,4 @@ func SeedRoles(db *gorm.DB) error {
 
 	return nil
 }
+

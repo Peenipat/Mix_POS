@@ -3,17 +3,15 @@ import (
 	"time"
 )
 type AppointmentStatusLog struct {
-	ID                   uint      `gorm:"primaryKey" json:"id"`
-	AppointmentID        uint      `gorm:"not null;index" json:"appointment_id"`
-	Appointment          Appointment `gorm:"foreignKey:AppointmentID" json:"appointment,omitempty"`
+	ID                  uint      `gorm:"primaryKey"`
+	AppointmentID       uint      `gorm:"not null;index"`              // ใช้ struct ได้ถ้าต้องการ preload
 
-	OldStatus            string    `gorm:"type:varchar(20)" json:"old_status,omitempty"`
-	NewStatus            string    `gorm:"type:varchar(20)" json:"new_status,omitempty"`
-	
-	ChangedByUserID      *uint     `gorm:"index" json:"changed_by_user_id,omitempty"` // ↔ loose link to core.users
-	ChangedByCustomerID  *uint     `gorm:"index" json:"changed_by_customer_id,omitempty"`
-	ChangedByCustomer    *Customer `gorm:"foreignKey:ChangedByCustomerID" json:"changed_by_customer,omitempty"`
+	OldStatus           string    `gorm:"type:varchar(20)"`
+	NewStatus           string    `gorm:"type:varchar(20)"`
 
-	ChangedAt            time.Time `gorm:"default:now()" json:"changed_at"`
-	Notes                string    `gorm:"type:text" json:"notes,omitempty"`
+	ChangedByUserID     *uint     `gorm:"index"`                       // Loose FK → ไม่ preload
+	ChangedByCustomerID *uint     `gorm:"index"`                       // Loose FK → ไม่ preload
+	ChangedAt           time.Time `gorm:"autoCreateTime"`
+
+	Notes               string    `gorm:"type:text"`
 }

@@ -6,17 +6,17 @@ import (
 	"time"
 
 	Core_authDto "myapp/modules/core/dto/auth"	
-	"myapp/modules/core/services"
+	coreServices "myapp/modules/core/services"
     "myapp/modules/core/models"
 	"github.com/gofiber/fiber/v2"
 )
 
 var (
-    authSvc *services.AuthService // ตัว logic login 
-    logSvc  services.SystemLogService //ตัวสำหรับ save log login
+    authSvc *coreServices.AuthService // ตัว logic login 
+    logSvc  coreServices.SystemLogService //ตัวสำหรับ save log login
 )
 // init Dependency Injection
-func InitAuthHandler(a *services.AuthService, l services.SystemLogService) {
+func InitAuthHandler(a *coreServices.AuthService, l coreServices.SystemLogService) {
     authSvc = a
     logSvc = l
 }

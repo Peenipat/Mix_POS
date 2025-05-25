@@ -20,11 +20,16 @@ func NewTenantUserController(svc corePort.ITenantUser) *TenantUserController {
     return &TenantUserController{Service: svc}
 }
 
+var (
+	ErrInvalidUserID       = errors.New("invalid user ID")
+	ErrUserAlreadyAssigned = errors.New("user already assigned to tenant")
+	ErrUserNotAssigned = errors.New("user not assigned to tenant")
+    ErrNoTenantsAssigned  = errors.New("no tenants assigned to user")
+    ErrUserNotFound       = errors.New("user not found")
+)
+
 // AddUserToTenant handles POST /tenants/:tenant_id/users/:user_id
 func (ctrl *TenantUserController) AddUserToTenant(c *fiber.Ctx) error {
-    // 1. (Optional) Authorization: check role from c.Locals("role") if needed
-
-    // 2. Parse tenant_id
     tidParam := c.Params("tenant_id")
     tid64, err := strconv.ParseUint(tidParam, 10, 64)
     if err != nil || tid64 == 0 {
@@ -144,5 +149,53 @@ func (ctrl *TenantUserController) RemoveUserFromTenant(c *fiber.Ctx) error {
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
         "status":  "success",
         "message": "User removed from tenant",
+    })
+}
+
+
+func (ctrl *TenantUserController) ListTenantsByUser(c *fiber.Ctx) error {
+    // 1. Parse and validate user_id
+    uidParam := c.Params("user_id")
+    uid64, err := strconv.ParseUint(uidParam, 10, 64)
+    if err != nil || uid64 == 0 {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid user ID",
+        })
+    }
+    userID := uint(uid64)
+
+    // 2. Call service
+    tenants, err := ctrl.Service.ListTenantsByUser(c.Context(), userID)
+    if err != nil {
+        // 3. Handle service errors
+        switch {
+        case errors.Is(err, coreServices.ErrInvalidUserID):
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+                "status":  "error",
+                "message": err.Error(),
+            })
+        case errors.Is(err, coreServices.ErrUserNotFound):
+            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+                "status":  "error",
+                "message": "User not found",
+            })
+        case errors.Is(err, coreServices.ErrNoTenantsAssigned):
+            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+                "status":  "error",
+                "message": "No tenants assigned to this user",
+            })
+        default:
+            return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                "status":  "error",
+                "message": "Failed to fetch tenants",
+            })
+        }
+    }
+
+    // 4. Success
+    return c.JSON(fiber.Map{
+        "status": "success",
+        "data":   tenants,
     })
 }

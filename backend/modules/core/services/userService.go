@@ -204,6 +204,7 @@ func (u *UserService) GetAllUsers(limit int, offset int) ([]corePort.UserInfoRes
 			Email:    u.Email,
 			RoleID:   u.RoleID,      // รหัสบทบาท
             Role:     u.Role.Name,
+
 		}
 	})
 

@@ -10,6 +10,7 @@ func RegisterTenantUserRoutes(router fiber.Router, ctrl *Core_controllers.Tenant
 	tenantuser := router.Group("/tenant-user")
 	tenantuser.Post("/tenants/:tenant_id/users/:user_id", ctrl.AddUserToTenant)
 	tenantuser.Delete("/tenants/:tenant_id/users/:user_id", ctrl.RemoveUserFromTenant)
+	tenantuser.Get("/user/:user_id",ctrl.ListTenantsByUser)
 
 }
 

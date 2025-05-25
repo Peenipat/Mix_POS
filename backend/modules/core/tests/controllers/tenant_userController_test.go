@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"testing"
+	"testing"	
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -28,9 +28,9 @@ func (m *MockTenantUserService) IsUserInTenant(ctx context.Context, tenantID uin
 	panic("unimplemented")
 }
 
-// ListTenantsByUser implements corePort.ITenantUser.
 func (m *MockTenantUserService) ListTenantsByUser(ctx context.Context, userID uint) ([]coreModels.Tenant, error) {
-	panic("unimplemented")
+	args := m.Called(ctx, userID)
+	return args.Get(0).([]coreModels.Tenant), args.Error(1)
 }
 
 // ListUsersByTenant implements corePort.ITenantUser.
@@ -54,6 +54,7 @@ func setupApp(svc *MockTenantUserService) *fiber.App {
 	ctrl := coreControllers.NewTenantUserController(svc)
 	app.Post("/tenants/:tenant_id/users/:user_id", ctrl.AddUserToTenant)
 	app.Delete("/tenants/:tenant_id/users/:user_id", ctrl.RemoveUserFromTenant)
+	app.Get("/users/:user_id/tenants", ctrl.ListTenantsByUser)
 	return app
 }
 
@@ -351,3 +352,132 @@ func TestRemoveUserFromTenantController(t *testing.T) {
         svc.AssertExpectations(t)
     })
 }
+
+
+func TestListTenantsByUserController(t *testing.T) {
+	ctxMatcher := mock.Anything
+
+	t.Run("InvalidUserID", func(t *testing.T) {
+		app := setupApp(new(MockTenantUserService))
+		req := httptest.NewRequest(http.MethodGet, "/users/abc/tenants", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("ServiceError_InvalidID", func(t *testing.T) {
+		svc := new(MockTenantUserService)
+		svc.
+			On("ListTenantsByUser", ctxMatcher, uint(5)).
+			Return([]coreModels.Tenant{}, coreServices.ErrInvalidUserID).
+			Once()
+
+		app := setupApp(svc)
+		req := httptest.NewRequest(http.MethodGet, "/users/5/tenants", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+		var body map[string]string
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.Equal(t, "error", body["status"])
+		assert.Equal(t, coreServices.ErrInvalidUserID.Error(), body["message"])
+
+		svc.AssertExpectations(t)
+	})
+
+	t.Run("ServiceError_UserNotFound", func(t *testing.T) {
+		svc := new(MockTenantUserService)
+		svc.
+			On("ListTenantsByUser", ctxMatcher, uint(2)).
+			Return([]coreModels.Tenant{}, coreServices.ErrUserNotFound).
+			Once()
+
+		app := setupApp(svc)
+		req := httptest.NewRequest(http.MethodGet, "/users/2/tenants", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+		var body map[string]string
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.Equal(t, "error", body["status"])
+		assert.Equal(t, "User not found", body["message"])
+
+		svc.AssertExpectations(t)
+	})
+
+	t.Run("ServiceError_NoTenants", func(t *testing.T) {
+		svc := new(MockTenantUserService)
+		svc.
+			On("ListTenantsByUser", ctxMatcher, uint(3)).
+			Return([]coreModels.Tenant{}, coreServices.ErrNoTenantsAssigned).
+			Once()
+
+		app := setupApp(svc)
+		req := httptest.NewRequest(http.MethodGet, "/users/3/tenants", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+		var body map[string]string
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.Equal(t, "error", body["status"])
+		assert.Equal(t, "No tenants assigned to this user", body["message"])
+
+		svc.AssertExpectations(t)
+	})
+
+	t.Run("ServiceError_Internal", func(t *testing.T) {
+		svc := new(MockTenantUserService)
+		svc.
+			On("ListTenantsByUser", ctxMatcher, uint(4)).
+			Return([]coreModels.Tenant{}, errors.New("db error")).
+			Once()
+
+		app := setupApp(svc)
+		req := httptest.NewRequest(http.MethodGet, "/users/4/tenants", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+		var body map[string]string
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.Equal(t, "error", body["status"])
+		assert.Equal(t, "Failed to fetch tenants", body["message"])
+
+		svc.AssertExpectations(t)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		tenants := []coreModels.Tenant{
+			{ID: 10, Name: "A", Domain: "a"},
+			{ID: 20, Name: "B", Domain: "b"},
+		}
+		svc := new(MockTenantUserService)
+		svc.
+			On("ListTenantsByUser", ctxMatcher, uint(7)).
+			Return(tenants, nil).
+			Once()
+
+		app := setupApp(svc)
+		req := httptest.NewRequest(http.MethodGet, "/users/7/tenants", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var result struct {
+			Status string              `json:"status"`
+			Data   []coreModels.Tenant `json:"data"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.Equal(t, "success", result.Status)
+		assert.Len(t, result.Data, 2)
+		assert.Equal(t, uint(10), result.Data[0].ID)
+		assert.Equal(t, uint(20), result.Data[1].ID)
+
+		svc.AssertExpectations(t)
+	})
+}
+
+
+
+
+
+
+
+

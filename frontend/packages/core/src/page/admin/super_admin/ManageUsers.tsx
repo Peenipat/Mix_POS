@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, FormEvent } from 'react';
 import axios from "../../../lib/axios";
 import { toast } from 'react-toastify';
 import { UserResponseSchema, CreateUserForm, User as UserResponse } from '../../../schemas/userSchema';
+import { User } from '../../../schemas/userSchema';
 import EditUserModal from "../components/EditUserModal";
 import CreateUserModal from '../components/CreateUserModal';
-import { DataTable, Column } from '../components/DataTable';
+import { DataTable, Column, Action } from '../components/DataTable';
 import { z } from "zod";
 
 export default function ManageUsers() {
@@ -15,22 +16,60 @@ export default function ManageUsers() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [assignUser, setAssignUser] = useState<User | null>(null);
+  const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<number>();
+
+  console.log(users)
   // Fetch users on mount
   useEffect(() => {
+    // fetch users
     (async () => {
       try {
         const res = await axios.get('/admin/users');
         const parsed = z.array(UserResponseSchema).safeParse(res.data);
         if (!parsed.success) throw parsed.error;
         setUsers(parsed.data);
-      } catch (err: any) {
-        console.error(err);
+      } catch (e: any) {
         toast.error('Failed to load users');
       } finally {
         setLoading(false);
       }
     })();
+    // fetch tenants for the dropdown
+    (async () => {
+      try {
+        const res = await axios.get<{ status: string; data: { id: number; name: string }[] }>('/core/tenant-route?active=true');
+        if (res.data.status !== 'success') throw new Error(res.data.status);
+        setTenants(res.data.data);
+      } catch (e) {
+        toast.error('Failed to load tenants');
+      }
+    })();
   }, []);
+
+  const handleAssignClick = (u: User) => {
+    setAssignUser(u);
+    setSelectedTenantId(tenants[0]?.id);
+    setIsAssignOpen(true);
+  };
+
+  // on submit assign
+  const handleAssign = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!assignUser || !selectedTenantId) return;
+    try {
+      await axios.post(
+        `/core/tenant-user/tenants/${selectedTenantId}/users/${assignUser.id}`
+      );
+      toast.success(`User #${assignUser.id} assigned to tenant ${selectedTenantId}`);
+      setIsAssignOpen(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Assignment failed');
+    }
+  };
 
   // Handlers
   const handleEdit = (user: UserResponse) => {
@@ -89,10 +128,16 @@ export default function ManageUsers() {
     { header: 'Username', accessor: 'username' },
     { header: 'Email', accessor: 'email' },
     { header: 'Role', accessor: 'role' },
-    { header: 'Created At', accessor: 'createdAt' },
-    { header: 'Updated At', accessor: 'updatedAt' },
-    { header: 'Deleted At', accessor: 'deletedAt' },
+    // { header: 'Created At', accessor: 'createdAt' },
+    // { header: 'Updated At', accessor: 'updatedAt' },
+    // { header: 'Deleted At', accessor: 'deletedAt' },
   ];
+
+  const assignAction: Action<User> = {
+    label: 'Add to tenant',
+    onClick: handleAssignClick,
+    className: 'text-green-600',
+  };
 
   if (loading) return <div className="text-center p-4">Loading...</div>;
 
@@ -115,14 +160,57 @@ export default function ManageUsers() {
         showDelete
         onEdit={handleEdit}
         onDelete={handleDelete}
-        actions={[
-          {
-            label: 'View',
-            onClick: (u) => console.log('View', u),
-            className: 'text-blue-600',
-          },
-        ]}
+        actions={[assignAction]}
       />
+
+      {isAssignOpen && assignUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <form
+            onSubmit={handleAssign}
+            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm"
+          >
+            <h2 className="text-xl font-semibold mb-4">
+              Assign User to Tenant
+            </h2>
+            <p className="mb-2">
+              <strong>User ID:</strong> {assignUser.id}
+            </p>
+            <p className="mb-4">
+              <strong>Username:</strong> {assignUser.username}
+            </p>
+            <p className="mb-4">
+              <strong>Current Tenant:</strong>{' '}
+              {assignUser.tenantId
+                ? tenants.find((t) => t.id === assignUser.tenantId)?.name + ` (#${assignUser.tenantId})`
+                : 'None'}
+            </p>
+            <label className="block mb-2 font-medium">Select Tenant</label>
+            <select
+              value={selectedTenantId}
+              onChange={(e) => setSelectedTenantId(+e.target.value)}
+              className="w-full input input-bordered mb-4"
+            >
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} (#{t.id})
+                </option>
+              ))}
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setIsAssignOpen(false)}
+                className="btn btn-ghost"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Assign
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {selectedUser && (

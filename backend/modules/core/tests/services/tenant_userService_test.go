@@ -229,6 +229,94 @@ func TestRemoveUserFromTenant(t *testing.T) {
 	})
 }
 
+func TestListTenantsByUser(t *testing.T) {
+	ctx := context.Background()
+    db := setupTenantUserDB(t)
+	t.Run("InvalidUserID", func(t *testing.T) {
+		setupTenantUserDB(t)
+		svc := coreServices.NewTenantUserService(db)
+		_, err := svc.ListTenantsByUser(ctx, 0)
+		assert.ErrorIs(t, err, coreServices.ErrInvalidUserID)
+	})
+
+	t.Run("UserNotFound", func(t *testing.T) {
+		setupTenantUserDB(t)
+		svc := coreServices.NewTenantUserService(db)
+		_, err := svc.ListTenantsByUser(ctx, 1)
+		assert.ErrorIs(t, err, coreServices.ErrUserNotFound)
+	})
+
+	t.Run("NoTenantsAssigned", func(t *testing.T) {
+		db := setupTenantUserDB(t)
+		// create user only
+		require.NoError(t, db.Create(&coreModels.User{ID: 1, Username: "alice"}).Error)
+
+		svc := coreServices.NewTenantUserService(db)
+		list, err := svc.ListTenantsByUser(ctx, 1)
+		assert.ErrorIs(t, err, coreServices.ErrNoTenantsAssigned)
+		assert.Nil(t, list)
+	})
+
+	t.Run("DBErrorOnUserCheck", func(t *testing.T) {
+		db := setupTenantUserDB(t)
+		svc := coreServices.NewTenantUserService(db)
+		// close underlying sql.DB to force error
+		sqlDB, _ := db.DB()
+		require.NoError(t, sqlDB.Close())
+
+		_, err := svc.ListTenantsByUser(ctx, 1)
+		assert.Error(t, err)
+	})
+
+	t.Run("DBErrorOnFetchTenants", func(t *testing.T) {
+		db := setupTenantUserDB(t)
+		// create user so user check passes
+		require.NoError(t, db.Create(&coreModels.User{ID: 2, Username: "bob"}).Error)
+		svc := coreServices.NewTenantUserService(db)
+		// close underlying sql.DB to force join error
+		sqlDB, _ := db.DB()
+		require.NoError(t, sqlDB.Close())
+
+		_, err := svc.ListTenantsByUser(ctx, 2)
+		assert.Error(t, err)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+        db := setupTenantUserDB(t)
+        // prepare user and tenants
+        require.NoError(t, db.Create(&coreModels.User{ID: 3, Username: "carol"}).Error)
+    
+        t1 := coreModels.Tenant{ID: 10, Name: "TenA", Domain: "domainA"}
+        t2 := coreModels.Tenant{ID: 20, Name: "TenB", Domain: "domainB"}
+        require.NoError(t, db.Create(&t1).Error)
+        require.NoError(t, db.Create(&t2).Error)
+    
+        // assign both
+        require.NoError(t, db.Create(&coreModels.TenantUser{TenantID: 10, UserID: 3}).Error)
+        require.NoError(t, db.Create(&coreModels.TenantUser{TenantID: 20, UserID: 3}).Error)
+    
+        svc := coreServices.NewTenantUserService(db)
+        list, err := svc.ListTenantsByUser(ctx, 3)
+        require.NoError(t, err)
+        assert.Len(t, list, 2)
+    
+        ids := []uint{list[0].ID, list[1].ID}
+        assert.Contains(t, ids, uint(10))
+        assert.Contains(t, ids, uint(20))
+    })
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -6,6 +6,7 @@ import (
 
 	corePort "myapp/modules/core/port"
 	coreServices "myapp/modules/core/services"
+    coreModels "myapp/modules/core/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -152,7 +153,6 @@ func (ctrl *TenantUserController) RemoveUserFromTenant(c *fiber.Ctx) error {
     })
 }
 
-
 func (ctrl *TenantUserController) ListTenantsByUser(c *fiber.Ctx) error {
     // 1. Parse and validate user_id
     uidParam := c.Params("user_id")
@@ -181,9 +181,10 @@ func (ctrl *TenantUserController) ListTenantsByUser(c *fiber.Ctx) error {
                 "message": "User not found",
             })
         case errors.Is(err, coreServices.ErrNoTenantsAssigned):
-            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-                "status":  "error",
-                "message": "No tenants assigned to this user",
+            // เปลี่ยนจาก 404+error เป็น 200+success พร้อม data ว่าง
+            return c.JSON(fiber.Map{
+                "status": "success",
+                "data":   []coreModels.Tenant{},
             })
         default:
             return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

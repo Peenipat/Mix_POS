@@ -7,6 +7,7 @@ import EditUserModal from "../components/EditUserModal";
 import CreateUserModal from '../components/CreateUserModal';
 import { DataTable, Column, Action } from '../components/DataTable';
 import { z } from "zod";
+import { Button } from '../components/Button';
 
 export default function ManageUsers() {
   // State
@@ -21,8 +22,7 @@ export default function ManageUsers() {
   const [assignUser, setAssignUser] = useState<User | null>(null);
   const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<number>();
-
-  console.log(users)
+  const [currentTenant, setCurrentTenant] = useState<{ id: number; name: string } | null>(null);
   // Fetch users on mount
   useEffect(() => {
     // fetch users
@@ -49,6 +49,34 @@ export default function ManageUsers() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!assignUser) return
+  
+    (async () => {
+      try {
+        const res = await axios.get<{
+          status: string
+          data: Array<{ id: number; name: string }>
+        }>(`/core/tenant-user/user/${assignUser.id}`)
+  
+        if (res.data.status !== 'success') {
+          throw new Error(res.data.status)
+        }
+  
+        const list = res.data.data
+        // เอา entry แรก ถ้าไม่มีเลยก็เป็น null
+        setCurrentTenant(
+          list.length > 0
+            ? { id: list[0].id, name: list[0].name }
+            : null
+        )
+      } catch (err) {
+        console.error(err)
+        setCurrentTenant(null)
+      }
+    })()
+  }, [assignUser])
 
   const handleAssignClick = (u: User) => {
     setAssignUser(u);
@@ -144,13 +172,9 @@ export default function ManageUsers() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex justify-between items-center">
+      
         <h1 className="text-3xl font-bold">Manage Users</h1>
-        <button
-          className="btn btn-success"
-          onClick={() => setIsCreateOpen(true)}
-        >
-          Create User
-        </button>
+        <Button color="default" onClick={() => setIsCreateOpen(true)}>Create User</Button>
       </div>
 
       <DataTable<UserResponse>
@@ -180,8 +204,8 @@ export default function ManageUsers() {
             </p>
             <p className="mb-4">
               <strong>Current Tenant:</strong>{' '}
-              {assignUser.tenantId
-                ? tenants.find((t) => t.id === assignUser.tenantId)?.name + ` (#${assignUser.tenantId})`
+              {currentTenant
+                ? `${currentTenant.name} (#${currentTenant.id})`
                 : 'None'}
             </p>
             <label className="block mb-2 font-medium">Select Tenant</label>

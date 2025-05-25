@@ -404,25 +404,29 @@ func TestListTenantsByUserController(t *testing.T) {
 		svc.AssertExpectations(t)
 	})
 
-	t.Run("ServiceError_NoTenants", func(t *testing.T) {
-		svc := new(MockTenantUserService)
-		svc.
-			On("ListTenantsByUser", ctxMatcher, uint(3)).
-			Return([]coreModels.Tenant{}, coreServices.ErrNoTenantsAssigned).
-			Once()
-
-		app := setupApp(svc)
-		req := httptest.NewRequest(http.MethodGet, "/users/3/tenants", nil)
-		resp, _ := app.Test(req)
-		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
-
-		var body map[string]string
-		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
-		assert.Equal(t, "error", body["status"])
-		assert.Equal(t, "No tenants assigned to this user", body["message"])
-
-		svc.AssertExpectations(t)
-	})
+	t.Run("NoTenantsAssigned_ReturnsEmpty", func(t *testing.T) {
+		       svc := new(MockTenantUserService)
+		       svc.
+		           On("ListTenantsByUser", ctxMatcher, uint(3)).
+		           Return([]coreModels.Tenant{}, coreServices.ErrNoTenantsAssigned).
+		           Once()
+		
+		       app := setupApp(svc)
+		       req := httptest.NewRequest(http.MethodGet, "/users/3/tenants", nil)
+		       resp, _ := app.Test(req)
+		       // Now returns 200 with empty data
+		       assert.Equal(t, http.StatusOK, resp.StatusCode)
+		
+		       var result struct {
+		           Status string               `json:"status"`
+		           Data   []coreModels.Tenant  `json:"data"`
+		       }
+		       require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		       assert.Equal(t, "success", result.Status)
+		       assert.Empty(t, result.Data)
+		
+		       svc.AssertExpectations(t)
+		   })
 
 	t.Run("ServiceError_Internal", func(t *testing.T) {
 		svc := new(MockTenantUserService)

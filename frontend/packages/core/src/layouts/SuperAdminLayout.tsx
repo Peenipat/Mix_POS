@@ -1,15 +1,26 @@
 import React from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from "react-router-dom";
 import LogoutButton from '../components/LogoutButton';
 
+const crumbsMap: Record<string, string> = {
+  "": "Home",
+  dashboard: "Dashboard",
+  users: "Manage Users",
+  tenant: "Manage Tenant",
+  log: "System Log",
+};
+
 export default function SuperAdminLayout() {
+  const { pathname } = useLocation();
+   // 1) แยก path เป็น segments  2) กรองทิ้ง "admin"
+  const raw = pathname.split("/").filter(Boolean);
+  const segments = raw.filter(seg => seg !== "admin");
   return (
     <>
       {/* Top Navbar */}
       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div className="px-3 py-3 lg:px-5 lg:pl-3">
           <div className="flex items-center justify-between">
-            {/* Mobile toggle & Logo */}
             <div className="flex items-center justify-start">
               <button
                 data-drawer-target="logo-sidebar"
@@ -38,7 +49,6 @@ export default function SuperAdminLayout() {
                 </span>
               </Link>
             </div>
-            {/* Logout */}
             <div className="flex items-center">
               <LogoutButton />
             </div>
@@ -91,8 +101,78 @@ export default function SuperAdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="p-4 sm:ml-64 pt-20 bg-gray-50 dark:bg-gray-900 min-h-screen">
-        <div className="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+      <div className="p-4 sm:ml-64 pt-20 bg-gray-100 dark:bg-gray-900 min-h-screen">
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+
+          {/* Breadcrumb */}
+          <nav className="flex mb-4" aria-label="Breadcrumb">
+            <ol className="inline-flex items-center space-x-1 md:space-x-2">
+              {segments.length === 0 || segments[0] !== "dashboard" ? (
+                <li className="inline-flex items-center">
+                  <Link
+                    to="/admin/dashboard"
+                    className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600"
+                  >
+                    <svg
+                      className="w-3 h-3 me-2.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="m19.707 9.293-2-2-7-7a1…Z" />
+                    </svg>
+                    Dashboard
+                  </Link>
+                </li>
+              ) : (
+                // กรณี path เริ่มต้นเลยเป็น /dashboard
+                <li>
+                  <span className="text-sm font-medium text-gray-500">
+                    Dashboard
+                  </span>
+                </li>
+              )}
+
+              {segments.map((seg, idx) => {
+                // ข้าม segment "dashboard" ไปแล้วเพราะเราใช้มันเป็น home
+                if (idx === 0 && seg === "dashboard") return null;
+                const to = "/" + segments.slice(0, idx + 1).join("/");
+                const isLast = idx === segments.length - 1;
+                const label = crumbsMap[seg] || seg;
+                return (
+                  <li key={to} aria-current={isLast ? "page" : undefined}>
+                    <div className="flex items-center">
+                      <svg
+                        className="w-3 h-3 text-gray-400 mx-1"
+                        fill="none"
+                        viewBox="0 0 6 10"
+                      >
+                        <path
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="m1 9 4-4-4-4"
+                        />
+                      </svg>
+                      {isLast ? (
+                        <span className="ms-1 text-sm font-medium text-gray-500">
+                          {label}
+                        </span>
+                      ) : (
+                        <Link
+                          to={to}
+                          className="ms-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ms-2"
+                        >
+                          {label}
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+
           <Outlet />
         </div>
       </div>

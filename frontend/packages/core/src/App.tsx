@@ -16,6 +16,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RequireRole from "./components/RequireRole";
 import Unauthorized from "./page/unauthorized";
 import React from "react";
+import ManageTenant from "./page/admin/super_admin/ManageTenant";
+import TenantDetail from "./page/admin/super_admin/Tenant$id";
 
 export default function App() {
   return (
@@ -46,6 +48,8 @@ export default function App() {
         <Route path="dashboard" element={<SuperAdminDashboard />} />
         <Route path="users" element={<ManageUsers />} />
         <Route path="log" element={<LogTablePage />} />
+        <Route path="tenant" element={<ManageTenant/>}/>
+        <Route path="tenant/:id" element={<TenantDetail/>}/>
       </Route>
 
       {/* ต้องเป็น BRANCH_ADMIN */}

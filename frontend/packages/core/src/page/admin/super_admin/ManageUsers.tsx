@@ -1,136 +1,145 @@
-import React from 'react'
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import axios from "../../../lib/axios";
-import { toast } from 'react-toastify'
-import { UserResponseSchema } from '../../../schemas/userSchema';
+import { toast } from 'react-toastify';
+import { UserResponseSchema, CreateUserForm, User as UserResponse } from '../../../schemas/userSchema';
 import EditUserModal from "../components/EditUserModal";
-import { z } from "zod"
-
-// interface กำหนดโครงสร้างข้อมูล user
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-  createdAt?: string;
-  updatedAt?: string;
-  deletedAt?: string | null;
-}
+import CreateUserModal from '../components/CreateUserModal';
+import { DataTable, Column } from '../components/DataTable';
+import { z } from "zod";
 
 export default function ManageUsers() {
-  const usersResponseSchema = z.array(UserResponseSchema); // schema สำหรับ validate array ของ users  ที่ตอบกลับมาจาก Database
-  const [users, setUsers] = useState<User[]>([]); // เก็บข้อมูล user ทั้งหมดที่ดึงจาก backend
-  const [loading, setLoading] = useState(true); // สถานะโหลดหน้า
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);  // user ที่ถูกเลือกเพื่อแก้ไข
-  const [isModalOpen, setIsModalOpen] = useState(false); // สถานะเปิด modal แก้ไข
+  // State
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // ดึงข้อมูล users ตอนเปิด
+  // Fetch users on mount
   useEffect(() => {
-    const fetchUsers = async () => {
+    (async () => {
       try {
-        const res = await axios.get("/admin/users")
-        const parsed = usersResponseSchema.safeParse(res.data); // validate response ของ user ว่าถูกต้องตาม schema ไหม
-
-        if (!parsed.success) {
-          console.error("Invalid API Response:", parsed.error);
-          setUsers([]); //ไม่ผ่านให้ส่ง array เปล่า
-          return
-        }
-        setUsers(parsed.data); // ผ่าน set user เข้า useState
-      } catch (err) {
-        setUsers([]);
-        console.error("Fetch users error:", err);
+        const res = await axios.get('/admin/users');
+        const parsed = z.array(UserResponseSchema).safeParse(res.data);
+        if (!parsed.success) throw parsed.error;
+        setUsers(parsed.data);
+      } catch (err: any) {
+        console.error(err);
+        toast.error('Failed to load users');
       } finally {
-        setLoading(false); // หยุดโหลดไม่ว่าจะสำเร็จหรือล้มเหลว
+        setLoading(false);
       }
-    };
-
-    fetchUsers();
+    })();
   }, []);
 
-  // ฟังก์ชันเปิด modal พร้อมส่ง user ที่ต้องการแก้ไข
-  const handleEdit = (user: User) => {
+  // Handlers
+  const handleEdit = (user: UserResponse) => {
     setSelectedUser(user);
-    setIsModalOpen(true);
+    setIsEditOpen(true);
   };
 
-  // ฟังก์ชัน save user หลังจากแก้ไขจาก modal
-  const handleSave = async (updatedUser: User) => {
+  const handleSave = async (updated: UserResponse) => {
     try {
       await axios.put('/admin/change_role', {
-        id: updatedUser.id,
-        role: updatedUser.role,
-      })
-      // อัปเดต state เมื่อสำเร็จ
-      setUsers(prev =>
-        prev.map(u => (u.id === updatedUser.id ? updatedUser : u))
-      )
-      toast.success('User updated successfully')
-      setIsModalOpen(false)  // ปิด modal แทน onClose()
+        id: updated.id,
+        role: updated.role,
+      });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === updated.id ? updated : u))
+      );
+      toast.success('User updated');
     } catch (err: any) {
-      console.error(err)
-      toast.error(err.response?.data?.error || 'Failed to update user')
+      console.error(err);
+      toast.error('Update failed');
+    } finally {
+      setIsEditOpen(false);
     }
-  }
+  };
 
-  // กรณีโหลดข้อมูลยังไม่เสร็จ
-  if (loading) return <div className="text-center">Loading...</div>
+  const handleDelete = async (user: UserResponse) => {
+    if (!confirm(`Delete ${user.username}?`)) return;
+    try {
+      await axios.delete(`/admin/users/${user.id}`);
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      toast.success('User deleted');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Delete failed');
+    }
+  };
+
+  const handleCreate = (newUser: CreateUserForm) => {
+    // Optimistic add, backend should return real ID
+    const created: UserResponse = {
+      id: Date.now(),
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      deletedAt: null,
+    };
+    setUsers((prev) => [...prev, created]);
+    setIsCreateOpen(false);
+  };
+
+  // Columns definition
+  const columns: Column<UserResponse>[] = [
+    { header: '#', accessor: 'id' },
+    { header: 'Username', accessor: 'username' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Role', accessor: 'role' },
+    { header: 'Created At', accessor: 'createdAt' },
+    { header: 'Updated At', accessor: 'updatedAt' },
+    { header: 'Deleted At', accessor: 'deletedAt' },
+  ];
+
+  if (loading) return <div className="text-center p-4">Loading...</div>;
 
   return (
-    <div className="overflow-x-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Manage Users</h1>
-      <button className="btn btn-success">Create user</button>
-      <table className="table table-zebra w-full">
-        {/* head */}
-        <thead className="bg-gray-200 text-gray-700">
-          <tr>
-            <th className="text-center">#</th>
-            <th className="text-center">Username</th>
-            <th className="text-center">Email</th>
-            <th className="text-center">Role</th>
-            <th className="text-center">Created At</th>
-            <th className="text-center">Updated At</th>
-            <th className="text-center">Deleted At</th>
-            <th className="text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user, index) => (
-            <tr key={user.id}>
-              <td className="text-center" >{index + 1}</td>
-              <td className="text-center" >{user.username}</td>
-              <td >{user.email}</td>
-              <td className="text-center">{user.role}</td>
-              <td className="text-center">
-                {user.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString('th-TH')
-                  : "-"}
-              </td>
-              <td className="text-center">
-                {user.updatedAt
-                  ? new Date(user.updatedAt).toLocaleDateString('th-TH')
-                  : "-"}
-              </td>
-              <td className="text-center">
-                {user.deletedAt
-                  ? new Date(user.deletedAt).toLocaleDateString('th-TH')
-                  : "-"}
-              </td>
-              <td className="flex justify-between text-center">
-                <button className="btn btn-warning" onClick={() => handleEdit(user)}>Edit</button>
-                <button className="btn btn-error">Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {isModalOpen && selectedUser && (
+    <div className="p-4 space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Manage Users</h1>
+        <button
+          className="btn btn-success"
+          onClick={() => setIsCreateOpen(true)}
+        >
+          Create User
+        </button>
+      </div>
+
+      <DataTable<UserResponse>
+        data={users}
+        columns={columns}
+        showEdit
+        showDelete
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        actions={[
+          {
+            label: 'View',
+            onClick: (u) => console.log('View', u),
+            className: 'text-blue-600',
+          },
+        ]}
+      />
+
+      {/* Edit Modal */}
+      {selectedUser && (
         <EditUserModal
+          isOpen={isEditOpen}
           user={selectedUser}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => setIsEditOpen(false)}
           onSave={handleSave}
         />
       )}
+
+      {/* Create Modal */}
+      <CreateUserModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreate={handleCreate}
+      />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func RegisterAdminRoutes(router fiber.Router, ctrl *Core_controllers.UserController) {
-	adminGroup := router.Group("/admin", middlewares.RequireAuth(), middlewares.RequireSuperAdmin())
+	adminGroup := router.Group("/", middlewares.RequireAuth(), middlewares.RequireSuperAdmin())
 	adminGroup.Post("/create_users", ctrl.CreateUserFromAdmin)
 	adminGroup.Put("/change_role", ctrl.ChangeUserRole)
 	adminGroup.Get("/users",ctrl.GetAllUsers)

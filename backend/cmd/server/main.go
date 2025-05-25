@@ -168,10 +168,16 @@ func main() {
 	tenantUserService := coreServices.NewTenantUserService(database.DB)
 	tenantUserController := coreControllers.NewTenantUserController(tenantUserService)
 
+	branchService := coreServices.NewBranchService(database.DB) 
+	branchController := coreControllers.NewBranchController(branchService)
+
+	
+
 	coreGroup := app.Group("/api/v1/core")
 	coreRoutes.RegisterUserRoutes(coreGroup,userController)
 	coreRoutes.RegisterTenantRoutes(coreGroup,tenantController)
 	coreRoutes.RegisterTenantUserRoutes(coreGroup,tenantUserController)
+	coreRoutes.RegisterBranchRoutes(coreGroup,branchController)
 	
 	adminGroup := app.Group("/api/v1/admin")
 	coreRoutes.RegisterAdminRoutes(adminGroup,userController)
@@ -186,10 +192,7 @@ func main() {
 	authSvc := coreServices.NewAuthService(database.DB, logSvc)
 	coreControllers.InitAuthHandler(authSvc, logSvc)
 
-	branchService := coreServices.NewBranchService(database.DB) 
-	branchController := coreControllers.NewBranchController(branchService)
-
-	coreRoutes.RegisterBranchRoutes(app,branchController)
+	
 
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)

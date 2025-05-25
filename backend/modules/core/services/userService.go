@@ -193,7 +193,7 @@ func (u *UserService) ChangePassword(ctx context.Context, userID uint, oldPasswo
 func (u *UserService) GetAllUsers(limit int, offset int) ([]corePort.UserInfoResponse, error) {
 	var users []coreModels.User
 	//ค้นหา user เช็ค limit และกำหนด offset
-	if err := database.DB.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	if err := database.DB.Preload("Role").Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil, err
 	}
 

@@ -5,7 +5,8 @@
   "version": "0.0.0",
   "workspaces": [
     "packages/core",
-    "packages/barberbooking"
+    "packages/barberbooking",
+    "packages/shared"
   ],
   "scripts": {
     "dev:core": "npm --workspace core run dev",

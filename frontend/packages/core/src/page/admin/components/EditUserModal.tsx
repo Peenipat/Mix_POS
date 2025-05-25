@@ -1,13 +1,15 @@
 import React from 'react'
 import { useState } from "react";
-import { User } from "../super_admin/ManageUsers"
+import { User } from '../../../schemas/userSchema';
 interface EditUserModalProps {
+  isOpen: boolean;
   user: User;
   onClose: () => void;
   onSave: (updatedUser: User) => void;
 }
 
-export default function EditUserModal({ user, onClose, onSave }: EditUserModalProps) {
+export default function EditUserModal({ isOpen, user, onClose, onSave }: EditUserModalProps) {
+  if (!isOpen) return null;
   const [formData, setFormData] = useState({
     username: user.username,
     email: user.email,

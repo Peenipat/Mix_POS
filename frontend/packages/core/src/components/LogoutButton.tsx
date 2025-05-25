@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../store/hook";
 import { logout } from "../store/authSlice";
+import React from "react";
 
 interface LogoutButtonProps {
   className?: string; 

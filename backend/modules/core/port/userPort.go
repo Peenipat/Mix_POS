@@ -31,6 +31,14 @@ type UserInfoResponse struct {
 	Role     string `json:"role"`
 }
 
+type MeDTO struct {
+    ID        uint   `json:"id"`
+    Username  string `json:"username"`
+    Email     string `json:"email"`
+    BranchID  *uint  `json:"branch_id"`
+    TenantIDs []uint `json:"tenant_ids"`
+}
+
 type LoginResponse struct {
 	Token string           `json:"token"`
 	User  UserInfoResponse `json:"user"`
@@ -43,6 +51,7 @@ type IUser interface {
 	GetAllUsers(limit int, offset int) ([]UserInfoResponse, error)
 	FilterUsersByRole(role string) ([]UserInfoResponse, error)
 	ChangePassword(ctx context.Context, userID uint, oldPassword, newPassword string) error 
+	Me(ctx context.Context, userID uint) (*MeDTO, error)
 
 	// GetUserByID(ctx context.Context, id uint) (*coreModels.User, error)
 	// GetUserByEmail(ctx context.Context, email string) (*coreModels.User, error)

@@ -178,10 +178,11 @@ func main() {
 	coreRoutes.RegisterTenantRoutes(coreGroup,tenantController)
 	coreRoutes.RegisterTenantUserRoutes(coreGroup,tenantUserController)
 	coreRoutes.RegisterBranchRoutes(coreGroup,branchController)
+	coreRoutes.SetupAuthRoutes(coreGroup,userController)
 	
 	adminGroup := app.Group("/api/v1/admin")
 	coreRoutes.RegisterAdminRoutes(adminGroup,userController)
-	coreRoutes.SetupAuthRoutes(adminGroup,userController)
+	
 
 
 
@@ -219,7 +220,7 @@ func main() {
 
 	appointmentStatusLogController := bookingControllers.NewAppointmentStatusLogController(apppointmentStatusLogService)
 
-	bookingGroup := app.Group("/api/barberbooking")
+	bookingGroup := app.Group("/api/v1/barberbooking")
 
 	// Register routes
 	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)

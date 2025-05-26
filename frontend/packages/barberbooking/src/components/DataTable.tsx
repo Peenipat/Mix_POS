@@ -1,5 +1,3 @@
-import React from 'react';
-
 export type Column<T> = {
   header: string;
   accessor: keyof T;
@@ -8,7 +6,7 @@ export type Column<T> = {
 export type Action<T> = {
   label: string;
   onClick: (row: T) => void;
-  className?: string; 
+  className?: string; // optional custom styling
 };
 
 type DataTableProps<T> = {
@@ -19,7 +17,7 @@ type DataTableProps<T> = {
   showDelete?: boolean;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
-  actions?: Action<T>[]; 
+  actions?: Action<T>[]; // additional custom actions
 };
 
 export function DataTable<T extends Record<string, any>>({

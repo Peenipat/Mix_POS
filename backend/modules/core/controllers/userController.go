@@ -5,6 +5,7 @@ import (
 	coreServices "myapp/modules/core/services"
 	"errors"
 	"strconv"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -216,5 +217,46 @@ func (ctrl *UserController) ChangePassword(c *fiber.Ctx) error {
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
         "status":  "success",
         "message": "Password changed successfully",
+    })
+}
+
+func (ac *UserController) Me(c *fiber.Ctx) error {
+    // 1. ดึง user_id จาก middleware RequireAuth
+    uidVal := c.Locals("user_id")
+    if uidVal == nil {
+        return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
+            "status":  "error",
+            "message": "User not authenticated",
+        })
+    }
+    userID, ok := uidVal.(uint)
+    if !ok {
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid user_id type in context",
+        })
+    }
+
+    // 2. เรียก service Me
+    meDTO, err := ac.UserService.Me(c.Context(), userID)
+    if err != nil {
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to fetch user info",
+            "error":   err.Error(),
+        })
+    }
+    if meDTO == nil {
+        return c.Status(http.StatusNotFound).JSON(fiber.Map{
+            "status":  "error",
+            "message": "User not found",
+        })
+    }
+
+    // 3. ตอบกลับ
+    return c.Status(http.StatusOK).JSON(fiber.Map{
+        "status":  "success",
+        "message": "User profile retrieved",
+        "data":    meDTO,
     })
 }

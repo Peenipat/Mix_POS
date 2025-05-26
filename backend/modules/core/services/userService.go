@@ -18,6 +18,7 @@ type UserService struct {
 }
 
 func NewUserService(db *gorm.DB) corePort.IUser {
+    
 	return &UserService{DB: db}
 }
 
@@ -251,6 +252,49 @@ func (u *UserService) FilterUsersByRole(role string) ([]corePort.UserInfoRespons
 	}
 
 	return result, nil
+}
+
+func (s *UserService) Me(ctx context.Context, userID uint) (*corePort.MeDTO, error) {
+    // 1) หา user ก่อน
+    var user coreModels.User
+    err := s.DB.WithContext(ctx).First(&user, userID).Error
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, nil
+    }
+    if err != nil {
+        return nil, err
+    }
+
+    // 2) โหลดความสัมพันธ์ทีหลังแบบแยกกัน (ใช้ s.DB ไม่ใช่ database.DB)
+    if err := s.DB.WithContext(ctx).
+        Model(&user).
+        Preload("Branch", func(db *gorm.DB) *gorm.DB {
+            return db.Select("id", "tenant_id")
+        }).
+        First(&user).Error; err != nil {
+        return nil, err
+    }
+
+    if err := s.DB.WithContext(ctx).
+        Model(&user).
+        Preload("TenantUsers", func(db *gorm.DB) *gorm.DB {
+            return db.Select("tenant_id", "user_id")
+        }).
+        First(&user).Error; err != nil {
+        return nil, err
+    }
+
+    // 3) สร้าง DTO สำหรับตอบกลับ
+    dto := &corePort.MeDTO{
+        ID:       user.ID,
+        Username: user.Username,
+        Email:    user.Email,
+        BranchID: user.BranchID,
+    }
+    for _, tu := range user.TenantUsers {
+        dto.TenantIDs = append(dto.TenantIDs, tu.TenantID)
+    }
+    return dto, nil
 }
 
 

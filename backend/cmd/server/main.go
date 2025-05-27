@@ -21,6 +21,8 @@ import (
 
 	// "github.com/gofiber/fiber/v2/middleware/filesystem"
 	fiberSwagger "github.com/swaggo/fiber-swagger"
+	"github.com/joho/godotenv"
+	aws "myapp/cmd/worker"
 
 	"myapp/database"
 	_ "myapp/docs" // import generated docs
@@ -36,6 +38,10 @@ import (
 )
 
 func main() {
+
+	if err := godotenv.Load(); err != nil {
+        log.Println("No .env file found, relying on environment variables")
+    }
 	app := fiber.New()
 
 	// Global middleware
@@ -235,6 +241,8 @@ func main() {
 	for _, r := range app.GetRoutes() {
 		fmt.Printf("%-6s %s\n", r.Method, r.Path)
 	}
+
+	aws.InitAWS()
 
 	// Route api docs
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)

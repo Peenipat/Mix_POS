@@ -62,16 +62,32 @@ func (s *BarberService) GetBarberByID(ctx context.Context, id uint) (*barberBook
 }
 
 // ListBarbers optionally filters by branch_id
-func (s *BarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingModels.Barber, error) {
-	var barbers []barberBookingModels.Barber
-	query := s.DB.WithContext(ctx).Model(&barberBookingModels.Barber{})
-	if branchID != nil {
-		query = query.Where("branch_id = ?", *branchID)
-	}
-	if err := query.Find(&barbers).Error; err != nil {
-		return nil, err
-	}
-	return barbers, nil
+func (s *BarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingPort.BarberWithUser, error) {
+    // Make a slice of the port’s DTO type
+    var rows []barberBookingPort.BarberWithUser
+
+    q := s.DB.WithContext(ctx).
+        Model(&barberBookingModels.Barber{}).
+        Select(`
+            barbers.id,
+            barbers.branch_id,
+            barbers.user_id,
+			barbers.phone_number,
+            users.username,
+            users.email,
+            barbers.created_at,
+            barbers.updated_at
+        `).
+        Joins(`LEFT JOIN users ON users.id = barbers.user_id`)
+
+    if branchID != nil {
+        q = q.Where("barbers.branch_id = ?", *branchID)
+    }
+
+    if err := q.Scan(&rows).Error; err != nil {
+        return nil, err
+    }
+    return rows, nil
 }
 
 // UpdateBarber updates barber info

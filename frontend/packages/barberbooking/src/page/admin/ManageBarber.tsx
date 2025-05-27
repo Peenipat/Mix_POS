@@ -48,9 +48,9 @@ export function ManageBarber() {
   // 4) table set-up
   const columns: Column<Barber>[] = [
     { header: "ID",   accessor: "id" },
-    { header: "Name", accessor: "name" },
+    { header: "Username", accessor: "username" },
     { header: "Email",accessor: "email" },
-    { header: "Phone",accessor: "phone" },
+    { header: "Phone",accessor: "phone_number" },
   ];
   const editAction: Action<Barber> = {
     label: "Edit",

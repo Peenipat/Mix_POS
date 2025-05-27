@@ -7,6 +7,7 @@ import (
 	"myapp/modules/core/models"
 	corePort "myapp/modules/core/port"
 	"myapp/utils"
+    "strings"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -62,15 +63,28 @@ func (u *UserService) CreateUserFromRegister(input corePort.RegisterInput) error
 
 
 func (u *UserService) CreateUserFromAdmin(input corePort.CreateUserInput) error {
-    // 1) ตรวจ email ซ้ำ
+    // เริ่ม Transaction
+    tx := database.DB.Begin()
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+        }
+    }()
+
+    // 1) ตรวจ email ซ้ำ แล้วเช็ค error
     var existing coreModels.User
-    database.DB.Where("email = ?", input.Email).First(&existing)
+    if err := tx.Where("email = ?", input.Email).First(&existing).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+        tx.Rollback()
+        return fmt.Errorf("check existing user: %w", err)
+    }
     if existing.ID != 0 {
+        tx.Rollback()
         return errors.New("email already in use")
     }
 
     // 2) ป้องกันสร้าง SUPER_ADMIN
     if input.Role == string(coreModels.RoleNameSaaSSuperAdmin) {
+        tx.Rollback()
         return errors.New("cannot create SUPER_ADMIN")
     }
 
@@ -82,36 +96,45 @@ func (u *UserService) CreateUserFromAdmin(input corePort.CreateUserInput) error 
          coreModels.RoleNameAssistantManager,
          coreModels.RoleNameStaff,
          coreModels.RoleNameUser:
-        // ผ่าน
     default:
+        tx.Rollback()
         return errors.New("invalid role provided")
     }
 
     // 4) หา Role record ที่ตรงกับชื่อ
     var role coreModels.Role
-    if err := database.DB.Where("name = ?", rn).First(&role).Error; err != nil {
-        return errors.New("specified role not found")
+    if err := tx.Where("name = ?", rn).First(&role).Error; err != nil {
+        tx.Rollback()
+        return fmt.Errorf("role not found: %w", err)
     }
 
     // 5) hash password
     hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
     if err != nil {
-        return errors.New("failed to hash password")
+        tx.Rollback()
+        return fmt.Errorf("failed to hash password: %w", err)
     }
 
-    // 6) สร้าง User พร้อมตั้ง RoleID
+    // 6) สร้าง User record
     user := coreModels.User{
-        Username: input.Username,
-        Email:    input.Email,
-        Password: string(hashed),
-        RoleID:   role.ID,      // <-- ใส่ FK ไปยัง roles.id
+        Username:   strings.TrimSpace(input.Username),
+        Email:      strings.TrimSpace(input.Email),
+        Password:   string(hashed),
+        RoleID:     role.ID,
+
+        BranchID:   input.BranchID,
+        AvatarURL:  input.AvatarURL,
+        AvatarName: input.AvatarName,
     }
 
-    if err := database.DB.Create(&user).Error; err != nil {
-        return errors.New("failed to create user")
+    if err := tx.Create(&user).Error; err != nil {
+        tx.Rollback()
+        return fmt.Errorf("failed to create user: %w", err)
     }
-    return nil
+
+    return tx.Commit().Error
 }
+
 
 
 func (u *UserService) ChangeRoleFromAdmin(input corePort.ChangeRoleInput) error {
@@ -205,6 +228,9 @@ func (u *UserService) GetAllUsers(limit int, offset int) ([]corePort.UserInfoRes
 			Email:    u.Email,
 			RoleID:   u.RoleID,      // รหัสบทบาท
             Role:     u.Role.Name,
+
+            AvatarURL:   u.AvatarURL,   // เอา URL มาใส่
+            AvatarName:  u.AvatarName,
 
 		}
 	})

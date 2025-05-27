@@ -1,7 +1,7 @@
 export interface Barber {
     id: number;
-    name: string;
+    username: string;
     email: string;
-    phone?: string;
+    phone_number?: string;
 }
    

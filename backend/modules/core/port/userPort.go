@@ -16,6 +16,10 @@ type CreateUserInput struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 	Role     string `json:"role" validate:"required"`
+
+    BranchID   *uint
+	AvatarURL  string
+    AvatarName string
 }
 
 type ChangeRoleInput struct {
@@ -29,6 +33,9 @@ type UserInfoResponse struct {
 	Email    string `json:"email"`
 	RoleID   uint   `json:"role_id"`
 	Role     string `json:"role"`
+
+	AvatarURL   string `json:"avatar_url,omitempty"`   
+    AvatarName  string `json:"avatar_name,omitempty"` 
 }
 
 type MeDTO struct {

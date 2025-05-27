@@ -35,9 +35,9 @@ func (m *MockBarberService) GetBarberByID(ctx context.Context, barberID uint) (*
 	return args.Get(0).(*barberBookingModels.Barber), args.Error(1)
 }
 
-func (m *MockBarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingModels.Barber, error) {
+func (m *MockBarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingPort.BarberWithUser, error) {
 	args := m.Called(ctx, branchID)
-	return args.Get(0).([]barberBookingModels.Barber), args.Error(1)
+	return args.Get(0).([]barberBookingPort.BarberWithUser), args.Error(1)
 }
 
 func (m *MockBarberService) UpdateBarber(ctx context.Context, barberID uint, barber *barberBookingModels.Barber) (*barberBookingModels.Barber, error) {

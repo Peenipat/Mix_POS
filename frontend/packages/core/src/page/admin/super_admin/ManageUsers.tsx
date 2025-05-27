@@ -4,10 +4,11 @@ import { toast } from 'react-toastify';
 import { UserResponseSchema, CreateUserForm, User as UserResponse } from '../../../schemas/userSchema';
 import { User } from '../../../schemas/userSchema';
 import EditUserModal from "../components/EditUserModal";
-import CreateUserModal from '../components/CreateUserModal';
+import { CreateUserModal } from '../components/CreateUserModal';
 import { DataTable, Column, Action } from '../components/DataTable';
 import { z } from "zod";
 import { Button } from '../components/Button';
+import { UserList } from '../components/UserList';
 
 export default function ManageUsers() {
   // State
@@ -24,46 +25,56 @@ export default function ManageUsers() {
   const [selectedTenantId, setSelectedTenantId] = useState<number>();
   const [currentTenant, setCurrentTenant] = useState<{ id: number; name: string } | null>(null);
   // Fetch users on mount
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get("/admin/users");
+      const parsed = z.array(UserResponseSchema).safeParse(res.data);
+      if (!parsed.success) throw parsed.error;
+      setUsers(parsed.data);
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. ฟังก์ชัน fetchTenants
+  const fetchTenants = async () => {
+    try {
+      const res = await axios.get<{
+        status: string;
+        data: { id: number; name: string }[];
+      }>("/core/tenant-route?active=true");
+      if (res.data.status !== "success") throw new Error(res.data.status);
+      setTenants(res.data.data);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load tenants");
+    }
+  };
+
+  // 3. เรียกทั้งสองใน useEffect
   useEffect(() => {
-    // fetch users
-    (async () => {
-      try {
-        const res = await axios.get('/admin/users');
-        const parsed = z.array(UserResponseSchema).safeParse(res.data);
-        if (!parsed.success) throw parsed.error;
-        setUsers(parsed.data);
-      } catch (e: any) {
-        toast.error('Failed to load users');
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // fetch tenants for the dropdown
-    (async () => {
-      try {
-        const res = await axios.get<{ status: string; data: { id: number; name: string }[] }>('/core/tenant-route?active=true');
-        if (res.data.status !== 'success') throw new Error(res.data.status);
-        setTenants(res.data.data);
-      } catch (e) {
-        toast.error('Failed to load tenants');
-      }
-    })();
+    fetchUsers();
+    fetchTenants();
   }, []);
 
   useEffect(() => {
     if (!assignUser) return
-  
+
     (async () => {
       try {
         const res = await axios.get<{
           status: string
           data: Array<{ id: number; name: string }>
         }>(`/core/tenant-user/user/${assignUser.id}`)
-  
+
         if (res.data.status !== 'success') {
           throw new Error(res.data.status)
         }
-  
+
         const list = res.data.data
         // เอา entry แรก ถ้าไม่มีเลยก็เป็น null
         setCurrentTenant(
@@ -135,19 +146,9 @@ export default function ManageUsers() {
     }
   };
 
-  const handleCreate = (newUser: CreateUserForm) => {
-    // Optimistic add, backend should return real ID
-    const created: UserResponse = {
-      id: Date.now(),
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: null,
-    };
-    setUsers((prev) => [...prev, created]);
+  const handleCreate = () => {
     setIsCreateOpen(false);
+    fetchUsers();
   };
 
   // Columns definition
@@ -172,7 +173,7 @@ export default function ManageUsers() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex justify-between items-center">
-      
+
         <h1 className="text-3xl font-bold">Manage Users</h1>
         <Button color="default" onClick={() => setIsCreateOpen(true)}>Create User</Button>
       </div>
@@ -252,6 +253,8 @@ export default function ManageUsers() {
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreate}
       />
+
+      <UserList users={users} />
     </div>
   );
 }

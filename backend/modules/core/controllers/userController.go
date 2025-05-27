@@ -3,9 +3,11 @@ package Core_controllers
 import (
 	corePort "myapp/modules/core/port"
 	coreServices "myapp/modules/core/services"
+    aws "myapp/cmd/worker"
 	"errors"
 	"strconv"
 	"net/http"
+    "log"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -54,19 +56,48 @@ func (ctrl *UserController) CreateUserFromRegister(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string
 // @Router       /admin/create_users [post]
 // @Security     ApiKeyAuth
-func (ctrl *UserController)  CreateUserFromAdmin(c *fiber.Ctx) error {
-	var input corePort.CreateUserInput
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-	}
+func (ctrl *UserController) CreateUserFromAdmin(c *fiber.Ctx) error {
+    // 1) อ่านค่าฟิลด์ต่าง ๆ จาก form-data
+    input := new(corePort.CreateUserInput)
+    input.Username = c.FormValue("username")
+    input.Email    = c.FormValue("email")
+    input.Password = c.FormValue("password")
+    input.Role     = c.FormValue("role")
 
-	if err := ctrl.UserService.CreateUserFromAdmin(input); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
+    // แปลง branch_id (ถ้ามี)
+    if b := c.FormValue("branch_id"); b != "" {
+        if bid, err := strconv.ParseUint(b, 10, 64); err == nil {
+            u := uint(bid)
+            input.BranchID = &u
+        }
+    }
 
-	return c.JSON(fiber.Map{"message": "User created successfully"})
+    // 2) รับไฟล์ avatar แล้วอัปโหลดขึ้น S3
+    if fileHeader, err := c.FormFile("avatar"); err == nil {
+        url, filename, err := aws.UploadToS3(fileHeader)
+        if err != nil {
+            // log ลง console เพื่อดีบัก
+            log.Printf("uploadToS3 error: %v", err)
+            return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+        }
+        // if err != nil {
+        //     return c.Status(500).JSON(fiber.Map{"error": "failed to upload avatar"})
+        // }
+        input.AvatarURL  = url
+        input.AvatarName = filename
+    }
+
+    // 3) เรียก Service เพื่อสร้าง User
+    if err := ctrl.UserService.CreateUserFromAdmin(*input); err != nil {
+        return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    // 4) ตอบกลับสำเร็จ พร้อมสถานะ 201
+    return c.Status(201).JSON(fiber.Map{
+        "message":    "User created successfully",
+        "avatar_url": input.AvatarURL,
+    })
 }
-
 // ChangeUserRole godoc
 // @Summary      เปลี่ยน Role ของผู้ใช้
 // @Description  สำหรับ Super Admin เพื่อเปลี่ยน Role ของผู้ใช้

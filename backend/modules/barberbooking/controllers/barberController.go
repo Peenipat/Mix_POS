@@ -54,36 +54,42 @@ func (ctrl *BarberController) GetBarberByID(c *fiber.Ctx) error {
 
 }
 //public
-func (ctrl *BarberController) ListBarbersByBranch(c *fiber.Ctx) error{
+func (ctrl *BarberController) ListBarbersByBranch(c *fiber.Ctx) error {
+    // 1. Parse the branch_id URL param
+    branchID, err := helperFunc.ParseUintParam(c, "branch_id")
+    if err != nil {
+        return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid branch_id",
+            "error":   err.Error(),
+        })
+    }
 
-	branchID, err := helperFunc.ParseUintParam(c,"branch_id")
-	if err != nil{
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error":err.Error(),
-		})
-	}
+    // 2. Call the service
+    barbers, err := ctrl.BarberService.ListBarbersByBranch(c.Context(), &branchID)
+    if err != nil {
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed to fetch barbers",
+            "error":   err.Error(),
+        })
+    }
 
-	listBarber,err := ctrl.BarberService.ListBarbersByBranch(c.Context(),&branchID)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":"error",
-			"message":"Failed to fetch List Barber",
-			"error":"Internal server error",
-		})
-	}
+    // 3. If no barbers found, 404
+    if len(barbers) == 0 {
+        return c.Status(http.StatusNotFound).JSON(fiber.Map{
+            "status":  "error",
+            "message": "no barbers found for this branch",
+            "data":    []barberBookingPort.BarberWithUser{},
+        })
+    }
 
-	if listBarber == nil {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"status":"error",
-			"message":"List Barber not found",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"status":"success",
-		"message":"List Barber retrieved",
-		"data": listBarber,
-	})
+    // 4. Return the list
+    return c.Status(http.StatusOK).JSON(fiber.Map{
+        "status":  "success",
+        "message": "barber list retrieved",
+        "data":    barbers,
+    })
 }
 
 var RolesCanManageBarber = []coreModels.RoleName{

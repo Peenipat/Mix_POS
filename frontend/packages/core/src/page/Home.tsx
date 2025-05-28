@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import React from 'react'
+import { Button } from "@object/shared";
 export default function Home() {
   const navigate = useNavigate();
   return (
@@ -20,6 +21,8 @@ export default function Home() {
     >
       login
     </button>
+
+    <Button>Button</Button>
 
     </>
   )

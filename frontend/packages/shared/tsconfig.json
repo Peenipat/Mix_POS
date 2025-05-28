@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "target": "es5",
+    "moduleResolution": "node"
+  },
+  "include": ["src"]
+}

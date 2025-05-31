@@ -13,3 +13,14 @@ type IAppointmentReview interface{
 	DeleteReview(ctx context.Context, reviewID uint, actorUserID uint, actorRole string) error
 	GetAverageRatingByBarber(ctx context.Context, barberID uint) (float64, error)
 }
+
+type CreateAppointmentReviewRequest struct {
+    CustomerID *uint  `json:"customer_id,omitempty" example:"4"`
+    Rating     int    `json:"rating" example:"5"`
+    Comment    string `json:"comment,omitempty" example:"Great service!"`
+}
+
+type UpdateAppointmentReviewRequest struct {
+    Rating  int    `json:"rating" example:"4"`
+    Comment string `json:"comment,omitempty" example:"Updated comment"`
+}

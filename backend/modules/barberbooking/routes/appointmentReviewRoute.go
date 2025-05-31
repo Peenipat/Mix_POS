@@ -11,7 +11,7 @@ import (
 func RegisterAppointmentReviewRoute(router fiber.Router, ctrl *barberBookingController.AppointmentReviewController) {
 
 	group := router.Group("/tenants/:tenant_id/appointments")
-	group.Post("/:appointment_id/reviews",barberbookingMiddlewares.RequireTenant(), ctrl.CreateReview)
+	group.Post("/:appointment_id/reviews",barberbookingMiddlewares.RequireTenant(), ctrl.CreateReview)//
 	group.Put("/reviews/:review_id",barberbookingMiddlewares.RequireTenant(), ctrl.UpdateReview)
 
 	group.Use(middlewares.RequireAuth())

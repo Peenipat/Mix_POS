@@ -21,8 +21,18 @@ var logService coreServices.SystemLogService
 func InitSystemLogHandler(svc coreServices.SystemLogService) {
 	logService = svc
 }
-
-// CreateLog handles POST /admin/system_logs
+// CreateLog godoc
+// @Summary      สร้าง Log Entry
+// @Description  รับข้อมูล Log (action, resource, status, HTTPMethod, endpoint, optional user_id, branch_id, details) แล้วบันทึกลงระบบ
+// @Tags         Log
+// @Accept       json
+// @Produce      json
+// @Param        body  body      Core_authDto.CreateLogRequest  true  "ข้อมูลสำหรับสร้าง Log Entry"
+// @Success      201   {object}  Core_authDto.CreateLogResponse   "คืนค่า LogID และ CreatedAt ของ Log ที่สร้าง"
+// @Failure      400   {object}  map[string]string               "Invalid input หรือ invalid details format"
+// @Failure      500   {object}  map[string]string               "เกิดข้อผิดพลาดระหว่างการสร้าง Log"
+// @Router       /none [post]
+// @Security     ApiKeyAuth
 func CreateLog(ctx *fiber.Ctx) error {
 	//ผูกตัวแปรเข้ากับ request โดย check ด้วยว่าข้อมูลที่เข้ามามี type ตรงตามที่กำหนดไว้หรือเปล่า
 	var req Core_authDto.CreateLogRequest
@@ -79,7 +89,22 @@ func CreateLog(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(res)
 }
 
-// GetSystemLogs handles GET /admin/system_logs
+// GetSystemLogs godoc
+// @Summary      ดึงประวัติระบบ (System Logs)
+// @Description  ดึงรายการ System Logs พร้อม pagination และ filter ตาม action, endpoint, status, ช่วงเวลา `from`–`to` (RFC3339)
+// @Tags         Log
+// @Produce      json
+// @Param        page      query     int     false  "หน้า (default = 1)"             default(1)
+// @Param        limit     query     int     false  "จำนวนต่อหน้า (default = 20)"   default(20)
+// @Param        action    query     string  false  "กรองตาม action"
+// @Param        endpoint  query     string  false  "กรองตาม endpoint"
+// @Param        status    query     string  false  "กรองตาม status"
+// @Param        from      query     string  false  "วันที่เริ่มต้น (RFC3339)"
+// @Param        to        query     string  false  "วันที่สิ้นสุด (RFC3339)"
+// @Success      200       {object}  map[string]interface{}  "คืนค่า total และ logs[]"
+// @Failure      500       {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึง System Logs"
+// @Router       /logs [get]
+// @Security     ApiKeyAuth
 func GetSystemLogs(ctx *fiber.Ctx) error {
 	page, _ := strconv.Atoi(ctx.Query("page", "1"))
 	limit, _ := strconv.Atoi(ctx.Query("limit", "20"))
@@ -115,7 +140,18 @@ func GetSystemLogs(ctx *fiber.Ctx) error {
 	return ctx.JSON(fiber.Map{"total": total, "logs": logs})
 }
 
-// GetSystemLogByID handles GET /admin/system_logs/:log_id
+// GetSystemLogByID godoc
+// @Summary      ดึง System Log ตาม ID
+// @Description  ดึงข้อมูล System Log รายการเดียวตามรหัส `log_id`
+// @Tags         Log
+// @Produce      json
+// @Param        log_id  path      int  true  "รหัส Log"
+// @Success      200     {object}  coreModels.SystemLog  "คืนค่า SystemLog object"
+// @Failure      400     {object}  map[string]string     "invalid log_id"
+// @Failure      404     {object}  map[string]string     "log not found"
+// @Failure      500     {object}  map[string]string     "เกิดข้อผิดพลาดระหว่างดึง Log"
+// @Router       /none [get]
+// @Security     ApiKeyAuth
 func GetSystemLogByID(ctx *fiber.Ctx) error {
 	param := ctx.Params("log_id")
 	id64, err := strconv.ParseUint(param, 10, 32)

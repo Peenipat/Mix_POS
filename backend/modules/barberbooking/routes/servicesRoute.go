@@ -13,10 +13,10 @@ func RegisterServiceRoutes(router fiber.Router, ctrl *barberBookingController.Se
 	group := router.Group("/tenants/:tenant_id/services")
 
 	group.Get("/", ctrl.GetAllServices)    //  public
-	group.Get("/:id", ctrl.GetServiceByID) //  public
+	group.Get("/:service_id", ctrl.GetServiceByID) //  public
 
 	group.Use(middlewares.RequireAuth())
 	group.Post("/", barberbookingMiddlewares.RequireTenant(), ctrl.CreateService)
-	group.Put("/:id", barberbookingMiddlewares.RequireTenant(), ctrl.UpdateService)
-	group.Delete("/:id", barberbookingMiddlewares.RequireTenant(), ctrl.DeleteService)
+	group.Put("/:service_id", barberbookingMiddlewares.RequireTenant(), ctrl.UpdateService)
+	group.Delete("/:service_id", barberbookingMiddlewares.RequireTenant(), ctrl.DeleteService)
 }

@@ -27,6 +27,21 @@ var RolesCanManageWorkload = []coreModels.RoleName{
 	coreModels.RoleNameTenant,
 }
 
+// GetWorkloadByBarber godoc
+// @Summary      ดึงปริมาณงานของช่างตัดผม
+// @Description  คืนข้อมูล BarberWorkload สำหรับช่างตัดผมที่ระบุ ภายใน Tenant ที่กำหนด โดยกรองตามวันที่ (YYYY-MM-DD) ถ้าไม่ส่ง date จะใช้วันที่ปัจจุบัน
+// @Tags         Workload
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                              true   "รหัส Tenant"
+// @Param        barber_id  path      uint                              true   "รหัส Barber"
+// @Param        date       query     string                            false  "วันที่กรอง (YYYY-MM-DD), default = today"
+// @Success      200        {object}  barberBookingModels.BarberWorkload  "คืนค่า status success และข้อมูล workload ใน key `data`"
+// @Failure      400        {object}  map[string]string                 "Invalid Barber ID หรือรูปแบบวันที่ไม่ถูกต้อง"
+// @Failure      403        {object}  map[string]string                 "Permission denied"
+// @Failure      500        {object}  map[string]string                 "Failed to fetch workload"
+// @Router      /tenants/:tenant_id/barberworkload/barbers/:barber_id [get]
+// @Security     ApiKeyAuth
 func (ctrl *BarberWorkloadController) GetWorkloadByBarber(c *fiber.Ctx) error {
 
     roleStr, ok := c.Locals("role").(string)
@@ -89,6 +104,20 @@ func (ctrl *BarberWorkloadController) GetWorkloadByBarber(c *fiber.Ctx) error {
 
 }
 
+
+// @Summary      สร้าง/อัปเดตปริมาณงานของช่างตัดผม
+// @Description  Upsert (insert หรือ update) BarberWorkload ตามรหัสช่างและวันที่
+// @Tags         Workload
+// @Accept       json
+// @Produce      json
+// @Param        barber_id    path      uint                              true  "รหัส Barber"
+// @Param        body         body      barberBookingPort.UpsertBarberWorkloadRequest  true  "Payload สำหรับ upsert ปริมาณงาน (date, appointments, hours)"
+// @Success      200          {object}  map[string]string               "คืนค่า status success และข้อความยืนยันการ upsert"
+// @Failure      400          {object}  map[string]string               "Invalid barber_id หรือ invalid JSON body หรือ invalid date format"
+// @Failure      403          {object}  map[string]string               "Permission denied"
+// @Failure      500          {object}  map[string]string               "Failed upsert workload"
+// @Router       /tenants/:tenant_id/barberworkload/barbers/:barber_id [post]
+// @Security     ApiKeyAuth
 func (ctrl *BarberWorkloadController) UpsertBarberWorkload(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageWorkload) {
@@ -145,6 +174,21 @@ var RolesCanGetSummaryBarber = []coreModels.RoleName{
 	coreModels.RoleNameBranchAdmin,
 }
 
+// GetWorkloadSummaryByBranch godoc
+// @Summary      สรุปปริมาณงานรายสาขา
+// @Description  คืนรายการสรุป BarberWorkload grouped by Branch ตามวันที่ และตัวกรอง Tenant/Branch (ถ้ามี)  
+// @Tags         Workload
+// @Accept       json
+// @Produce      json
+// @Param        date        query     string   true   "วันที่กรอง (YYYY-MM-DD)"
+// @Param        tenant_id   query     uint     false  "กรองเฉพาะ Tenant (optional)"
+// @Param        branch_id   query     uint     false  "กรองเฉพาะ Branch (optional)"
+// @Success      200         {object}  map[string][]barberBookingModels.BarberWorkload  "คืนค่า status success และ array ของสรุปปริมาณงานใน key `data`"
+// @Failure      400         {object}  map[string]string   "Missing date หรือ Invalid date/tenant_id/branch_id"
+// @Failure      403         {object}  map[string]string   "Permission denied"
+// @Failure      500         {object}  map[string]string   "Failed to fetch workload summary"
+// @Router       /tenants/:tenant_id/barberworkload/branches/:branch_id/summary [get]
+// @Security     ApiKeyAuth
 func (ctrl *BarberWorkloadController) GetWorkloadSummaryByBranch(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanGetSummaryBarber) {

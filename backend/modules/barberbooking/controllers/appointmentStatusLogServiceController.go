@@ -19,7 +19,19 @@ func NewAppointmentStatusLogController(
     }
 }
 
-// GET /tenants/:tenant_id/appointments/:appointment_id/logs
+// GetAppointmentLogs godoc
+// @Summary      ดึงประวัติสถานะของนัดหมาย
+// @Description  คืนรายการ AppointmentStatusLog ของนัดหมายที่ระบุ ภายใต้ Tenant เพื่อความสอดคล้องของ URL
+// @Tags         AppointmentLog
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id       path      uint                                           true  "รหัส Tenant"
+// @Param        appointment_id  path      uint                                           true  "รหัส Appointment"
+// @Success      200             {object}  map[string][]barberBookingModels.AppointmentStatusLog  "คืนค่า status success และ array ของ logs ใน key `data`"
+// @Failure      400             {object}  map[string]string                             "Invalid tenant_id หรือ appointment_id"
+// @Failure      500             {object}  map[string]string                             "Failed to fetch logs"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id/logs [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentStatusLogController) GetAppointmentLogs(c *fiber.Ctx) error {
     // 1. Parse tenant_id (เพื่อ consistency)
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {

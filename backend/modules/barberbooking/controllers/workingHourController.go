@@ -18,7 +18,19 @@ func NewWorkingHourController(service barberBookingPort.IWorkingHourService) *Wo
 	}
 }
 
-// GetWorkingHours ดึงเวลาเปิด-ปิดของสาขา
+// GetWorkingHours godoc
+// @Summary      ดึงเวลาเปิด-ปิดของสาขา
+// @Description  ดึงรายการ WorkingHour ทั้งหมดสำหรับสาขาที่ระบุ
+// @Tags         WorkingHour
+// @Accept       json
+// @Produce      json
+// @Param        branch_id   path      uint   true  "รหัสสาขา"
+// @Success      200         {object}  map[string]interface{}  "คืนค่า status, message และ array ของ WorkingHour"
+// @Failure      400         {object}  map[string]string       "Invalid branch ID"
+// @Failure      404         {object}  map[string]string       "No working hours found for this branch"
+// @Failure      500         {object}  map[string]string       "Failed to fetch working hours"
+// @Router       /tenants/:tenant_id/workinghour/branches/:branch_id [get]
+// @Security     ApiKeyAuth
 func (ctrl *WorkingHourController) GetWorkingHours(c *fiber.Ctx) error {
 	// 1. Parse branch_id จาก URL param
 	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
@@ -61,7 +73,20 @@ var RolesCanManageWorkingHour = []coreModels.RoleName{
 	coreModels.RoleNameBranchAdmin,
 }
 
-// UpdateWorkingHours อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)
+// UpdateWorkingHours godoc
+// @Summary      อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)
+// @Description  รับรายการ WorkingHourInput หลายรายการเพื่อนำมาอัปเดตเวลาเปิด-ปิดของสาขาที่ระบุ (วันในสัปดาห์, เปิด/ปิด)
+// @Tags         WorkingHour
+// @Accept       json
+// @Produce      json
+// @Param        branch_id   path      uint                        true  "รหัสสาขา"
+// @Param        body        body      []barberBookingDto.WorkingHourInput  true  "Array ของ WorkingHourInput — ตัวอย่าง: [{\"weekday\":1,\"open_time\":\"09:00\",\"close_time\":\"17:00\"}, ...]"
+// @Success      200         {object}  map[string]string  "คืนค่า status และข้อความยืนยันการอัปเดต"
+// @Failure      400         {object}  map[string]string  "Invalid branch ID, ไม่มีข้อมูลใน body หรือ JSON ไม่ถูกต้อง"
+// @Failure      403         {object}  map[string]string  "Permission denied"
+// @Failure      500         {object}  map[string]string  "Failed to update working hours"
+// @Router       /tenants/:tenant_id/workinghour/branches/:branch_id  [put]
+// @Security     ApiKeyAuth
 func (ctrl *WorkingHourController) UpdateWorkingHours(c *fiber.Ctx) error {
 
 	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
@@ -110,7 +135,20 @@ func (ctrl *WorkingHourController) UpdateWorkingHours(c *fiber.Ctx) error {
 	})
 }
 
-// CreateWorkingHours สร้างวันทำการใหม่ (เฉพาะ 1 วัน)
+// CreateWorkingHours godoc
+// @Summary      สร้างวันทำการใหม่ (เฉพาะ 1 วัน)
+// @Description  สร้าง WorkingHour ใหม่สำหรับสาขาที่ระบุ กำหนดวันในสัปดาห์ (0=อาทิตย์,...,6=เสาร์) และเวลาเปิด-ปิด
+// @Tags         WorkingHour
+// @Accept       json
+// @Produce      json
+// @Param        branch_id   path      uint                        true  "รหัสสาขา"
+// @Param        body        body      barberBookingDto.WorkingHourInput  true  "Payload สำหรับสร้างวันทำการ (weekday, start_time, end_time)"
+// @Success      201         {object}  map[string]string  "คืนค่า status และข้อความยืนยันการสร้าง"
+// @Failure      400         {object}  map[string]string  "Invalid branch ID, weekday ไม่ถูกต้อง หรือ JSON ไม่ถูกต้อง"
+// @Failure      403         {object}  map[string]string  "Permission denied"
+// @Failure      500         {object}  map[string]string  "Failed to create working hour"
+// @Router       /tenants/:tenant_id/workinghour/branches/:branch_id [post]
+// @Security     ApiKeyAuth
 func (ctrl *WorkingHourController) CreateWorkingHours(c *fiber.Ctx) error {
 	// ตรวจสอบสิทธิ์
 	roleStr, ok := c.Locals("role").(string)

@@ -30,6 +30,18 @@ var RolesCanManageCustomer = []coreModels.RoleName{
 	coreModels.RoleNameBranchAdmin,
 }
 
+// GetAllCustomers godoc
+// @Summary      ดึงรายชื่อลูกค้า
+// @Description  คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+// @Tags         Customer
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                               true  "รหัส Tenant"
+// @Success      200        {object}  map[string]interface{}            "คืนค่า status success, message และ array ของ Customer ใน key `data`"
+// @Failure      400        {object}  map[string]string                 "Invalid tenant ID หรือ Failed to fetch customer"
+// @Failure      403        {object}  map[string]string                 "Permission denied"
+// @Router       /tenants/:tenant_id/customers [get]
+// @Security     ApiKeyAuth
 func (ctrl *CustomerController) GetAllCustomers(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
 	fmt.Println("roleStr:", roleStr)
@@ -64,6 +76,21 @@ func (ctrl *CustomerController) GetAllCustomers(c *fiber.Ctx) error {
 	})
 }
 
+// GetCustomerByID godoc
+// @Summary      ดึงข้อมูลลูกค้าตาม ID
+// @Description  คืนข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+// @Tags         Customer
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                             true  "รหัส Tenant"
+// @Param        cus_id     path      uint                             true  "รหัส Customer"
+// @Success      200        {object}  map[string]interface{}          "คืนค่า status success, message และข้อมูล Customer ใน key `data`"
+// @Failure      400        {object}  map[string]string               "Invalid tenant_id หรือ invalid cus_id"
+// @Failure      403        {object}  map[string]string               "Permission denied"
+// @Failure      404        {object}  map[string]string               "Customer not found"
+// @Failure      500        {object}  map[string]string               "Failed to fetch customer"
+// @Router      /tenants/:tenant_id/customers/:cus_id [get]
+// @Security     ApiKeyAuth
 func (ctrl *CustomerController) GetCustomerByID(c *fiber.Ctx) error {
 	// 1. เช็คสิทธิ์
 	roleStr, ok := c.Locals("role").(string)
@@ -115,6 +142,19 @@ func (ctrl *CustomerController) GetCustomerByID(c *fiber.Ctx) error {
 	})
 }
 
+// CreateCustomer godoc
+// @Summary      สร้างลูกค้าใหม่
+// @Description  เพิ่ม Customer ใหม่ภายใต้ Tenant ที่ระบุ (กรอกชื่อและเบอร์โทร)  
+// @Tags         Customer
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                          true  "รหัส Tenant"
+// @Param        body       body      barberBookingModels.Customer  true  "Payload สำหรับสร้าง Customer (Name, Phone)"
+// @Success      201        {object}  map[string]string            "คืนค่า status success และข้อความยืนยันการสร้าง"
+// @Failure      400        {object}  map[string]string            "Invalid tenant ID หรือ Invalid request body หรือ Invalid Customer input"
+// @Failure      500        {object}  map[string]string            "Failed to create customer"
+// @Router       /tenants/:tenant_id/customers [post]
+// @Security     ApiKeyAuth
 func (ctrl *CustomerController) CreateCustomer(c *fiber.Ctx) error {
 
 	var payload barberBookingModels.Customer
@@ -156,6 +196,21 @@ func (ctrl *CustomerController) CreateCustomer(c *fiber.Ctx) error {
 
 }
 
+// UpdateCustomer godoc
+// @Summary      แก้ไขข้อมูลลูกค้า
+// @Description  อัปเดตข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ
+// @Tags         Customer
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                           true  "รหัส Tenant"
+// @Param        cus_id     path      uint                           true  "รหัส Customer"
+// @Param        body       body      barberBookingModels.Customer   true  "Payload สำหรับอัปเดต Customer (Name, Phone, Email)"
+// @Success      200        {object}  barberBookingModels.Customer   "คืนค่า status success และข้อมูล Customer ที่อัปเดตใน key `data`"
+// @Failure      400        {object}  map[string]string              "Invalid tenant_id, invalid cus_id, Invalid request body หรือ Invalid Customer input"
+// @Failure      404        {object}  map[string]string              "Customer not found"`
+// @Failure      500        {object}  map[string]string              "Failed to update customer"
+// @Router       /tenants/:tenant_id/customers/:cus_id  [put]
+// @Security     ApiKeyAuth
 func (ctrl *CustomerController) UpdateCustomer(c *fiber.Ctx) error {
 	tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
 	if err != nil {
@@ -210,6 +265,20 @@ func (ctrl *CustomerController) UpdateCustomer(c *fiber.Ctx) error {
 	})
 }
 
+// DeleteCustomer godoc
+// @Summary      ลบลูกค้า
+// @Description  ลบ Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+// @Tags         Customer
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint               true  "รหัส Tenant"
+// @Param        cus_id     path      uint               true  "รหัส Customer"
+// @Success      200        {object}  map[string]string  "คืนค่า status success และข้อความยืนยันการลบ"
+// @Failure      400        {object}  map[string]string  "Invalid tenant_id หรือ invalid cus_id"
+// @Failure      403        {object}  map[string]string  "Permission denied"
+// @Failure      500        {object}  map[string]string  "Failed to delete customer"
+// @Router       /tenants/:tenant_id/customers/:cus_id [delete]
+// @Security     ApiKeyAuth
 func (ctrl *CustomerController) DeleteCustomer(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageCustomer) {
@@ -243,6 +312,22 @@ func (ctrl *CustomerController) DeleteCustomer(c *fiber.Ctx) error {
 
 }
 
+
+// FindCustomerByEmail godoc
+// @Summary      ค้นหาลูกค้าตามอีเมล
+// @Description  ค้นหา Customer ภายใต้ Tenant ที่ระบุ โดยใช้ Email ใน body (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+// @Tags         Customer
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                          true  "รหัส Tenant"
+// @Param        body       body      barberBookingModels.Customer true  "Payload ที่ประกอบด้วยฟิลด์ Email (json: email)"
+// @Success      200        {object}  map[string]interface{}       "คืนค่า status success, message และข้อมูล Customer ใน key `data`"
+// @Failure      400        {object}  map[string]string            "Invalid tenant_id หรือ Invalid request body"
+// @Failure      403        {object}  map[string]string            "Permission denied"
+// @Failure      404        {object}  map[string]string            "Customer not found"
+// @Failure      500        {object}  map[string]string            "Failed to find customer by email"
+// @Router       /tenants/:tenant_id/customers/find-by-email [post]
+// @Security     ApiKeyAuth
 func (ctrl *CustomerController) FindCustomerByEmail(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageCustomer) {

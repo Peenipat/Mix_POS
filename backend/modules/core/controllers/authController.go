@@ -21,9 +21,22 @@ func InitAuthHandler(a *coreServices.AuthService, l coreServices.SystemLogServic
     logSvc = l
 }
 
+
+// LoginHandler godoc
+// @Summary      User login
+// @Description  Authenticates a user with email & password, issues a JWT cookie, and logs the attempt.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      Core_authDto.LoginRequest  true  "Login credentials (email & password)"
+// @Success      200   {object}  map[string]interface{}     "Returns the authenticated user object"
+// @Failure      400   {object}  map[string]string          "Invalid input"
+// @Failure      401   {object}  map[string]string          "Unauthorized – wrong credentials"
+// @Router       /login [post]
+// @Security     ApiKeyAuth
 func LoginHandler(c *fiber.Ctx) error {
     // 1) Bind request
-    var req Core_authDto.LoginRequest // check type from input
+    var req Core_authDto.LoginRequest 
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
     }

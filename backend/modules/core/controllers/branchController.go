@@ -30,7 +30,19 @@ var RolesCanManageBranch = []coreModels.RoleName{
 
 
 
-// CreateBranch handles POST /branches
+// CreateBranch godoc
+// @Summary      สร้างสาขาใหม่ เช็คตัวเชื่อมกับ Tenant
+// @Description  ใช้สร้างสาขาย่อยใหม่โดยระบุชื่อสาขาและที่อยู่เท่านั้น ยังไม่มีการเชื่อมโยงกับ Tenant
+// @Tags         Branch
+// @Accept       json
+// @Produce      json
+// @Param        body  body      corePort.CreateBranchInput  true  "ข้อมูลสำหรับสร้างสาขา (ชื่อ, ที่อยู่) — tenant_id จะถูกดึงจาก context ของผู้ใช้"
+// @Success      201   {object}  map[string]interface{}  "คืนค่า status, message และข้อมูลสาขาที่สร้าง"
+// @Failure      400   {object}  map[string]string       "ข้อมูลส่งมาไม่ถูกต้อง, ขาด tenant ID หรือสาขานี้มีอยู่แล้ว"
+// @Failure      403   {object}  map[string]string       "ไม่มีสิทธิ์เข้าถึง"
+// @Failure      500   {object}  map[string]string       "สร้างสาขาไม่สำเร็จ"
+// @Router       /core/tenants/:tenant_id/branches [post]
+// @Security     ApiKeyAuth
 func (ctrl *BranchController) CreateBranch(c *fiber.Ctx) error {
 	// Authorization: ตรวจสอบ role
 	roleStr, ok := c.Locals("role").(string)
@@ -82,7 +94,16 @@ func (ctrl *BranchController) CreateBranch(c *fiber.Ctx) error {
 	})
 }
 
-// Line SAAS_Admin
+// GetBranches godoc
+// @Summary      ดึงรายการสาขาทั้งหมด
+// @Description  ดึงข้อมูลสาขาทั้งหมดโดยไม่กรองตาม Tenant (ต้องมีสิทธิ์ RolesCanManageBranch)
+// @Tags         Branch
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "คืนค่า status และ array ของสาขาใน key `data`"
+// @Failure      403  {object}  map[string]string       "ไม่มีสิทธิ์เข้าถึง"
+// @Failure      500  {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึงข้อมูลสาขา"
+// @Router       /core/branches/all [get]
+// @Security     ApiKeyAuth
 func (ctrl *BranchController) GetBranches(c *fiber.Ctx) error {
     // 1. Authorization
     roleStr, ok := c.Locals("role").(string)
@@ -110,6 +131,19 @@ func (ctrl *BranchController) GetBranches(c *fiber.Ctx) error {
 }
 
 
+// GetBranchByID godoc
+// @Summary      ดึงข้อมูลสาขาตาม ID
+// @Description  ดึงข้อมูลสาขาเดียวตามรหัสสาขาที่ระบุ (ต้องมีสิทธิ์ RolesCanManageBranch)
+// @Tags         Branch
+// @Produce      json
+// @Param        id   path      int  true  "รหัสสาขา"
+// @Success      200  {object}  map[string]interface{}  "คืนค่า status และข้อมูลสาขาใน key `data`"
+// @Failure      400  {object}  map[string]string       "Invalid branch ID หรือ รหัสไม่ถูกต้อง"
+// @Failure      403  {object}  map[string]string       "ไม่มีสิทธิ์เข้าถึง"
+// @Failure      404  {object}  map[string]string       "ไม่พบสาขาตามรหัสที่ระบุ"
+// @Failure      500  {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึงข้อมูลสาขา"
+// @Router       /core/branch/:id [get]
+// @Security     ApiKeyAuth
 func (ctrl *BranchController) GetBranchByID(c *fiber.Ctx) error {
     // 1. Authorization
     roleStr, ok := c.Locals("role").(string)
@@ -159,6 +193,21 @@ func (ctrl *BranchController) GetBranchByID(c *fiber.Ctx) error {
     })
 }
 
+// UpdateBranch godoc
+// @Summary      แก้ไขชื่อสาขาตาม ID
+// @Description  อัปเดตชื่อสาขาที่ระบุด้วยรหัสสาขา (ต้องมีสิทธิ์ RolesCanManageBranch)
+// @Tags         Branch
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int                         true  "รหัสสาขา"
+// @Param        body  body      corePort.UpdateBranchInput  true  "ข้อมูลที่ต้องการอัปเดต (name)"
+// @Success      200   {object}  map[string]interface{}      "คืนค่า status และข้อมูลสาขาที่อัปเดต"
+// @Failure      400   {object}  map[string]string           "Invalid branch ID, malformed JSON, หรือ validation error"
+// @Failure      403   {object}  map[string]string           "ไม่มีสิทธิ์เข้าถึง"
+// @Failure      404   {object}  map[string]string           "ไม่พบสาขาตามรหัสที่ระบุ"
+// @Failure      500   {object}  map[string]string           "เกิดข้อผิดพลาดระหว่างอัปเดตสาขา"
+// @Router       /core/tenants/:tenant_id/branches/:id [put]
+// @Security     ApiKeyAuth
 func (ctrl *BranchController) UpdateBranch(c *fiber.Ctx) error {
     // 1. Authorization
     roleStr, ok := c.Locals("role").(string)
@@ -229,6 +278,20 @@ func (ctrl *BranchController) UpdateBranch(c *fiber.Ctx) error {
     })
 }
 
+// DeleteBranch godoc
+// @Summary      ลบสาขาตาม ID
+// @Description  ลบสาขาที่ระบุด้วยรหัสสาขา (ต้องมีสิทธิ์ RolesCanManageBranch)  
+// @Tags         Branch
+// @Produce      json
+// @Param        id   path      int  true  "รหัสสาขา"
+// @Success      200  {object}  map[string]string  "คืนค่า status และข้อความยืนยันการลบ"
+// @Failure      400  {object}  map[string]string  "Invalid branch ID หรือ รหัสไม่ถูกต้อง"
+// @Failure      403  {object}  map[string]string  "ไม่มีสิทธิ์เข้าถึง"
+// @Failure      404  {object}  map[string]string  "ไม่พบสาขาตามรหัสที่ระบุ"
+// @Failure      409  {object}  map[string]string  "ไม่สามารถลบสาขาได้ เนื่องจากมีการใช้งานอยู่"
+// @Failure      500  {object}  map[string]string  "เกิดข้อผิดพลาดระหว่างการลบสาขา"
+// @Router       /core/tenants/:tenant_id/branches/:id [delete]
+// @Security     ApiKeyAuth
 func (ctrl *BranchController) DeleteBranch(c *fiber.Ctx) error {
     // 1. Authorization
     roleStr, ok := c.Locals("role").(string)
@@ -282,6 +345,18 @@ func (ctrl *BranchController) DeleteBranch(c *fiber.Ctx) error {
     })
 }
 
+// GetBranchesByTenantID godoc
+// @Summary      ดึงรายการสาขาของ Tenant ปัจจุบัน
+// @Description  ดึงข้อมูลสาขาทั้งหมดเฉพาะสำหรับ Tenant ที่ผู้ใช้ล็อกอินอยู่ (tenant_id มาจาก context หลังตรวจสอบ token)
+// @Tags         Branch
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "คืนค่า status และ array ของสาขาใน key `data`"
+// @Failure      400  {object}  map[string]string       "Missing or invalid tenant ID หรือ InvalidTenantID"
+// @Failure      403  {object}  map[string]string       "ไม่มีสิทธิ์เข้าถึง"
+// @Failure      404  {object}  map[string]string       "ไม่พบ Tenant ตามรหัสที่ระบุ"
+// @Failure      500  {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึงข้อมูลสาขา"
+// @Router       /core/tenants/:tenant_id/branches [get]
+// @Security     ApiKeyAuth
 func (ctrl *BranchController) GetBranchesByTenantID(c *fiber.Ctx) error {
     // 1. Authorization
     roleStr, ok := c.Locals("role").(string)

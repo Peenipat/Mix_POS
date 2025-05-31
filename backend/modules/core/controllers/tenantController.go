@@ -17,6 +17,18 @@ func NewTenantController(svc corePort.ITenant) *TenantController {
     return &TenantController{TenantService: svc}
 }
 
+// CreateTenant godoc
+// @Summary      สร้าง Tenant ใหม่
+// @Description  สร้าง Tenant ใหม่โดยระบุชื่อ (name) และโดเมน (domain)
+// @Tags         Tenant
+// @Accept       json
+// @Produce      json
+// @Param        body  body      corePort.CreateTenantInput  true  "ข้อมูลสำหรับสร้าง Tenant (name, domain)"
+// @Success      201   {object}  map[string]interface{}      "คืนค่า status และข้อมูล tenant ที่สร้าง"
+// @Failure      400   {object}  map[string]string           "Malformed JSON หรือข้อมูลไม่ถูกต้อง"
+// @Failure      500   {object}  map[string]string           "เกิดข้อผิดพลาดระหว่างสร้าง tenant"
+// @Router       /core/tenant-route/create [post]
+// @Security     ApiKeyAuth
 func (ctrl *TenantController) CreateTenant(c *fiber.Ctx) error {
     var req corePort.CreateTenantInput
     if err := c.BodyParser(&req); err != nil {
@@ -41,6 +53,19 @@ func (ctrl *TenantController) CreateTenant(c *fiber.Ctx) error {
     return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status":"success","data":tenant})
 }
 
+
+// GetTenantByID godoc
+// @Summary      ดึงข้อมูล Tenant ตาม ID
+// @Description  ดึงรายละเอียดของ Tenant หนึ่งรายการตามรหัสที่ระบุ
+// @Tags         Tenant
+// @Produce      json
+// @Param        id   path      int  true  "รหัส Tenant"
+// @Success      200  {object}  map[string]interface{}  "คืนค่า status และข้อมูล Tenant ใน key `data`"
+// @Failure      400  {object}  map[string]string       "Invalid tenant ID หรือ รหัสไม่ถูกต้อง"
+// @Failure      404  {object}  map[string]string       "ไม่พบ Tenant ตามรหัสที่ระบุ"
+// @Failure      500  {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึงข้อมูล Tenant"
+// @Router       /core/tenant-route/:id [get]
+// @Security     ApiKeyAuth
 func (ctrl *TenantController) GetTenantByID(c *fiber.Ctx) error {
     // 1. Parse and validate tenant ID from path
     idParam := c.Params("id")
@@ -82,6 +107,18 @@ func (ctrl *TenantController) GetTenantByID(c *fiber.Ctx) error {
     })
 }
 
+
+// ListTenants godoc
+// @Summary      ดึงรายการ Tenant ทั้งหมด
+// @Description  ดึงรายการ Tenant โดยสามารถกรองเฉพาะที่ active ได้ผ่าน query parameter `active` (default = true)
+// @Tags         Tenant
+// @Produce      json
+// @Param        active  query     bool  false  "กรองเฉพาะ Tenant ที่ active (true/false), default = true"
+// @Success      200     {object}  map[string]interface{}  "คืนค่า status และ array ของ Tenant ใน key `data`"
+// @Failure      400     {object}  map[string]string       "Invalid `active` query parameter"
+// @Failure      500     {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึงรายการ Tenant"
+// @Router       /core/tenant-route [get]
+// @Security     ApiKeyAuth
 func (ctrl *TenantController) ListTenants(c *fiber.Ctx) error {
     // 1. Parse optional ?active query (default = true)
     onlyActive := true
@@ -112,6 +149,21 @@ func (ctrl *TenantController) ListTenants(c *fiber.Ctx) error {
     })
 }
 
+
+// UpdateTenant godoc
+// @Summary      แก้ไขข้อมูล Tenant ตาม ID
+// @Description  อัปเดตชื่อ โดเมน หรือสถานะ active ของ Tenant หน่วยตามรหัสที่ระบุ
+// @Tags         Tenant
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int                          true  "รหัส Tenant"
+// @Param        body  body      corePort.UpdateTenantInput  true  "ข้อมูลที่ต้องการอัปเดต (name, domain, isActive)"
+// @Success      200   {object}  map[string]string            "คืนค่า status และข้อความยืนยันการอัปเดต"
+// @Failure      400   {object}  map[string]string            "Invalid tenant ID หรือ malformed JSON หรือ validation error"
+// @Failure      404   {object}  map[string]string            "ไม่พบ Tenant ตามรหัสที่ระบุ"
+// @Failure      500   {object}  map[string]string            "เกิดข้อผิดพลาดระหว่างอัปเดต Tenant"
+// @Router       /core/tenant-route/:id [put]
+// @Security     ApiKeyAuth
 func (ctrl *TenantController) UpdateTenant(c *fiber.Ctx) error {
     // 1. Parse and validate ID
     idParam := c.Params("id")
@@ -183,6 +235,19 @@ func (ctrl *TenantController) UpdateTenant(c *fiber.Ctx) error {
     })
 }
 
+// DeleteTenant godoc
+// @Summary      ลบ Tenant ตาม ID
+// @Description  ลบ Tenant ที่ระบุด้วยรหัส (ต้องไม่มีการใช้งานอยู่ หรือจะเกิด conflict error หากยังมีทรัพยากรภายในใช้ Tenant นี้อยู่)
+// @Tags         Tenant
+// @Produce      json
+// @Param        id   path      int  true  "รหัส Tenant"
+// @Success      200  {object}  map[string]string  "คืนค่า status และข้อความยืนยันการลบ"
+// @Failure      400  {object}  map[string]string  "Invalid tenant ID หรือ รหัสไม่ถูกต้อง"
+// @Failure      404  {object}  map[string]string  "ไม่พบ Tenant ตามรหัสที่ระบุ"
+// @Failure      409  {object}  map[string]string  "ไม่สามารถลบ Tenant ได้ เนื่องจากยังมีการใช้งานภายในระบบ"
+// @Failure      500  {object}  map[string]string  "เกิดข้อผิดพลาดระหว่างการลบ Tenant"
+// @Router       /core/tenant-route/:id [delete]
+// @Security     ApiKeyAuth
 func (ctrl *TenantController) DeleteTenant(c *fiber.Ctx) error {
     // 1. Parse and validate ID
     idParam := c.Params("id")

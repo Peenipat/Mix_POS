@@ -1,6 +1,3 @@
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
 package main
 
 import (
@@ -18,21 +15,24 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
 
 	// "github.com/gofiber/fiber/v2/middleware/filesystem"
-	fiberSwagger "github.com/swaggo/fiber-swagger"
+
 	"github.com/joho/godotenv"
 	aws "myapp/cmd/worker"
 
 	"myapp/database"
-	_ "myapp/docs" // import generated docs
+
 	bookingControllers "myapp/modules/barberbooking/controllers"
+	_ "myapp/modules/barberbooking/docs" // registers as "barberbooking"
 	bookingModels "myapp/modules/barberbooking/models"
 	bookingRoutes "myapp/modules/barberbooking/routes"
 	bookingServices "myapp/modules/barberbooking/services"
 	coreControllers "myapp/modules/core/controllers"
-	coreRoutes "myapp/modules/core/routes"
+	_ "myapp/modules/core/docs" // registers as "core"
 	coreModels "myapp/modules/core/models"
+	coreRoutes "myapp/modules/core/routes"
 	coreServices "myapp/modules/core/services"
 	"myapp/seeds"
 )
@@ -40,8 +40,8 @@ import (
 func main() {
 
 	if err := godotenv.Load(); err != nil {
-        log.Println("No .env file found, relying on environment variables")
-    }
+		log.Println("No .env file found, relying on environment variables")
+	}
 	app := fiber.New()
 
 	// Global middleware
@@ -174,32 +174,24 @@ func main() {
 	tenantUserService := coreServices.NewTenantUserService(database.DB)
 	tenantUserController := coreControllers.NewTenantUserController(tenantUserService)
 
-	branchService := coreServices.NewBranchService(database.DB) 
+	branchService := coreServices.NewBranchService(database.DB)
 	branchController := coreControllers.NewBranchController(branchService)
 
-	
-
 	coreGroup := app.Group("/api/v1/core")
-	coreRoutes.RegisterUserRoutes(coreGroup,userController)
-	coreRoutes.RegisterTenantRoutes(coreGroup,tenantController)
-	coreRoutes.RegisterTenantUserRoutes(coreGroup,tenantUserController)
-	coreRoutes.RegisterBranchRoutes(coreGroup,branchController)
-	coreRoutes.SetupAuthRoutes(coreGroup,userController)
-	
+	coreRoutes.RegisterUserRoutes(coreGroup, userController)
+	coreRoutes.RegisterTenantRoutes(coreGroup, tenantController)
+	coreRoutes.RegisterTenantUserRoutes(coreGroup, tenantUserController)
+	coreRoutes.RegisterBranchRoutes(coreGroup, branchController)
+	coreRoutes.SetupAuthRoutes(coreGroup, userController)
+
 	adminGroup := app.Group("/api/v1/admin")
-	coreRoutes.RegisterAdminRoutes(adminGroup,userController)
-	
-
-
-
+	coreRoutes.RegisterAdminRoutes(adminGroup, userController)
 
 	logSvc := coreServices.NewSystemLogService(database.DB)
 	coreControllers.InitSystemLogHandler(logSvc)
 
 	authSvc := coreServices.NewAuthService(database.DB, logSvc)
 	coreControllers.InitAuthHandler(authSvc, logSvc)
-
-	
 
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)
@@ -245,7 +237,6 @@ func main() {
 	aws.InitAWS()
 
 	// Route api docs
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	// ลง middleware rate limiter หลัง route เพื่อจำกัดความถี่
 	app.Use(limiter.New(limiter.Config{
@@ -260,6 +251,11 @@ func main() {
 	// }))
 
 	// Start server
+	app.Get("/api/v1/core/swagger/*", fiberSwagger.WrapHandler)
+
+	// Serve BarberBooking Swagger UI & JSON
+	app.Get("/api/v1/barberbooking/swagger/*", fiberSwagger.WrapHandler)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3001"

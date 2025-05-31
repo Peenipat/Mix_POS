@@ -25,8 +25,20 @@ type AppointmentController struct {
 func NewAppointmentController(service barberBookingPort.IAppointment) *AppointmentController {
     return &AppointmentController{Service: service}
 }
-
-// CheckBarberAvailability handles GET /tenants/:tenant_id/barbers/:barber_id/availability?start=&end=
+// CheckBarberAvailability godoc
+// @Summary      ตรวจสอบความพร้อมของช่างตัดผม
+// @Description  ตรวจสอบว่า Barber ที่ระบุสามารถรับงานได้ในช่วงเวลาที่กำหนด (RFC3339) หรือไม่
+// @Tags         Appointment
+// @Produce      json
+// @Param        tenant_id   path      int     true  "รหัส Tenant"
+// @Param        barber_id   path      int     true  "รหัส Barber"
+// @Param        start       query     string  true  "เวลาเริ่มต้น (RFC3339) เช่น 2025-05-29T09:00:00Z"
+// @Param        end         query     string  true  "เวลาสิ้นสุด (RFC3339) เช่น 2025-05-29T10:00:00Z"
+// @Success      200         {object}  map[string]interface{}  "คืนค่า status และ available (true/false)"
+// @Failure      400         {object}  map[string]string       "พารามิเตอร์ไม่ถูกต้อง หรือขาด start/end"
+// @Failure      500         {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างตรวจสอบความพร้อม"
+// @Router       /tenants/:tenant_id/barbers/:barber_id/availability [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) CheckBarberAvailability(c *fiber.Ctx) error {
     // 1. Parse tenant_id from path
     tID, err := helperFunc.ParseUintParam(c, "tenant_id")
@@ -83,7 +95,19 @@ func (ctrl *AppointmentController) CheckBarberAvailability(c *fiber.Ctx) error {
         JSON(fiber.Map{"status": "success", "available": available})
 }
 
-// CreateAppointment handles POST /tenants/:tenant_id/appointments
+// CreateAppointment godoc
+// @Summary      สร้างนัดหมายใหม่ (Create Appointment)
+// @Description  สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service, customer, optional barber, start_time (RFC3339) และ notes
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param tenant_id path uint true "รหัส Tenant"
+// @Param body body barberBookingPort.CreateAppointmentRequest true "Payload สำหรับสร้างนัดหมาย"
+// @Success      201         {object}  barberBookingModels.Appointment            "คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง"
+// @Failure      400         {object}  map[string]string                          "Missing required fields หรือ Invalid format"
+// @Failure      500         {object}  map[string]string                          "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments [post]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
@@ -137,6 +161,21 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 }
 
 // GetAvailableBarbers handles GET /tenants/:tenant_id/branches/:branch_id/available-barbers?start=&end=
+// GetAvailableBarbers godoc
+// @Summary      ดึงรายชื่อช่างตัดผมว่าง
+// @Description  คืนรายการ Barber ที่ว่างในช่วงเวลาที่กำหนด (RFC3339) ภายใต้ Tenant และ Branch ที่ระบุ
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint     true  "รหัส Tenant"
+// @Param        branch_id  path      uint     true  "รหัส Branch"
+// @Param        start      query     string   true  "เวลาเริ่มต้น (RFC3339) เช่น 2025-05-29T09:00:00Z"
+// @Param        end        query     string   true  "เวลาสิ้นสุด (RFC3339) เช่น 2025-05-29T10:00:00Z"
+// @Success      200        {object}  map[string][]barberBookingModels.Barber  "คืนค่า status success และ array ของ Barber ที่ว่าง"
+// @Failure      400        {object}  map[string]string                        "Missing or invalid parameters"
+// @Failure      500        {object}  map[string]string                        "Internal Server Error"
+// @Router       /tenants/:tenant_id/branches/:branch_id/available-barbers [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) GetAvailableBarbers(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
@@ -186,6 +225,20 @@ func (ctrl *AppointmentController) GetAvailableBarbers(c *fiber.Ctx) error {
 }
 
 // PUT /tenants/:tenant_id/appointments/:appointment_id
+// UpdateAppointment godoc
+// @Summary      แก้ไขข้อมูลนัดหมาย
+// @Description  อัปเดต Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยรับข้อมูล JSON ของ Appointment ใหม่
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id        path      uint                                         true  "รหัส Tenant"
+// @Param        appointment_id   path      uint                                         true  "รหัส Appointment"
+// @Param        body             body      barberBookingModels.Appointment              true  "ข้อมูล Appointment ที่ต้องการอัปเดต"
+// @Success      200              {object}  barberBookingModels.Appointment              "คืนค่า status success และข้อมูล Appointment ที่อัปเดต"
+// @Failure      400              {object}  map[string]string                             "Invalid tenant_id, appointment_id หรือ JSON body"
+// @Failure      500              {object}  map[string]string                             "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id [put]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) UpdateAppointment(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
@@ -223,6 +276,20 @@ func (ctrl *AppointmentController) UpdateAppointment(c *fiber.Ctx) error {
 }
 
 // GET /tenants/:tenant_id/appointments/:appointment_id
+// GetAppointmentByID godoc
+// @Summary      ดึงข้อมูลนัดหมายตาม ID
+// @Description  คืนรายละเอียด Appointment ตามรหัสที่ระบุ ภายใต้ Tenant สำหรับความสอดคล้องของ URL
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id       path      uint   true  "รหัส Tenant"
+// @Param        appointment_id  path      uint   true  "รหัส Appointment"
+// @Success      200             {object}  barberBookingModels.Appointment  "คืนค่า status success และข้อมูล Appointment"
+// @Failure      400             {object}  map[string]string               "Invalid tenant_id หรือ appointment_id"
+// @Failure      404             {object}  map[string]string               "Appointment not found"
+// @Failure      500             {object}  map[string]string               "Failed to fetch appointment"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) GetAppointmentByID(c *fiber.Ctx) error {
     // 1. Parse tenant_id (for URL consistency; we don't pass it to service)
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -266,6 +333,27 @@ func (ctrl *AppointmentController) GetAppointmentByID(c *fiber.Ctx) error {
 }
 
 // GET /tenants/:tenant_id/appointments
+// ListAppointments godoc
+// @Summary      ดึงรายการนัดหมายของ Tenant
+// @Description  คืนรายการ Appointment ของ Tenant ที่ระบุ โดยรองรับการกรองตาม branch_id, barber_id, customer_id, status, ช่วงวัน (RFC3339), pagination (limit, offset) และการจัดเรียง (sort_by)
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id    path      uint     true   "รหัส Tenant"
+// @Param        branch_id    query     uint     false  "กรองตาม Branch ID"
+// @Param        barber_id    query     uint     false  "กรองตาม Barber ID"
+// @Param        customer_id  query     uint     false  "กรองตาม Customer ID"
+// @Param        status       query     string   false  "กรองตามสถานะ Appointment"
+// @Param        start_date   query     string   false  "กรองวันที่เริ่มต้น (RFC3339)"
+// @Param        end_date     query     string   false  "กรองวันที่สิ้นสุด (RFC3339)"
+// @Param        limit        query     int      false  "จำนวนรายการสูงสุด (pagination)"
+// @Param        offset       query     int      false  "เลื่อนข้ามรายการ (pagination)"
+// @Param        sort_by      query     string   false  "จัดเรียงผลลัพธ์ เช่น start_time desc"
+// @Success      200          {object}  map[string][]barberBookingModels.Appointment  "คืนค่า status success และ array ของ Appointment ใน key `data`"
+// @Failure      400          {object}  map[string]string                            "Invalid query parameters"
+// @Failure      500          {object}  map[string]string                            "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) ListAppointments(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
@@ -354,6 +442,21 @@ type CancelRequest struct {
     ActorCustomerID *uint `json:"actor_customer_id,omitempty"`
 }
 // POST /tenants/:tenant_id/appointments/:appointment_id/cancel
+// CancelAppointment godoc
+// @Summary      ยกเลิกนัดหมาย
+// @Description  ยกเลิก Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยระบุ Actor เป็น User หรือ Customer ได้ครั้งละหนึ่งคน
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id         path      uint             true  "รหัส Tenant"
+// @Param        appointment_id    path      uint             true  "รหัส Appointment"
+// @Param        body              body      CancelRequest    true  "ข้อมูล Actor: ระบุ ActorUserID หรือ ActorCustomerID อย่างใดอย่างหนึ่ง"
+// @Success      200               {object}  map[string]string  "คืนค่า status success และข้อความยืนยันการยกเลิก"
+// @Failure      400               {object}  map[string]string  "Missing or invalid parameters หรือ cannot be cancelled"
+// @Failure      404               {object}  map[string]string  "Appointment not found"
+// @Failure      500               {object}  map[string]string  "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id/cancel [post]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) CancelAppointment(c *fiber.Ctx) error {
     // 1. Parse path params
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -408,6 +511,21 @@ type RescheduleRequest struct {
     ActorCustomerID  *uint  `json:"actor_customer_id,omitempty"`
 }
 // POST /tenants/:tenant_id/appointments/:appointment_id/reschedule
+// RescheduleAppointment godoc
+// @Summary      เปลี่ยนเวลานัดหมาย
+// @Description  Reschedule Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยระบุเวลาใหม่และ Actor (User หรือ Customer)
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id       path      uint               true  "รหัส Tenant"
+// @Param        appointment_id  path      uint               true  "รหัส Appointment"
+// @Param        body            body      RescheduleRequest  true  "ข้อมูลสำหรับเลื่อนนัดหมาย (new_start_time, actor_user_id หรือ actor_customer_id)"
+// @Success      200             {object}  map[string]string  "คืนค่า status success และข้อความยืนยันการเลื่อนนัดหมาย"
+// @Failure      400             {object}  map[string]string  "Missing or invalid parameters หรือ cannot reschedule"
+// @Failure      404             {object}  map[string]string  "Appointment not found"
+// @Failure      500             {object}  map[string]string  "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id/reschedule [post]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) RescheduleAppointment(c *fiber.Ctx) error {
     // 1. Parse path params
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -494,6 +612,22 @@ func (ctrl *AppointmentController) RescheduleAppointment(c *fiber.Ctx) error {
 }
 
 // GET /tenants/:tenant_id/barbers/:barber_id/appointments?start=...&end=...
+// GetAppointmentsByBarber godoc
+// @Summary      ดึงนัดหมายของช่างตัดผม
+// @Description  คืนรายการ Appointment ของช่างตัดผมที่ระบุ ภายใน Tenant ที่กำหนด และช่วงเวลาเลือกได้ (RFC3339)
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint      true   "รหัส Tenant"
+// @Param        barber_id  path      uint      true   "รหัส Barber"
+// @Param        start      query     string    false  "เวลาเริ่มต้นกรอง (RFC3339), เช่น 2025-05-30T09:00:00Z"
+// @Param        end        query     string    false  "เวลาสิ้นสุดกรอง (RFC3339), เช่น 2025-05-30T17:00:00Z"
+// @Success      200        {object}  map[string][]barberBookingModels.Appointment  "คืนค่า status success และ array ของ Appointment ใน key `data`"
+// @Failure      400        {object}  map[string]string                            "Invalid tenant_id, barber_id หรือรูปแบบเวลาไม่ถูกต้อง"
+// @Failure      404        {object}  map[string]string                            "Barber not found"
+// @Failure      500        {object}  map[string]string                            "Internal Server Error"
+// @Router       /none [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) GetAppointmentsByBarber(c *fiber.Ctx) error {
     // 1. Parse tenant_id (for consistency; not used in service but ensures valid URL)
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -567,6 +701,21 @@ var RolesCanManageAppointment = []coreModels.RoleName{
 }
 
 // DELETE /tenants/:tenant_id/appointments/:appointment_id
+// DeleteAppointment godoc
+// @Summary      ลบการนัดหมาย
+// @Description  ลบ Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด (ต้องมีสิทธิ์ Tenant หรือ TenantAdmin)
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id        path      uint     true  "รหัส Tenant"
+// @Param        appointment_id   path      uint     true  "รหัส Appointment"
+// @Success      200              {object}  map[string]string  "คืนค่า status success และข้อความยืนยันการลบ"
+// @Failure      400              {object}  map[string]string  "Invalid tenant_id หรือ appointment_id"
+// @Failure      403              {object}  map[string]string  "Permission denied"
+// @Failure      404              {object}  map[string]string  "Appointment not found"
+// @Failure      500              {object}  map[string]string  "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id [delete]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentController) DeleteAppointment(c *fiber.Ctx) error {
     // 1. Authorization: ตรวจสิทธิ์ก่อน
     roleStr, ok := c.Locals("role").(string)

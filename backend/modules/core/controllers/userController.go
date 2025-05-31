@@ -27,7 +27,7 @@ func NewUserController(scv corePort.IUser) *UserController {
 // @Tags           Auth
 // @Accept         json
 // @Produce        json
-// @Param          body body authDto.RegisterInput true "ข้อมูลผู้ใช้"
+// @Param          body body corePort.RegisterInput true "ข้อมูลผู้ใช้"
 // @Success        200 {object} map[string]string "ลงทะเบียนสำเร็จ"
 // @Failure        400 {object} map[string]string "ข้อมูลไม่ถูกต้องหรือลงทะเบียนล้มเหลว"
 // @Router         /auth/register [post]
@@ -51,8 +51,8 @@ func (ctrl *UserController) CreateUserFromRegister(c *fiber.Ctx) error {
 // @Tags         User
 // @Accept       json
 // @Produce      json
-// @Param        body  body  userDto.CreateUserInput  true  "ข้อมูลผู้ใช้งาน"
-// @Success      200  {object}  models.User
+// @Param        body  body  corePort.CreateUserInput  true  "ข้อมูลผู้ใช้งาน"
+// @Success      200  {object}  coreModels.User
 // @Failure 400 {object} map[string]string
 // @Router       /admin/create_users [post]
 // @Security     ApiKeyAuth
@@ -104,7 +104,7 @@ func (ctrl *UserController) CreateUserFromAdmin(c *fiber.Ctx) error {
 // @Tags         Admin
 // @Accept       json
 // @Produce      json
-// @Param        body body userDto.ChangeRoleInput true "ข้อมูลผู้ใช้งาน"
+// @Param        body body corePort.ChangeRoleInput true "ข้อมูลผู้ใช้งาน"
 // @Success      200 {object} map[string]string
 // @Failure      400 {object} map[string]string
 // @Router       /admin/change_role [put]
@@ -139,7 +139,7 @@ func (ctrl *UserController)  ChangeUserRole(c *fiber.Ctx) error {
 // @Produce json
 // @Param page query int false "หน้าที่ต้องการ (default 1)"
 // @Param limit query int false "จำนวนรายการต่อหน้า (default 10)"
-// @Success 200 {array} userDto.UserResponse
+// @Success 200 {array} corePort.UserInfoResponse
 // @Failure 500 {object} map[string]string
 // @Router /admin/users [get]
 // @Security ApiKeyAuth
@@ -164,7 +164,7 @@ func (ctrl *UserController)  GetAllUsers(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        role query string true "Role ที่ต้องการกรอง เช่น STAFF, USER, BRANCH_ADMIN, SUPER_ADMIN"
-// @Success      200 {array} userDto.UserResponse
+// @Success      200 {array} corePort.UserInfoResponse
 // @Failure      400 {object} map[string]string
 // @Failure      403 {object} map[string]string
 // @Failure      500 {object} map[string]string

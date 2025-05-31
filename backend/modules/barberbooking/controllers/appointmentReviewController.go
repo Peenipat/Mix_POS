@@ -22,6 +22,20 @@ func NewAppointmentReviewController(svc barberBookingPort.IAppointmentReview) *A
 }
 
 // GET /tenants/:tenant_id/reviews/:review_id
+// GetReviewByID godoc
+// @Summary      ดึงรีวิวตาม ID
+// @Description  คืนข้อมูล Appointment Review ตามรหัสที่ระบุ ภายใต้ Tenant สำหรับ consistency ของ URL
+// @Tags         Review
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                              true  "รหัส Tenant"
+// @Param        review_id  path      uint                              true  "รหัส Review"
+// @Success      200        {object}  barberBookingModels.AppointmentReview  "คืนค่า status success และข้อมูล review"
+// @Failure      400        {object}  map[string]string               "Invalid tenant_id หรือ review_id"
+// @Failure      404        {object}  map[string]string               "Review not found"
+// @Failure      500        {object}  map[string]string               "Failed to fetch review"
+// @Router       /tenants/:tenant_id/reviews/:review_id [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentReviewController) GetReviewByID(c *fiber.Ctx) error {
 
     // 1. Parse tenant_id (เพื่อ consistency)
@@ -73,6 +87,16 @@ func (ctrl *AppointmentReviewController) GetReviewByID(c *fiber.Ctx) error {
 }
 
 // POST /tenants/:tenant_id/appointments/:appointment_id/reviews
+// @Tags         Review
+// @Param tenant_id       path  uint                              true  "รหัส Tenant"
+// @Param appointment_id  path  uint                              true  "รหัส Appointment"
+// @Param body            body  barberBookingPort.CreateAppointmentReviewRequest  true  "Payload สำหรับสร้างรีวิว"
+// @Success 201           {object} barberBookingModels.AppointmentReview  "คืนค่า status success และข้อมูล review ที่สร้าง"
+// @Failure 400           {object} map[string]string                         "Invalid input หรือ cannot review appointment"
+// @Failure 404           {object} map[string]string                         "Appointment not found"
+// @Failure 500           {object} map[string]string                         "Internal Server Error"
+// @Router /tenants/:tenant_id/appointments/:appointment_id/reviews [post]
+// @Security ApiKeyAuth
 func (ctrl *AppointmentReviewController) CreateReview(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -137,6 +161,20 @@ func (ctrl *AppointmentReviewController) CreateReview(c *fiber.Ctx) error {
 }
 
 // PUT /tenants/:tenant_id/appointments/:appointment_id/reviews/:review_id
+// @Summary      อัปเดตรีวิว
+// @Description  แก้ไข Rating และ Comment ของ Appointment Review ตามรหัสที่ระบุ
+// @Tags         Review
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint                             true  "รหัส Tenant"
+// @Param        review_id  path      uint                             true  "รหัส Review"
+// @Param        body       body      barberBookingPort.UpdateAppointmentReviewRequest  true  "Payload สำหรับอัปเดตรีวิว"
+// @Success      200        {object}  barberBookingModels.AppointmentReview  "คืนค่า status success และข้อมูลรีวิวที่อัปเดต"
+// @Failure      400        {object}  map[string]string               "Invalid parameters หรือ invalid JSON body"
+// @Failure      404        {object}  map[string]string               "Review not found"
+// @Failure      500        {object}  map[string]string               "Internal Server Error"
+// @Router       /tenants/:tenant_id/appointments/:appointment_id/reviews/:review_id [put]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentReviewController) UpdateReview(c *fiber.Ctx) error {
     // 1. Validate tenant_id for path consistency
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -205,6 +243,22 @@ type DeleteReviewRequest struct {
 }
 
 // DELETE /tenants/:tenant_id/appointments/:appointment_id/reviews/:review_id
+// @Summary      ลบรีวิว
+// @Description  ลบ Appointment Review ตามรหัสที่ระบุ โดยระบุ ActorCustomerID
+// @Tags         Review
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id       path      uint                             true  "รหัส Tenant"
+// @Param        appointment_id  path      uint                             true  "รหัส Appointment"
+// @Param        review_id       path      uint                             true  "รหัส Review"
+// @Param        body            body      DeleteReviewRequest  true  "Payload สำหรับลบรีวิว (actor_customer_id)"
+// @Success      200             {object}  map[string]string               "คืนค่า status success และข้อความยืนยันการลบ"
+// @Failure      400             {object}  map[string]string               "Invalid parameters หรือ invalid JSON body"
+// @Failure      403             {object}  map[string]string               "not authorized"
+// @Failure      404             {object}  map[string]string               "Review not found"
+// @Failure      500             {object}  map[string]string               "Internal Server Error"
+// @Router       /none [delete]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentReviewController) DeleteReview(c *fiber.Ctx) error {
     // 1. Parse tenant_id (for URL consistency)
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
@@ -266,6 +320,19 @@ func (ctrl *AppointmentReviewController) DeleteReview(c *fiber.Ctx) error {
 }
 
 // GET /tenants/:tenant_id/barbers/:barber_id/average-rating
+// GetAverageRatingByBarber godoc
+// @Summary      ดึงคะแนนเฉลี่ยของช่างตัดผม
+// @Description  คืนค่า average rating (float64) ของช่างตัดผมที่ระบุ ภายใน Tenant สำหรับ consistency ของ URL
+// @Tags         Review
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id  path      uint   true  "รหัส Tenant"
+// @Param        barber_id  path      uint   true  "รหัส Barber"
+// @Success      200        {object}  map[string]float64  "คืนค่า status success และ average rating ใน key `data`"
+// @Failure      400        {object}  map[string]string   "Invalid tenant_id หรือ barber_id"
+// @Failure      500        {object}  map[string]string   "Internal Server Error"
+// @Router       /none [get]
+// @Security     ApiKeyAuth
 func (ctrl *AppointmentReviewController) GetAverageRatingByBarber(c *fiber.Ctx) error {
     // 1. Validate tenant_id (for URL consistency)
     if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {

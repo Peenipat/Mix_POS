@@ -17,6 +17,6 @@ func RegisterBarberWorkloadRoute(router fiber.Router ,ctrl barberBookingControll
     // Any write operation ต้องผ่าน auth + tenant check
     group.Use(middlewares.RequireAuth())
     group.Post("/barbers/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.UpsertBarberWorkload)
-    group.Put("/barbers/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.UpsertBarberWorkload)
+    //group.Put("/barbers/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.UpsertBarberWorkload)//
 	
 }

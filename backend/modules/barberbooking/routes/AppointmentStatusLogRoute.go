@@ -11,5 +11,5 @@ import (
 
 func RegisterAppointmentStatusLogRoute(router fiber.Router ,ctrl *barberBookingController.AppointmentStatusLogController ){
 	group := router.Group("/tenants/:tenant_id/appointments")
-	group.Get("/:appointment_id/logs", ctrl.GetAppointmentLogs) 
+	group.Get("/:appointment_id/logs", ctrl.GetAppointmentLogs) //
 }

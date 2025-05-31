@@ -29,7 +29,20 @@ var (
     ErrUserNotFound       = errors.New("user not found")
 )
 
-// AddUserToTenant handles POST /tenants/:tenant_id/users/:user_id
+// AddUserToTenant godoc
+// @Summary      เพิ่มผู้ใช้งานให้กับ Tenant
+// @Description  กำหนดให้ User ที่ระบุด้วย `user_id` เข้าใช้งาน Tenant ที่ระบุด้วย `tenant_id`
+// @Tags         TenantUser
+// @Produce      json
+// @Param        tenant_id  path      int  true  "รหัส Tenant"
+// @Param        user_id    path      int  true  "รหัส User"
+// @Success      201        {object}  map[string]string  "คืนค่า status และข้อความยืนยันการเพิ่มผู้ใช้"
+// @Failure      400        {object}  map[string]string  "Invalid tenant ID หรือ invalid user ID"
+// @Failure      404        {object}  map[string]string  "Tenant not found หรือ User not found"
+// @Failure      409        {object}  map[string]string  "User already assigned to this tenant"
+// @Failure      500        {object}  map[string]string  "เกิดข้อผิดพลาดระหว่างการเพิ่มผู้ใช้งานให้ Tenant"
+// @Router       /core/tenant-user/tenants/:tenant_id/users/:user_id [post]
+// @Security     ApiKeyAuth
 func (ctrl *TenantUserController) AddUserToTenant(c *fiber.Ctx) error {
     tidParam := c.Params("tenant_id")
     tid64, err := strconv.ParseUint(tidParam, 10, 64)
@@ -90,6 +103,21 @@ func (ctrl *TenantUserController) AddUserToTenant(c *fiber.Ctx) error {
     })
 }
 
+
+// RemoveUserFromTenant godoc
+// @Summary      นำผู้ใช้ออกจาก Tenant
+// @Description  ลบการผูก User ที่ระบุด้วย `user_id` ออกจาก Tenant ที่ระบุด้วย `tenant_id`
+// @Tags         TenantUser
+// @Produce      json
+// @Param        tenant_id  path      int  true  "รหัส Tenant"
+// @Param        user_id    path      int  true  "รหัส User"
+// @Success      200        {object}  map[string]string  "คืนค่า status และข้อความยืนยันการลบผู้ใช้"
+// @Failure      400        {object}  map[string]string  "Invalid tenant ID หรือ Invalid user ID"
+// @Failure      404        {object}  map[string]string  "Tenant not found หรือ User not found"
+// @Failure      409        {object}  map[string]string  "User is not assigned to this tenant"
+// @Failure      500        {object}  map[string]string  "เกิดข้อผิดพลาดระหว่างการลบผู้ใช้จาก Tenant"
+// @Router       /core/tenant-user/tenants/:tenant_id/users/:user_id [delete]
+// @Security     ApiKeyAuth
 func (ctrl *TenantUserController) RemoveUserFromTenant(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     tidParam := c.Params("tenant_id")
@@ -153,6 +181,19 @@ func (ctrl *TenantUserController) RemoveUserFromTenant(c *fiber.Ctx) error {
     })
 }
 
+
+// ListTenantsByUser godoc
+// @Summary      ดึงรายการ Tenant ของ User
+// @Description  ดึงรายการ Tenant ที่ User ระบุเข้าใช้งานได้ (user_id มาจาก path)
+// @Tags         TenantUser
+// @Produce      json
+// @Param        user_id  path      int  true  "รหัส User"
+// @Success      200      {object}  map[string]interface{}  "คืนค่า status และ array ของ Tenant ใน key `data`"
+// @Failure      400      {object}  map[string]string       "Invalid user ID"
+// @Failure      404      {object}  map[string]string       "User not found"
+// @Failure      500      {object}  map[string]string       "เกิดข้อผิดพลาดระหว่างดึงรายการ Tenant"
+// @Router       /core/tenant-user/user/:user_id [get]
+// @Security     ApiKeyAuth
 func (ctrl *TenantUserController) ListTenantsByUser(c *fiber.Ctx) error {
     // 1. Parse and validate user_id
     uidParam := c.Params("user_id")

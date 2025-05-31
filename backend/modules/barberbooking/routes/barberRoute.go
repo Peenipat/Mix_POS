@@ -11,6 +11,7 @@ func RegisterBarberRoutes(router fiber.Router, ctrl *barberBookingController.Bar
 	// ===== PUBLIC ROUTES (ไม่ต้อง Auth) =====
 	
 	router.Get("/barbers/:barber_id", ctrl.GetBarberByID)
+	router.Get("/tenants/:tenant_id/barbers", barberbookingMiddlewares.RequireTenant(), ctrl.ListBarbersByTenant)
 
 	// ===== PROTECTED ROUTES (ต้อง Auth + Tenant) =====
 	group := router.Group("/tenants/:tenant_id/barbers")
@@ -21,5 +22,5 @@ func RegisterBarberRoutes(router fiber.Router, ctrl *barberBookingController.Bar
 	group.Put("/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.UpdateBarber)
 	group.Delete("/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.DeleteBarber)
 
-	router.Get("/tenants/:tenant_id/barbers", barberbookingMiddlewares.RequireTenant(), ctrl.ListBarbersByTenant)
+	
 }

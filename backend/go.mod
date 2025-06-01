@@ -5,8 +5,8 @@ go 1.24.2
 require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.76
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.4
-	github.com/gofiber/fiber/v2 v2.52.6
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/gofiber/fiber/v2 v2.52.8
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
 	golang.org/x/crypto v0.37.0

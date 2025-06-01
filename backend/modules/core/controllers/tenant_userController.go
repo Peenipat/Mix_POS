@@ -7,6 +7,7 @@ import (
 	corePort "myapp/modules/core/port"
 	coreServices "myapp/modules/core/services"
     coreModels "myapp/modules/core/models"
+    helperFunc "myapp/modules/core"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -239,5 +240,72 @@ func (ctrl *TenantUserController) ListTenantsByUser(c *fiber.Ctx) error {
     return c.JSON(fiber.Map{
         "status": "success",
         "data":   tenants,
+    })
+}
+
+
+var RolesCanManageTenantUsers = []coreModels.RoleName{
+	coreModels.RoleNameTenantAdmin,
+    coreModels.RoleNameBranchAdmin,
+	coreModels.RoleNameTenant,
+}
+// ListUsersForTenant godoc
+// @Summary      List users under a Tenant
+// @Description  Returns all users associated with the specified tenant ID.
+// @Tags         TenantUsers
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id   path      uint     true   "Tenant ID"
+// @Success      200         {object}  map[string][]UserResponse   "status=success, data=array of users"
+// @Failure      400         {object}  map[string]string           "Invalid tenant_id"
+// @Failure      403         {object}  map[string]string           "Permission denied"
+// @Failure      500         {object}  map[string]string           "Failed to list users"
+// @Router       /core/tenant-user/tenants/:tenant_id [get]
+// @Security     ApiKeyAuth
+func (ctrl *TenantUserController) ListUsersForTenant(c *fiber.Ctx) error {
+    // ตรวจ permission …
+    roleStr, ok := c.Locals("role").(string)
+    if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageTenantUsers) {
+        return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Permission denied",
+        })
+    }
+
+    // Parse tenant_id จาก path param
+    tenantIDParam := c.Params("tenant_id")
+    tid, err := strconv.ParseUint(tenantIDParam, 10, 64)
+    if err != nil || tid == 0 {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid tenant_id",
+        })
+    }
+    tenantID := uint(tid)
+
+    // เรียก service มาดึง users
+    users, err := ctrl.Service.ListUsersByTenant(c.Context(), tenantID)
+    if err != nil {
+        // ส่งกลับ HTTP 500 พร้อมข้อความ error
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to list users",
+            "error":   err.Error(),
+        })
+    }
+
+    // ถ้า len(users) == 0 ก็ยัง respond 200 และ data เป็น slice ว่าง
+    var resp []map[string]interface{}
+    for _, u := range users {
+        resp = append(resp, map[string]interface{}{
+            "id":       u.ID,
+            "username": u.Username,
+            "email":    u.Email,
+        })
+    }
+
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "status": "success",
+        "data":   resp,
     })
 }

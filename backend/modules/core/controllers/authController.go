@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	Core_authDto "myapp/modules/core/dto/auth"	
+	Core_authDto "myapp/modules/core/dto/auth"
+	coreModels "myapp/modules/core/models"
 	coreServices "myapp/modules/core/services"
-    "myapp/modules/core/models"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -80,7 +81,8 @@ func LoginHandler(c *fiber.Ctx) error {
         Expires:  time.Now().Add(72 * time.Hour),
         HTTPOnly: true, // อ่าน cookies จาก client
         Secure:   false,    // ต้องใช้ https ตอน production
-        SameSite: "Lax",   
+        SameSite: "None",  
+        Path:     "/", 
     })
 
     // 4) Return response

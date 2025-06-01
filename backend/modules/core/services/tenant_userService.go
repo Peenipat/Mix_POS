@@ -70,10 +70,7 @@ func (s *TenantUserService) ListTenantsByUser(ctx context.Context, userID uint) 
     return tenants, nil
 }
 
-// ListUsersByTenant implements corePort.ITenantUser.
-func (s *TenantUserService) ListUsersByTenant(ctx context.Context, tenantID uint) ([]coreModels.User, error) {
-	panic("unimplemented")
-}
+
 
 
 
@@ -185,4 +182,31 @@ func (s *TenantUserService) RemoveUserFromTenant(ctx context.Context, tenantID, 
     }
 
     return nil
+}
+
+// ListUsersByTenant: ดึง list ของ coreModels.User ทั้งหมด ที่ผูกกับ tenantID ที่ระบุ
+func (s *TenantUserService) ListUsersByTenant(ctx context.Context, tenantID uint) ([]coreModels.User, error) {
+	var users []coreModels.User
+
+	// ตรวจเบื้องต้นก่อนว่า tenantID ต้องไม่เป็น 0
+	if tenantID == 0 {
+		return nil, errors.New("tenantID must be a positive integer")
+	}
+
+	// สร้าง transaction/DB query
+	tx := s.DB.WithContext(ctx).
+		Model(&coreModels.User{}).
+		Joins("JOIN tenant_users tu ON tu.user_id = users.id").
+		Where("tu.tenant_id = ?", tenantID)
+
+	// Execute the query
+	if err := tx.Find(&users).Error; err != nil {
+		// กรณี error จาก DB (เช่น connection หยุดทำงาน, SQL syntax ผิด ฯลฯ)
+		// log หรือ wrap error เพิ่มเติมได้
+		return nil, fmt.Errorf("failed to query users by tenant: %w", err)
+	}
+
+	// ถ้าไม่พบแถวใด (len(users) == 0) ก็คืน slice ว่าง ๆ กับ nil error
+	// caller จะได้รับ []coreModels.User{} และ error == nil
+	return users, nil
 }

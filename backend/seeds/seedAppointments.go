@@ -41,7 +41,7 @@ func SeedAppointments(db *gorm.DB) error {
 		{
 			BranchID:   branch.ID,
 			ServiceID:  service.ID,
-			BarberID:   &barber.ID,
+			BarberID:   barber.ID,
 			CustomerID: customer.ID,
 			TenantID:	1,
 			StartTime:  time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 0, 0, 0, loc),
@@ -52,7 +52,7 @@ func SeedAppointments(db *gorm.DB) error {
 		{
 			BranchID:   branch.ID,
 			ServiceID:  service.ID,
-			BarberID:   &barber.ID,
+			BarberID:   barber.ID,
 			CustomerID: customer.ID,
 			TenantID:	1,
 			StartTime:  time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 30, 0, 0, loc),

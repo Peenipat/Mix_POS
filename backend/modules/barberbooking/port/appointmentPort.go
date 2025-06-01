@@ -13,6 +13,7 @@ type IAppointment interface {
 	UpdateAppointment(ctx context.Context, id uint, tenantID uint, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error)
 	GetAppointmentByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error)
 	ListAppointments(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingModels.Appointment, error)
+	ListAppointmentsResponse(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]AppointmentResponse, error)
 	CancelAppointment(ctx context.Context,appointmentID uint,actorUserID *uint,actorCustomerID *uint,) error
 	RescheduleAppointment( ctx context.Context,appointmentID uint,newStartTime time.Time,actorUserID *uint, actorCustomerID *uint,) error
 	CalculateAppointmentEndTime(ctx context.Context, serviceID uint, startTime time.Time) (time.Time, error)
@@ -39,4 +40,37 @@ type CreateAppointmentRequest struct {
     CustomerID uint   `json:"customer_id" example:"4"`
     StartTime  string `json:"start_time" example:"2025-05-30T10:00:00Z"`
     Notes      string `json:"notes,omitempty" example:"Preferred barber: John"`
+}
+
+type AppointmentResponse struct {
+    ID        uint             `json:"id"`
+    BranchID  uint             `json:"branch_id"`
+
+    // ข้างล่างนี้ embed เฉพาะ field สำคัญของ Service
+    Service struct {
+        ID       uint   `json:"id"`
+        Name     string `json:"name"`
+        Duration int    `json:"duration"`
+        Price    float64 `json:"price"`
+    } `json:"service"`
+
+    Barber struct {
+        ID       uint   `json:"id"`
+        Username string `json:"username"`
+        Email    string `json:"email"`
+    } `json:"barber"`
+
+    Customer struct {
+        ID    uint   `json:"id"`
+        Name  string `json:"Name"`
+        Phone string `json:"Phone"`
+        Email string `json:"email"`
+    } `json:"customer"`
+
+    TenantID  uint   `json:"tenant_id"`
+    StartTime string `json:"start_time"` // ส่ง as ISO string
+    EndTime   string `json:"end_time"`   // ส่ง as ISO string
+
+    Status string `json:"status"`
+    Notes  string `json:"notes"`
 }

@@ -281,7 +281,7 @@ func (u *UserService) FilterUsersByRole(role string) ([]corePort.UserInfoRespons
 }
 
 func (s *UserService) Me(ctx context.Context, userID uint) (*corePort.MeDTO, error) {
-    // 1) หา user ก่อน
+    // 1) หา user เบื้องต้น
     var user coreModels.User
     err := s.DB.WithContext(ctx).First(&user, userID).Error
     if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -291,18 +291,14 @@ func (s *UserService) Me(ctx context.Context, userID uint) (*corePort.MeDTO, err
         return nil, err
     }
 
-    // 2) โหลดความสัมพันธ์ทีหลังแบบแยกกัน (ใช้ s.DB ไม่ใช่ database.DB)
+    // 2) โหลดความสัมพันธ์ทั้งหมด: Role, Branch และ TenantUsers
+    //    ใช้ Preload คราวเดียวก็ได้ (หรือจะแยกรอบก็ได้ แต่ Preload หลายตัวใน model เดียวกันย่อมดีกว่า)
     if err := s.DB.WithContext(ctx).
         Model(&user).
+        Preload("Role").   // <— เพิ่มตรงนี้ (โหลดตาราง roles เพื่อให้ user.Role.Name ไม่ว่าง)
         Preload("Branch", func(db *gorm.DB) *gorm.DB {
             return db.Select("id", "tenant_id")
         }).
-        First(&user).Error; err != nil {
-        return nil, err
-    }
-
-    if err := s.DB.WithContext(ctx).
-        Model(&user).
         Preload("TenantUsers", func(db *gorm.DB) *gorm.DB {
             return db.Select("tenant_id", "user_id")
         }).
@@ -310,11 +306,12 @@ func (s *UserService) Me(ctx context.Context, userID uint) (*corePort.MeDTO, err
         return nil, err
     }
 
-    // 3) สร้าง DTO สำหรับตอบกลับ
+    // 3) สร้าง DTO สำหรับตอบกลับ (ตอนนี้ user.Role.Name จะมีค่าตามความสัมพันธ์แล้ว)
     dto := &corePort.MeDTO{
         ID:       user.ID,
         Username: user.Username,
         Email:    user.Email,
+        Role:     user.Role.Name,  // ตอนนี้จะไม่ว่าง เพราะ preload มาแล้ว
         BranchID: user.BranchID,
     }
     for _, tu := range user.TenantUsers {
@@ -322,6 +319,7 @@ func (s *UserService) Me(ctx context.Context, userID uint) (*corePort.MeDTO, err
     }
     return dto, nil
 }
+
 
 
 //ChangePassword เอาไว้ก่อน

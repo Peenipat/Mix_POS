@@ -42,6 +42,7 @@ type MeDTO struct {
     ID        uint   `json:"id"`
     Username  string `json:"username"`
     Email     string `json:"email"`
+	Role       string `json:"role"`
     BranchID  *uint  `json:"branch_id"`
     TenantIDs []uint `json:"tenant_ids"`
 }

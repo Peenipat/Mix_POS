@@ -1,74 +1,103 @@
-import { createSlice, createAsyncThunk,  } from '@reduxjs/toolkit';
+// src/store/authSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { loginApi } from '../lib/api/loginApi';
+import { getMeApi } from '../lib/api/getMeApi';
 import type { loginResponse } from '../schemas/userSchema';
+import type { Me } from '../lib/api/getMeApi';
 
-
-interface AuthState {
-  user: loginResponse['user'] | null // ข้อมูล user หลัง login
-  status: 'idle' | 'loading' | 'succeeded' | 'failed'; // async process สถานะการเรียก API
-  error: string | null;
-}
-
-const initialState: AuthState = { // state เริ่มต้น
-  user: null,
-  status: 'idle',
-  error: null,
-};
-
-// ส่งข้อมูลให้ Backend
 export const loginUser = createAsyncThunk<
-  loginResponse,  // รูปแบบข้อมูลที่คืนกลับ
-  { email: string; password: string }, // รูปแบบ arguments ที่รับเข้า
-  { rejectValue: string } 
+  loginResponse,
+  { email: string; password: string },
+  { rejectValue: string }
 >(
   '/core/auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
-     return await loginApi(credentials)
+      return await loginApi(credentials);
     } catch (err: any) {
-        // ส่งต่อ error จาก backend
       return rejectWithValue(err.response?.data?.message || 'Login failed');
     }
   }
 );
 
+export const loadCurrentUser = createAsyncThunk<
+  Me,
+  void,
+  { rejectValue: string }
+>(
+  '/core/auth/me',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getMeApi();
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Not authenticated');
+    }
+  }
+);
+
+interface AuthState {
+  loginUser: loginResponse['user'] | null; // ข้อมูลเบื้องต้นจาก /login
+  me: Me | null;                            // ข้อมูลโปรไฟล์เต็มจาก /me
+  statusLogin: 'idle' | 'loading' | 'succeeded' | 'failed';
+  statusMe: 'idle' | 'loading' | 'succeeded' | 'failed';
+  errorLogin: string | null;
+  errorMe: string | null;
+}
+
+const initialState: AuthState = {
+  loginUser: null,
+  me: null,
+  statusLogin: 'idle',
+  statusMe: 'idle',
+  errorLogin: null,
+  errorMe: null,
+};
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-     // action สำหรับ logout เคลียร์ข้อมูลผู้ใช้และสถานะต่าง ๆ
     logout(state) {
-      state.user = null;
-      state.status = 'idle';
-      state.error = null;
-    },
-    // action สำหรับล้าง error
-    clearError(state) {
-      state.error = null;
+      state.loginUser = null;
+      state.me = null;
+      state.statusLogin = 'idle';
+      state.statusMe = 'idle';
+      state.errorLogin = null;
+      state.errorMe = null;
     },
   },
-  extraReducers: builder => {
-    builder
-      // รอ login
-      .addCase(loginUser.pending, state => {
-        state.status = 'loading';
-        state.error = null;
-      })
-      // login เสร็จ
-      .addCase(loginUser.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.user = action.payload.user; // เก็บข้อมูลผู้ใช้ที่ได้รับกลับมา
-      })
-      // login ไม่ผ่าน
-      .addCase(loginUser.rejected, (state, action) => {
-        state.status = 'failed';
-        // เก็บ error
-        state.error = action.payload ?? action.error.message ?? null;
-      });
+  extraReducers: (builder) => {
+    // ===== loginUser =====
+    builder.addCase(loginUser.pending, (state) => {
+      state.statusLogin = 'loading';
+      state.errorLogin = null;
+    });
+    builder.addCase(loginUser.fulfilled, (state, action) => {
+      state.statusLogin = 'succeeded';
+      state.loginUser = action.payload.user;
+    });
+    builder.addCase(loginUser.rejected, (state, action) => {
+      state.statusLogin = 'failed';
+      state.errorLogin = action.payload ?? action.error.message ?? null;
+      state.loginUser = null;
+    });
+
+    // ===== loadCurrentUser =====
+    builder.addCase(loadCurrentUser.pending, (state) => {
+      state.statusMe = 'loading';
+      state.errorMe = null;
+    });
+    builder.addCase(loadCurrentUser.fulfilled, (state, action) => {
+      state.statusMe = 'succeeded';
+      state.me = action.payload;
+    });
+    builder.addCase(loadCurrentUser.rejected, (state, action) => {
+      state.statusMe = 'failed';
+      state.errorMe = action.payload ?? action.error.message ?? null;
+      state.me = null;
+    });
   },
 });
 
-// action สำหรับเอาไปใช้ใน commpent
-export const { logout, clearError } = authSlice.actions;
-// reducer ไว้ต่อกับ store
+export const { logout } = authSlice.actions;
 export default authSlice.reducer;

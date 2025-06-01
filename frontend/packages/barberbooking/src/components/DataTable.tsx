@@ -1,6 +1,6 @@
 export type Column<T> = {
   header: string;
-  accessor: keyof T;
+  accessor: keyof T | ((row: T, rowIndex: number) => any);
 };
 
 export type Action<T> = {
@@ -54,76 +54,91 @@ export function DataTable<T extends Record<string, any>>({
           </tr>
         </thead>
         <tbody>
-          {data.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50"
-              onClick={() => onRowClick && onRowClick(row)}
+  {data.map((row, rowIndex) => (
+    <tr
+      key={rowIndex}
+      className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50"
+      onClick={() => onRowClick && onRowClick(row)}
+    >
+      {columns.map((col) => {
+        // 1) แยกเคสว่า accessor เป็น string key หรือ function
+        let rawValue: any;
+        if (typeof col.accessor === "function") {
+          rawValue = col.accessor(row, rowIndex);
+        } else {
+          rawValue = (row as any)[col.accessor];
+        }
+
+        // 2) แปลง rawValue เป็น string เพื่อนำไปแสดง
+        let display = "";
+        if (rawValue === null || rawValue === undefined) {
+          display = "";
+        } else if (typeof rawValue === "object") {
+          try {
+            display = JSON.stringify(rawValue);
+          } catch {
+            display = String(rawValue);
+          }
+        } else {
+          display = String(rawValue);
+        }
+
+        return (
+          <td
+            key={
+              typeof col.accessor === "function"
+                ? `func-${rowIndex}`
+                : String(col.accessor)
+            }
+            className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
+          >
+            {display}
+          </td>
+        );
+      })}
+
+      {hasAnyAction && (
+        <td className="px-6 py-4 text-right space-x-2">
+          {actions.map((action, idx) => (
+            <button
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                action.onClick(row);
+              }}
+              className={`font-medium hover:underline ${action.className ?? ""}`}
             >
-              {columns.map((col) => {
-                const value = row[col.accessor];
-                let display = '';
-                if (value === null || value === undefined) {
-                  display = '';
-                } else if (typeof value === 'object') {
-                  try {
-                    display = JSON.stringify(value);
-                  } catch {
-                    display = String(value);
-                  }
-                } else {
-                  display = String(value);
-                }
-                return (
-                  <td
-                    key={String(col.accessor)}
-                    className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                  >
-                    {display}
-                  </td>
-                );
-              })}
-              {hasAnyAction && (
-                <td className="px-6 py-4 text-right space-x-2">
-                  {actions.map((action, idx) => (
-                    <button
-                      key={idx}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        action.onClick(row);
-                      }}
-                      className={`font-medium hover:underline ${action.className ?? ''}`}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                  {showEdit && onEdit && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(row);
-                      }}
-                      className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {showDelete && onDelete && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(row);
-                      }}
-                      className="font-medium text-red-600 dark:text-red-500 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </td>
-              )}
-            </tr>
+              {action.label}
+            </button>
           ))}
-        </tbody>
+          {showEdit && onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(row);
+              }}
+              className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+            >
+              Edit
+            </button>
+          )}
+          {showDelete && onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(row);
+              }}
+              className="font-medium text-red-600 dark:text-red-500 hover:underline"
+            >
+              Delete
+            </button>
+          )}
+        </td>
+      )}
+    </tr>
+  ))}
+</tbody>
+
       </table>
     </div>
   );

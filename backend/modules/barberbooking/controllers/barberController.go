@@ -6,6 +6,8 @@ import (
 	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
 	"net/http"
+	"strings"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -134,35 +136,81 @@ var RolesCanManageBarber = []coreModels.RoleName{
 // @Router       /tenants/:tenant_id/barbers [post]
 // @Security     ApiKeyAuth
 func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
-	roleStr, ok := c.Locals("role").(string)
-	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageBarber) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Permission denied",
-		})
-	}
+    // 1) ตรวจ permission
+    roleStr, ok := c.Locals("role").(string)
+    if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageBarber) {
+        return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Permission denied",
+        })
+    }
 
-	var payload barberBookingModels.Barber
-	if err := c.BodyParser(&payload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid request body",
-		})
-	}
+    // 2) ดึง tenant_id จาก context
+    tenantIDVal := c.Locals("tenant_id")
+    if tenantIDVal == nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Missing tenant_id in context",
+        })
+    }
+    tenantID := tenantIDVal.(uint)
 
-	if err := ctrl.BarberService.CreateBarber(c.Context(), &payload); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed to create barber",
-			"error":   "Can't create barber",
-		})
-	}
+    // 3) ดึง branch_id จาก path param
+    branchIDParam := c.Params("branch_id")
+    branchIDUint64, err := strconv.ParseUint(branchIDParam, 10, 64)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid branch_id",
+        })
+    }
+    branchID := uint(branchIDUint64)
 
-	return c.Status(http.StatusCreated).JSON(fiber.Map{
-		"status":  "success",
-		"message": "Barber created",
-	})
+    // 4) Parse body ให้โครงสร้างเฉพาะ user_id กับ phone_number
+    var body struct {
+        UserID      uint   `json:"user_id"`
+        PhoneNumber string `json:"phone_number"`
+    }
+    if err := c.BodyParser(&body); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid request body",
+        })
+    }
+    if body.UserID == 0 {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "user_id is required",
+        })
+    }
+    if strings.TrimSpace(body.PhoneNumber) == "" {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "phone_number is required",
+        })
+    }
 
+    // 5) สร้าง payload ของ Barber
+    payload := &barberBookingModels.Barber{
+        TenantID:    tenantID,
+        BranchID:    branchID,
+        UserID:      body.UserID,
+        PhoneNumber: strings.TrimSpace(body.PhoneNumber),
+    }
+
+    // 6) เรียก service สร้าง
+    if err := ctrl.BarberService.CreateBarber(c.Context(), payload); err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to create barber",
+            "error":   err.Error(),
+        })
+    }
+
+    return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+        "status":  "success",
+        "message": "Barber created",
+    })
 }
 
 // UpdateBarber godoc

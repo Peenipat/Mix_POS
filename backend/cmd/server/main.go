@@ -47,7 +47,7 @@ func main() {
 	// Global middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
+		AllowOrigins:     "http://localhost:5173, http://localhost:5174",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowCredentials: true,
@@ -177,13 +177,6 @@ func main() {
 	branchService := coreServices.NewBranchService(database.DB)
 	branchController := coreControllers.NewBranchController(branchService)
 
-	coreGroup := app.Group("/api/v1/core")
-	coreRoutes.RegisterUserRoutes(coreGroup, userController)
-	coreRoutes.RegisterTenantRoutes(coreGroup, tenantController)
-	coreRoutes.RegisterTenantUserRoutes(coreGroup, tenantUserController)
-	coreRoutes.RegisterBranchRoutes(coreGroup, branchController)
-	coreRoutes.SetupAuthRoutes(coreGroup, userController)
-
 	adminGroup := app.Group("/api/v1/admin")
 	coreRoutes.RegisterAdminRoutes(adminGroup, userController)
 
@@ -192,6 +185,15 @@ func main() {
 
 	authSvc := coreServices.NewAuthService(database.DB, logSvc)
 	coreControllers.InitAuthHandler(authSvc, logSvc)
+
+	coreGroup := app.Group("/api/v1/core")
+	coreRoutes.RegisterUserRoutes(coreGroup, userController)
+	coreRoutes.RegisterTenantRoutes(coreGroup, tenantController)
+	coreRoutes.RegisterTenantUserRoutes(coreGroup, tenantUserController)
+	coreRoutes.RegisterBranchRoutes(coreGroup, branchController)
+	coreRoutes.SetupAuthRoutes(coreGroup, userController)
+
+	
 
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)
@@ -249,6 +251,8 @@ func main() {
 	//     Browse: false,
 	//     Index:  "index.html",
 	// }))
+
+
 
 	// Start server
 	app.Get("/api/v1/core/swagger/*", fiberSwagger.WrapHandler)

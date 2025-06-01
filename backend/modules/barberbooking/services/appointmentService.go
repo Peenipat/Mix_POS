@@ -131,10 +131,10 @@ func (s *appointmentService) CreateAppointment(
 		input.EndTime = endTime
 
 		// 3. ตรวจ availability ถ้ามี barber_id
-		if input.BarberID != nil {
+		if input.BarberID != 0 {
 			var barber barberBookingModels.Barber
 			if err := tx.
-				Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", *input.BarberID, input.TenantID).
+				Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", input.BarberID, input.TenantID).
 				First(&barber).Error; err != nil {
 				return fmt.Errorf("barber not found or mismatched branch")
 			}
@@ -142,7 +142,7 @@ func (s *appointmentService) CreateAppointment(
 				return fmt.Errorf("barber not found or mismatched branch")
 			}
 			available, err := s.checkBarberAvailabilityTx(
-				tx, input.TenantID, *input.BarberID, startTime, endTime,
+				tx, input.TenantID, input.BarberID, startTime, endTime,
 			)
 			if err != nil {
 				return fmt.Errorf("check barber availability failed: %w", err)
@@ -275,7 +275,7 @@ func (s *appointmentService) UpdateAppointment(
         }
 
         // 4. อัปเดต BarberID, CustomerID, Status, Notes ตาม input
-        if input.BarberID != nil {
+        if input.BarberID != 0 {
             ap.BarberID = input.BarberID
         }
         if input.CustomerID != 0 && input.CustomerID != ap.CustomerID {
@@ -349,53 +349,106 @@ func (s *appointmentService) GetAppointmentByID(ctx context.Context, id uint) (*
 }
 
 func (s *appointmentService) ListAppointments(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingModels.Appointment, error) {
-	var appointments []barberBookingModels.Appointment
+    var appointments []barberBookingModels.Appointment
 
-	tx := s.DB.WithContext(ctx).Model(&barberBookingModels.Appointment{})
+    // เริ่มต้น tx พร้อม preload ความสัมพันธ์ทั้งหมด
+    tx := s.DB.WithContext(ctx).Debug().
+        Model(&barberBookingModels.Appointment{}).
+        Preload("Service").
+        Preload("Customer").
+        Preload("Barber").
 
-	tx = tx.Where("tenant_id = ?", filter.TenantID)
+        Where("tenant_id = ?", filter.TenantID)
 
-	if filter.BranchID != nil {
-		tx = tx.Where("branch_id = ?", *filter.BranchID)
-	}
-	if filter.BarberID != nil {
-		tx = tx.Where("barber_id = ?", *filter.BarberID)
-	}
-	if filter.CustomerID != nil {
-		tx = tx.Where("customer_id = ?", *filter.CustomerID)
-	}
-	if filter.Status != nil {
-		tx = tx.Where("status = ?", *filter.Status)
-	}
-	if filter.StartDate != nil {
-		tx = tx.Where("start_time >= ?", *filter.StartDate)
-	}
-	if filter.EndDate != nil {
-		tx = tx.Where("end_time <= ?", *filter.EndDate)
-	}
+    // กรองตามเงื่อนไขต่าง ๆ
+    if filter.BranchID != nil {
+        tx = tx.Where("branch_id = ?", *filter.BranchID)
+    }
+    if filter.BarberID != nil {
+        tx = tx.Where("barber_id = ?", *filter.BarberID)
+    }
+    if filter.CustomerID != nil {
+        tx = tx.Where("customer_id = ?", *filter.CustomerID)
+    }
+    if filter.Status != nil {
+        tx = tx.Where("status = ?", *filter.Status)
+    }
+    if filter.StartDate != nil {
+        tx = tx.Where("start_time >= ?", *filter.StartDate)
+    }
+    if filter.EndDate != nil {
+        tx = tx.Where("end_time <= ?", *filter.EndDate)
+    }
 
-	if err := tx.Order("start_time asc").Find(&appointments).Error; err != nil {
-		return nil, err
-	}
+    // กำหนดการจัดเรียง กรณีมี sort_by หรือ default เรียงตาม start_time
+    if filter.SortBy != nil && *filter.SortBy != "" {
+        tx = tx.Order(*filter.SortBy)
+    } else {
+        tx = tx.Order("start_time asc")
+    }
 
-	if filter.Limit != nil {
-		tx = tx.Limit(*filter.Limit)
-	}
-	if filter.Offset != nil {
-		tx = tx.Offset(*filter.Offset)
-	}
+    // กำหนด Limit/Offset เพื่อ Pagination (ถ้ามี)
+    if filter.Limit != nil {
+        tx = tx.Limit(*filter.Limit)
+    }
+    if filter.Offset != nil {
+        tx = tx.Offset(*filter.Offset)
+    }
 
-	// Sorting
-	if filter.SortBy != nil && *filter.SortBy != "" {
-		tx = tx.Order(*filter.SortBy)
-	} else {
-		tx = tx.Order("start_time asc") // default sort
-	}
+    // สุดท้าย execute Find เพียงครั้งเดียว
+    if err := tx.Find(&appointments).Error; err != nil {
+        return nil, err
+    }
+    return appointments, nil
+}
 
-	if err := tx.Find(&appointments).Error; err != nil {
-		return nil, err
-	}
-	return appointments, nil
+func (s *appointmentService) ListAppointmentsResponse(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingPort.AppointmentResponse, error) {
+    // 1. เรียก ListAppointments ดึงข้อมูล full
+    apps, err := s.ListAppointments(ctx, filter)
+    if err != nil {
+        return nil, err
+    }
+
+    // 2. สร้าง slice ของ DTO
+    var result []barberBookingPort.AppointmentResponse
+    for _, a := range apps {
+        // แปลงเวลาเป็น ISO string (format RFC3339)
+        startISO := a.StartTime.Format(time.RFC3339)
+        endISO := a.EndTime.Format(time.RFC3339)
+
+        // สร้าง object ตัวนึง
+        ar := barberBookingPort.AppointmentResponse{
+            ID:       a.ID,
+            BranchID: a.BranchID,
+            TenantID: a.TenantID,
+            StartTime: startISO,
+            EndTime:   endISO,
+            Status:   string(a.Status),
+            Notes:    a.Notes,
+        }
+
+        // map ส่วน Service
+        ar.Service.ID = a.Service.ID
+        ar.Service.Name = a.Service.Name
+        ar.Service.Duration = a.Service.Duration
+        ar.Service.Price = a.Service.Price
+
+        // map ส่วน Barber (coreModels.User)
+        ar.Barber.ID = a.Barber.ID
+        ar.Barber.Username = a.Barber.Username
+        ar.Barber.Email = a.Barber.Email
+
+        // map ส่วน Customer
+        ar.Customer.ID = a.Customer.ID
+        ar.Customer.Name = a.Customer.Name
+        ar.Customer.Phone = a.Customer.Phone
+        ar.Customer.Email = a.Customer.Email
+
+        // เติมลง slice
+        result = append(result, ar)
+    }
+
+    return result, nil
 }
 
 func (s *appointmentService) CancelAppointment(

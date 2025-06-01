@@ -3,6 +3,7 @@ export interface Me {
     id: number;
     username: string;
     email: string;
+    role: string; 
     branch_id?: number;
     tenant_ids: number[];
   }

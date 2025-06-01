@@ -119,7 +119,7 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
     var payload struct {
         BranchID    uint   `json:"branch_id"`
         ServiceID   uint   `json:"service_id"`
-        BarberID    *uint  `json:"barber_id,omitempty"`
+        BarberID    uint  `json:"barber_id,omitempty"`
         CustomerID  uint   `json:"customer_id"`
         StartTime   string `json:"start_time"`
         Notes       string `json:"notes,omitempty"`
@@ -358,82 +358,87 @@ func (ctrl *AppointmentController) ListAppointments(c *fiber.Ctx) error {
     // 1. Parse tenant_id
     tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
     if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid tenant_id"})
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid tenant_id"})
     }
 
     // 2. Build filter
     var f barberBookingDto.AppointmentFilter
     f.TenantID = tenantID
 
-    if qs := c.Query("branch_id",""); qs != "" {
-        if v, err := strconv.ParseUint(qs,10,64); err!=nil {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid branch_id"})
+    if qs := c.Query("branch_id", ""); qs != "" {
+        if v, err := strconv.ParseUint(qs, 10, 64); err != nil {
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid branch_id"})
         } else {
-            u := uint(v); f.BranchID = &u
+            u := uint(v)
+            f.BranchID = &u
         }
     }
-    if qs := c.Query("barber_id",""); qs != "" {
-        if v, err := strconv.ParseUint(qs,10,64); err!=nil {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid barber_id"})
+    if qs := c.Query("barber_id", ""); qs != "" {
+        if v, err := strconv.ParseUint(qs, 10, 64); err != nil {
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid barber_id"})
         } else {
-            u := uint(v); f.BarberID = &u
+            u := uint(v)
+            f.BarberID = &u
         }
     }
-    if qs := c.Query("customer_id",""); qs != "" {
-        if v, err := strconv.ParseUint(qs,10,64); err!=nil {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid customer_id"})
+    if qs := c.Query("customer_id", ""); qs != "" {
+        if v, err := strconv.ParseUint(qs, 10, 64); err != nil {
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid customer_id"})
         } else {
-            u := uint(v); f.CustomerID = &u
+            u := uint(v)
+            f.CustomerID = &u
         }
     }
-    if qs := c.Query("status",""); qs != "" {
+    if qs := c.Query("status", ""); qs != "" {
         s := barberBookingModels.AppointmentStatus(qs)
         f.Status = &s
     }
-    if qs := c.Query("start_date",""); qs != "" {
+    if qs := c.Query("start_date", ""); qs != "" {
         t, err := time.Parse(time.RFC3339, qs)
         if err != nil {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid start_date format. Expect RFC3339"})
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid start_date format. Expect RFC3339"})
         }
         f.StartDate = &t
     }
-    if qs := c.Query("end_date",""); qs != "" {
+    if qs := c.Query("end_date", ""); qs != "" {
         t, err := time.Parse(time.RFC3339, qs)
         if err != nil {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid end_date format. Expect RFC3339"})
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid end_date format. Expect RFC3339"})
         }
         f.EndDate = &t
     }
-    if qs := c.Query("limit",""); qs != "" {
-        if v, err := strconv.Atoi(qs); err!=nil  || v < 0 {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid limit"})
+    if qs := c.Query("limit", ""); qs != "" {
+        if v, err := strconv.Atoi(qs); err != nil || v < 0 {
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid limit"})
         } else {
             f.Limit = &v
         }
     }
-    if qs := c.Query("offset",""); qs != "" {
-        if v, err := strconv.Atoi(qs); err!=nil || v < 0  {
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"error","message":"Invalid offset"})
+    if qs := c.Query("offset", ""); qs != "" {
+        if v, err := strconv.Atoi(qs); err != nil || v < 0 {
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid offset"})
         } else {
             f.Offset = &v
         }
     }
-    if qs := c.Query("sort_by",""); qs != "" {
+    if qs := c.Query("sort_by", ""); qs != "" {
         f.SortBy = &qs
     }
 
-    // 3. Call service
-    apps, err := ctrl.Service.ListAppointments(context.Background(), f)
+    // 3. Call service for DTO 
+    apptResp, err := ctrl.Service.ListAppointmentsResponse(context.Background(), f)
     if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "status":"error", "message":"Failed to list appointments", "error":err.Error(),
+            "status":  "error",
+            "message": "Failed to list appointments",
+            "error":   err.Error(),
         })
     }
 
-    // 4. Return
+    // 4. Return slimmed-down DTO
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
-        "status":"success",
-        "data": apps,
+        "status": "success",
+        "data":   apptResp,
     })
 }
 

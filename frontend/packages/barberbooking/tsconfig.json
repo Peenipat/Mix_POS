@@ -11,10 +11,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
+    "module": "esnext",
     "rootDir": "src",
     "jsx": "react-jsx"
   },
-  "include": ["src"],
+  "include": ["src", "pages", "components"],
   "references": [
     { "path": "../shared" }
   ]

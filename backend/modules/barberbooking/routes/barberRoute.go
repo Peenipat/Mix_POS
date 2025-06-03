@@ -17,10 +17,12 @@ func RegisterBarberRoutes(router fiber.Router, ctrl *barberBookingController.Bar
 	group := router.Group("/tenants/:tenant_id/barbers")
 	group.Use(middlewares.RequireAuth())
 	group.Get("/branches/:branch_id/barbers", ctrl.ListBarbersByBranch)
-	group.Post("/branches/:branch_id", barberbookingMiddlewares.RequireTenant(), ctrl.CreateBarber)
+	group.Get("/branches/:branch_id/user",ctrl.ListUserNotBarber)
+	group.Post("/branches/:branch_id", ctrl.CreateBarber)
 	group.Get("/users/:user_id/barber", barberbookingMiddlewares.RequireTenant(),ctrl.GetBarberByUser)
 	group.Put("/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.UpdateBarber)
 	group.Delete("/:barber_id", barberbookingMiddlewares.RequireTenant(), ctrl.DeleteBarber)
+	
 
 	
 }

@@ -77,7 +77,7 @@ export function ManageCustomer() {
   const columns: Column<Customer>[] = [
     {
       header: "#",
-      accessor: (_row, rowIndex) => rowIndex + 1, // แสดงลำดับ 1, 2, 3, …
+      accessor: (_row, rowIndex) => rowIndex + 1, 
     },
     { header: "Name",        accessor: "Name" },
     { header: "Email",       accessor: "email" },

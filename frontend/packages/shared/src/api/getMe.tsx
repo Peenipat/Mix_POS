@@ -1,13 +1,16 @@
-import  axios from "../lib/axios";
+import  axios  from "../lib/axios"
 export interface Me {
-    id: number;
-    username: string;
-    email: string;
-    branch_id?: number;
-    tenant_ids: number[];
-  }
-  
-  export async function fetchMe(): Promise<Me> {
-    const resp = await axios.get<{ data: Me }>("/core/user/me");
-    return resp.data.data;
-  }
+  id: number;
+  username: string;
+  email: string;
+  role: string; 
+  branch_id?: number;
+  tenant_ids: number[];
+}
+
+export async function getMeApi(): Promise<Me> {
+  // GET /core/user/me → backend จะตอบ { status: "success", data: { ... } }
+  // หรือในบางการ implement อาจตอบแค่ data โดยตรง เช่น { data: { id, username, ... } }
+  const resp = await axios.get<{ data: Me }>('/core/user/me');
+  return resp.data.data;
+}

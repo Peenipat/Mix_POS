@@ -24,25 +24,18 @@ export default function App() {
   const didFetchMe = useRef(false);
 
   useEffect(() => {
-    // ถ้ายังไม่เคย fetch /me และ path เริ่มต้นด้วย "/admin" → ให้ fetch
     if (!didFetchMe.current && location.pathname.startsWith("/admin")) {
       didFetchMe.current = true; // ตั้ง flag ว่าเรียก /me ไปแล้ว
       dispatch(loadCurrentUser())
         .catch(() => {
-          // ถ้า fetch /me พลาด (เช่น token ไม่ valid) ให้ logout
           dispatch(logout());
         })
         .finally(() => {
-          // ไม่ว่า /me จะสำเร็จหรือ fail ก็ถือว่า initialization เสร็จ
           setInitialized(true);
         });
     }
-    // แต่ถ้า path ไม่ใช่ "/admin" เลย (เช่น /login, /) → ข้ามการ fetch /me ไป
     
     setInitialized(true);
-    // ✅ สังเกตว่า dependency array ไม่ได้ใส่ location.pathname หรือ dispatch ซ้ำ
-    // ให้ run โค้ดนี้แค่ครั้งแรกที่ App mount เท่านั้น
-    console.log("call")
   }, [dispatch,]);
 
 

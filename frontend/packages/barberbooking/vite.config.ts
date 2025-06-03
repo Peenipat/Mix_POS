@@ -11,6 +11,8 @@ export default defineConfig({
   resolve: {
     alias: {
       'tailwindcss/version.js': path.resolve(__dirname, 'src/tailwind-version.js'),
+      '@': path.resolve(__dirname, 'src'), 
+       "@object/shared": path.resolve(__dirname, "../shared/src"), 
     },
   },
   css: {

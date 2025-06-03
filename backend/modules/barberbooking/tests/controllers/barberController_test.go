@@ -8,6 +8,7 @@ import (
 	barberBookingControllers "myapp/modules/barberbooking/controllers"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
+	coreModels "myapp/modules/core/models"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,6 +21,16 @@ import (
 
 type MockBarberService struct {
 	mock.Mock
+}
+
+// ListUserNotBarber implements barberBookingPort.IBarber.
+func (m *MockBarberService) ListUserNotBarber(ctx context.Context, branchID *uint) ([]barberBookingPort.UserNotBarber, error) {
+	panic("unimplemented")
+}
+
+// FindAvailableUsers implements barberBookingPort.IBarber.
+func (m *MockBarberService) FindAvailableUsers(ctx context.Context, tenantID uint, branchID uint) ([]coreModels.User, error) {
+	panic("unimplemented")
 }
 
 func (m *MockBarberService) CreateBarber(ctx context.Context, barber *barberBookingModels.Barber) error {
@@ -40,8 +51,8 @@ func (m *MockBarberService) ListBarbersByBranch(ctx context.Context, branchID *u
 	return args.Get(0).([]barberBookingPort.BarberWithUser), args.Error(1)
 }
 
-func (m *MockBarberService) UpdateBarber(ctx context.Context, barberID uint, barber *barberBookingModels.Barber) (*barberBookingModels.Barber, error) {
-	args := m.Called(ctx, barberID, barber)
+func (m *MockBarberService) UpdateBarber(ctx context.Context,barberID uint,updated *barberBookingModels.Barber,updatedUsername string,updatedEmail string,) (*barberBookingModels.Barber, error) {
+	args := m.Called(ctx, barberID, updated)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -272,15 +283,14 @@ func TestGetBarberByUser(t *testing.T) {
 			UserID:   3,
 		}
 		mockSvc.On("GetBarberByUser", mock.Anything, uint(1)).Return(barber, nil).Once()
-		
-	
+
 		req := httptest.NewRequest(http.MethodGet, "/users/1/barber", nil)
 		req.RequestURI = "/users/1/barber"
 		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-	
+
 		var body struct {
 			Status  string                      `json:"status"`
 			Message string                      `json:"message"`
@@ -292,7 +302,7 @@ func TestGetBarberByUser(t *testing.T) {
 		assert.Equal(t, "Barber retrieved", body.Message)
 		assert.Equal(t, uint(1), body.Data.ID)
 	})
-	
+
 	t.Run("PermissionDenied_ShouldReturn403", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users/1/barber", nil)
 		req.Header.Set("X-Mock-Role", "USER")
@@ -319,8 +329,6 @@ func TestGetBarberByUser(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
-	
-	
 }
 
 func TestListBarbersByTenant(t *testing.T) {
@@ -361,14 +369,14 @@ func TestListBarbersByTenant(t *testing.T) {
 		mockSvc.On("ListBarbersByTenant", mock.Anything, uint(1)).Return(barbers, nil).Once()
 
 		req := httptest.NewRequest(http.MethodGet, "/tenants/1/barbers", nil)
-		req.Header.Set("X-Mock-Role",string(barberBookingControllers.RolesCanManageBarber[0]))
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var body struct {
-			Status  string                        `json:"status"`
-			Message string                        `json:"message"`
+			Status  string                       `json:"status"`
+			Message string                       `json:"message"`
 			Data    []barberBookingModels.Barber `json:"data"`
 		}
 		err = json.NewDecoder(resp.Body).Decode(&body)
@@ -378,7 +386,6 @@ func TestListBarbersByTenant(t *testing.T) {
 		assert.Len(t, body.Data, 2)
 	})
 }
-
 
 func TestDeleteBarber(t *testing.T) {
 	mockSvc := new(MockBarberService)
@@ -404,7 +411,7 @@ func TestDeleteBarber(t *testing.T) {
 		mockSvc.On("DeleteBarber", mock.Anything, uint(1)).Return(assert.AnError)
 
 		req := httptest.NewRequest(http.MethodDelete, "/barbers/1", nil)
-		req.Header.Set("X-Mock-Role",string(barberBookingControllers.RolesCanManageBarber[0]))
+		req.Header.Set("X-Mock-Role", string(barberBookingControllers.RolesCanManageBarber[0]))
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)

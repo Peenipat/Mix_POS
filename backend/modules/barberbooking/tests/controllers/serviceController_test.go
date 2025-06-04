@@ -31,7 +31,7 @@ type MockService struct {
 	mock.Mock
 }
 
-func (m *MockService) GetAllServices() ([]barberBookingModels.Service, error) {
+func (m *MockService) GetAllServices(tenantID uint, branchID uint) ([]barberBookingModels.Service, error){
 	args := m.Called()
 	return args.Get(0).([]barberBookingModels.Service), args.Error(1)
 }
@@ -41,7 +41,7 @@ func (m *MockService) GetServiceByID(id uint) (*barberBookingModels.Service, err
 	return args.Get(0).(*barberBookingModels.Service), args.Error(1)
 }
 
-func (m *MockService) CreateService(service *barberBookingModels.Service) error {
+func (m *MockService)CreateService(tenantID uint, branchID uint,service *barberBookingModels.Service) error {
 	args := m.Called(service)
 	return args.Error(0)
 }

@@ -10,9 +10,10 @@ import (
 // SeedServices สร้างรายการบริการ (services) ตั้งต้น
 func SeedServices(db *gorm.DB) error {
     items := []bookingModels.Service{
-        {Name: "Haircut",    Duration: 30, Price: 200, TenantID:	1,},
-        {Name: "Shampoo",    Duration: 15, Price: 100, TenantID:	1,},
-        {Name: "Beard Trim", Duration: 20, Price: 150, TenantID:	1,},
+        {Name: "Haircut",    Duration: 30, Price: 200, TenantID:	1,BranchID:	1},
+        {Name: "Shampoo",    Duration: 15, Price: 100, TenantID:	1,BranchID:	1},
+        {Name: "Beard Trim", Duration: 20, Price: 150, TenantID:	1,BranchID:	1},
+        {Name: "Beard Trim2", Duration: 20, Price: 150, TenantID:	1,BranchID:	2},
         // เพิ่มรายการบริการอื่นได้ที่นี่…
     }
 
@@ -23,6 +24,7 @@ func SeedServices(db *gorm.DB) error {
             Duration:  svc.Duration,  // นาที
             Price:     svc.Price,
             TenantID: svc.TenantID,
+            BranchID: svc.BranchID,
             UpdatedAt: now,
 
         }

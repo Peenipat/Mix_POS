@@ -1183,30 +1183,38 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
                         "description": "รหัส Barber",
                         "name": "barber_id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Payload สำหรับอัปเดต Barber (เช่น BranchID, ชื่อ-นามสกุล ฯลฯ)",
+                        "description": "Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username, Email)",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Barber"
+                            "$ref": "#/definitions/barberBookingPort.UpdateBarberRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "คืนค่า status success และข้อมูล Barber ที่อัปเดตใน key ` + "`" + `data` + "`" + `",
+                        "description": "คืนค่า status success และข้อมูล Barber ใน key ` + "`" + `data` + "`" + `",
                         "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Barber"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid barber_id หรือ Invalid request body",
+                        "description": "Invalid tenant_id/barber_id หรือ Invalid request body",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1743,6 +1751,320 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to fetch workload summary",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/branch/:branch_id/services": {
+            "get": {
+                "description": "คืนรายการ Service ทั้งหมดในระบบ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ดึงรายการบริการทั้งหมด",
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Service ใน key ` + "`" + `data` + "`" + `",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch services",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "สร้างบริการใหม่",
+                "parameters": [
+                    {
+                        "description": "Payload สำหรับสร้าง Service (Name, Duration, Price)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Service"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success และข้อความยืนยันการสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body หรือ Invalid tenant ID หรือ Invalid service input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/branch/:branch_id/services/:service_id": {
+            "get": {
+                "description": "คืนข้อมูล Service ตามรหัสที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ดึงข้อมูลบริการตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Service ใน key ` + "`" + `data` + "`" + `",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "แก้ไขข้อมูลบริการ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับอัปเดต Service (Name, Duration, Price)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Service"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน key ` + "`" + `data` + "`" + `",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Service"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID หรือ Invalid request body หรือ Invalid service input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ลบบริการ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete service",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2331,320 +2653,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to fetch review",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/tenants/:tenant_id/services": {
-            "get": {
-                "description": "คืนรายการ Service ทั้งหมดในระบบ",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "ดึงรายการบริการทั้งหมด",
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และ array ของ Service ใน key ` + "`" + `data` + "`" + `",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to fetch services",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "สร้างบริการใหม่",
-                "parameters": [
-                    {
-                        "description": "Payload สำหรับสร้าง Service (Name, Duration, Price)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Service"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "คืนค่า status success และข้อความยืนยันการสร้าง",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body หรือ Invalid tenant ID หรือ Invalid service input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to create service",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/tenants/:tenant_id/services/:service_id": {
-            "get": {
-                "description": "คืนข้อมูล Service ตามรหัสที่ระบุ",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "ดึงข้อมูลบริการตาม ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Service",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และข้อมูล Service ใน key ` + "`" + `data` + "`" + `",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid service ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Service not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to fetch service",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "แก้ไขข้อมูลบริการ",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Service",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Payload สำหรับอัปเดต Service (Name, Duration, Price)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Service"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน key ` + "`" + `data` + "`" + `",
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Service"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid service ID หรือ Invalid request body หรือ Invalid service input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Service not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to update service",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "ลบบริการ",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Service",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid service ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to delete service",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3315,7 +3323,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "barber": {
-                    "$ref": "#/definitions/barberBookingModels.Barber"
+                    "$ref": "#/definitions/coreModels.User"
                 },
                 "barber_id": {
                     "type": "integer"
@@ -3473,7 +3481,7 @@ const docTemplate = `{
                 "phone_number": {
                     "type": "string"
                 },
-                "tenantID": {
+                "tenant_id": {
                     "type": "integer"
                 },
                 "updated_at": {
@@ -3542,6 +3550,9 @@ const docTemplate = `{
         "barberBookingModels.Service": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -3660,6 +3671,28 @@ const docTemplate = `{
                 }
             }
         },
+        "barberBookingPort.UpdateBarberRequest": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "email": {
+                    "description": "ถ้าต้องการอัปเดตอีเมลด้วย",
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "description": "ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย",
+                    "type": "string"
+                }
+            }
+        },
         "barberBookingPort.UpsertBarberWorkloadRequest": {
             "type": "object",
             "properties": {
@@ -3677,6 +3710,185 @@ const docTemplate = `{
                     "description": "จำนวนชั่วโมงทำงาน",
                     "type": "integer",
                     "example": 8
+                }
+            }
+        },
+        "coreModels.Branch": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "composite unique with TenantID",
+                    "type": "string"
+                },
+                "tenant": {
+                    "$ref": "#/definitions/coreModels.Tenant"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/coreModels.User"
+                    }
+                }
+            }
+        },
+        "coreModels.Module": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "เช่น barber_booking",
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.Role": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "module": {
+                    "$ref": "#/definitions/coreModels.Module"
+                },
+                "module_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "tenant": {
+                    "$ref": "#/definitions/coreModels.Tenant"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.Tenant": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.TenantUser": {
+            "type": "object",
+            "properties": {
+                "tenant": {
+                    "$ref": "#/definitions/coreModels.Tenant"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/coreModels.User"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "coreModels.User": {
+            "type": "object",
+            "properties": {
+                "avatar_name": {
+                    "type": "string"
+                },
+                "avatar_url": {
+                    "type": "string"
+                },
+                "branch": {
+                    "$ref": "#/definitions/coreModels.Branch"
+                },
+                "branch_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "$ref": "#/definitions/coreModels.Role"
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "tenant_users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/coreModels.TenantUser"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },

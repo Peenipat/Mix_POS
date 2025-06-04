@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS services;
 CREATE TABLE services (
   id         SERIAL PRIMARY KEY,
   tenant_id  INT NOT NULL,
+  branch_id  INT NOT NULL,
   name       VARCHAR(100) NOT NULL,
   duration   INT NOT NULL,
   price      NUMERIC NOT NULL,

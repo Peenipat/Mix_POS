@@ -13,7 +13,7 @@ import (
 func SeedBarbers(db *gorm.DB) error {
     // 1) หา Default Branch
     var branch coreModels.Branch
-    if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+    if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
         return errors.New("default branch not found: " + err.Error())
     }
 

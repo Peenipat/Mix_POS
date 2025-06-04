@@ -36,7 +36,7 @@ func SeedUsers(db *gorm.DB) error {
 
     // โหลด Default Branch (ใช้สำหรับทุกบทบาทที่ผูกสาขา)
     var branch coreModels.Branch
-    if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+    if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
         return err
     }
 
@@ -52,7 +52,7 @@ func SeedUsers(db *gorm.DB) error {
         // SaaS SuperAdmin (ไม่ผูกสาขา)
         {"saas_admin", "saas_admin@gmail.com", "12345678", roleSA.ID, nil},
         // Tenant Admin (ดูแลหลายสาขา)
-        {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, nil},
+        {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, &branch.ID},
         // Branch Admin (เฉพาะสาขา)
         {"branch_admin", "branch_admin@gmail.com", "12345678", roleBA.ID, &branch.ID},
         // Assistant Manager
@@ -60,7 +60,7 @@ func SeedUsers(db *gorm.DB) error {
         // Staff
         {"staff_user", "staff@gmail.com", "12345678", roleST.ID, &branch.ID},
         // End-customer / general user
-        {"generic_user", "user@gmail.com", "12345678", roleUS.ID, nil},
+        {"generic_user", "user@gmail.com", "12345678", roleUS.ID, &branch.ID},
     }
 
     now := time.Now()

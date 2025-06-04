@@ -146,16 +146,16 @@ func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
         })
     }
 
-    // 2) ดึง tenant_id จาก context
-    tenantIDVal := c.Locals("tenant_id")
-    if tenantIDVal == nil {
+
+    tenantIDParam := c.Params("branch_id")
+    tenantIDUint64, err := strconv.ParseUint(tenantIDParam, 10, 64)
+    if err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
             "status":  "error",
-            "message": "Missing tenant_id in context",
+            "message": "Invalid tenant_id",
         })
     }
-    tenantID := tenantIDVal.(uint)
-
+    tenantID := uint(tenantIDUint64)
     // 3) ดึง branch_id จาก path param
     branchIDParam := c.Params("branch_id")
     branchIDUint64, err := strconv.ParseUint(branchIDParam, 10, 64)

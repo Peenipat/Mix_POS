@@ -15,7 +15,7 @@ import (
 func SeedWorkingHours(db *gorm.DB) error {
     // โหลด Default Branch
     var branch coreModels.Branch
-    if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+    if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
         return err
     }
 

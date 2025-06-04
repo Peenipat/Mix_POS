@@ -16,7 +16,8 @@ export function ManageBarber() {
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
 
-  const tenantId = me?.tenant_ids?.[0]; const branchId = Number(me?.branch_id);
+  const tenantId = me?.tenant_ids?.[0]; 
+  const branchId = Number(me?.branch_id);
 
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [editBarber, setEditBarber] = useState<Barber>()
@@ -28,6 +29,12 @@ export function ManageBarber() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+
+  const handleDeleteSuccess = () => {
+    if (deleteBarber) {
+      setBarbers(prev => prev.filter(b => b.id !== deleteBarber.id));
+    }
+  };
 
   // ฟังก์ชันดึงข้อมูล barbers
   const loadBarbers = useCallback(async () => {
@@ -142,7 +149,7 @@ export function ManageBarber() {
           <DeleteBarberModal
             isOpen={isDeleteOpen}
             barber={deleteBarber}
-            onDelete={setBarbers((prev) => prev.filter((x) => x.id !== deleteBarber.id))}
+            onDelete={handleDeleteSuccess}
             onClose={() => setIsDeleteOpen(false)}
             onCreate={handleCreated}
           />
@@ -153,7 +160,11 @@ export function ManageBarber() {
 }
 
 
-
+interface User {
+  user_id: number;
+  username: string;
+  email: string;
+}
 interface CreateBarberModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -177,7 +188,7 @@ function CreateBarberModal({
   const [errorUsers, setErrorUsers] = useState<string | null>(null);
 
   // 2) ฟิลด์ฟอร์ม: selected user_id และ phoneNumber
-  const [selectedUserId, setSelectedUserId] = useState<number | "">("");
+  const [selectedUserId, setSelectedUserId] = useState<number | "">();
   const [phoneNumber, setPhoneNumber] = useState<string>("");
 
   // 3) สถานะ loading / error ของการสร้าง barber
@@ -210,14 +221,14 @@ function CreateBarberModal({
   }, [isOpen]);
 
   // 5) รีเซ็ตฟอร์มเมื่อเปิด modal ใหม่
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedUserId("");
-      setPhoneNumber("");
-      setErrorCreate(null);
-      setLoadingCreate(false);
-    }
-  }, [isOpen]);
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     setSelectedUserId("");
+  //     setPhoneNumber("");
+  //     setErrorCreate(null);
+  //     setLoadingCreate(false);
+  //   }
+  // }, [isOpen]);
 
   // 6) ฟังก์ชัน submit
   const handleSubmit = async (e: FormEvent) => {
@@ -262,7 +273,7 @@ function CreateBarberModal({
   if (statusMe === "loading") return null;
   if (statusMe === "succeeded" && !me) return null;
   if (!isOpen) return null;
-
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <form
@@ -285,8 +296,11 @@ function CreateBarberModal({
           ) : (
             <select
               id="user"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(Number(e.target.value))}
+              value={selectedUserId || undefined}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSelectedUserId(v === "" ? "" : Number(v));
+              }}
               className="w-full select select-bordered"
             >
               {users.length != 0 ? (
@@ -295,7 +309,7 @@ function CreateBarberModal({
 
 
               {users.map((u) => (
-                <option key={u.id} value={u.id}>
+                <option key={u.user_id} value={u.user_id}>
                   {u.username} ({u.email})
                 </option>
               ))}
@@ -386,6 +400,7 @@ function EditBarberModal({
     }
   }, [isOpen, barber, reset]);
 
+
   // 3. ถ้ายังโหลดข้อมูล me หรือไม่มี barber หรือ isOpen = false, return null
   if (statusMe === "loading") return null;
   if (statusMe === "succeeded" && !me) return null;
@@ -394,7 +409,7 @@ function EditBarberModal({
   // 4. ฟังก์ชันส่งข้อมูล
   const onSubmit = async (data: EditBarberFormData) => {
     if (!tenantId || !branchId) {
-      return; // หรือโชว์ error ด้วย setErrorCreate ก็ได้
+      return; ด้
     }
 
     try {
@@ -414,7 +429,6 @@ function EditBarberModal({
       onCreate();
       onClose();
     } catch (err: any) {
-      // แสดง error จาก server (เช่น ซ้ำ email) ได้ผ่าน setErrorCreate
       console.error(err);
     }
   };

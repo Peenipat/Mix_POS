@@ -20,7 +20,7 @@ func SeedAppointments(db *gorm.DB) error {
 	)
 
 	// 1) โหลดข้อมูลที่เกี่ยวข้อง
-	if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+	if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
 		return err
 	}
 	if err := db.Where("name = ?", "Haircut").First(&service).Error; err != nil {

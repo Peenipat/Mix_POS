@@ -17,10 +17,13 @@ func SeedBranches(db *gorm.DB) error {
 
     branches := []coreModels.Branch{
         {
-            Name:     "Default Branch",
+            Name:     "Branch 1",
             TenantID: tenant.ID,
         },
-        // เติมสาขาอื่น ๆ ได้ที่นี่
+        {
+            Name:     "Branch 2",
+            TenantID: tenant.ID,
+        },
     }
 
     now := time.Now()

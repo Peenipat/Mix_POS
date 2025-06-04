@@ -31,21 +31,46 @@ func NewServiceController(svc barberBookingPort.IServiceService) *ServiceControl
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}  "คืนค่า status success, message และ array ของ Service ใน key `data`"
 // @Failure      500  {object}  map[string]string       "Failed to fetch services"
-// @Router       /tenants/:tenant_id/services [get]
+// @Router       /tenants/:tenant_id/branch/:branch_id/services [get]
 func (ctrl *ServiceController) GetAllServices(c *fiber.Ctx) error {
-	services, err := ctrl.ServiceService.GetAllServices()
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed to fetch services",
-			"error":   err.Error(),
-		})
-	}
-	return c.JSON(fiber.Map{
-		"status":  "success",
-		"message": "Services retrieved",
-		"data":    services,
-	})
+    // 1) อ่าน tenant_id จาก URL
+    tenantParam := c.Params("tenant_id")
+    tenantID, err := strconv.ParseUint(tenantParam, 10, 64)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid tenant_id",
+            "error":   err.Error(),
+        })
+    }
+
+    // 2) อ่าน branch_id จาก URL
+    branchParam := c.Params("branch_id")
+    branchID, err := strconv.ParseUint(branchParam, 10, 64)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid branch_id",
+            "error":   err.Error(),
+        })
+    }
+
+    // 3) เรียก service layer เพื่อดึงข้อมูลเฉพาะ tenant & branch นี้
+    services, err := ctrl.ServiceService.GetAllServices(uint(tenantID), uint(branchID))
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to fetch services",
+            "error":   err.Error(),
+        })
+    }
+
+    // 4) คืนผลลัพธ์กลับไป
+    return c.JSON(fiber.Map{
+        "status":  "success",
+        "message": "Services retrieved",
+        "data":    services,
+    })
 }
 
 // GetServiceByID godoc
@@ -59,9 +84,9 @@ func (ctrl *ServiceController) GetAllServices(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string             "Invalid service ID"
 // @Failure      404  {object}  map[string]string             "Service not found"
 // @Failure      500  {object}  map[string]string             "Failed to fetch service"
-// @Router       /tenants/:tenant_id/services/:service_id [get]
+// @Router       /tenants/:tenant_id/branch/:branch_id/services/:service_id [get]
 func (ctrl *ServiceController) GetServiceByID(c *fiber.Ctx) error {
-	idParam := c.Params("id")
+	idParam := c.Params("service_id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
@@ -97,6 +122,7 @@ var RolesCanManageService = []coreModels.RoleName{
 	coreModels.RoleNameSaaSSuperAdmin,
 	coreModels.RoleNameTenant,
 	coreModels.RoleNameTenantAdmin,
+	coreModels.RoleNameBranchAdmin,
 }
 
 // CreateService godoc
@@ -111,67 +137,79 @@ var RolesCanManageService = []coreModels.RoleName{
 // @Failure      401   {object}  map[string]string            "Unauthorized"
 // @Failure      403   {object}  map[string]string            "Permission denied"
 // @Failure      500   {object}  map[string]string            "Failed to create service"
-// @Router       /tenants/:tenant_id/services [post]
+// @Router       /tenants/:tenant_id/branch/:branch_id/services [post]
 // @Security     ApiKeyAuth
 func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
-	// ตรวจสิทธิ์ผู้ใช้งาน
-	roleStr, ok := c.Locals("role").(string)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Unauthorized",
-		})
-	}
-	if !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Permission denied",
-		})
-	}
+    roleStr, ok := c.Locals("role").(string)
+    if !ok {
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Unauthorized",
+        })
+    }
+    if !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageService) {
+        return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Permission denied",
+        })
+    }
 
-	// แปลง request body
-	var payload barberBookingModels.Service
-	if err := c.BodyParser(&payload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid request body",
-		})
-	}
+    // 2) แปลง JSON body ลง payload
+    var payload barberBookingModels.Service
+    if err := c.BodyParser(&payload); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid request body",
+        })
+    }
 
-	// ดึง tenant_id จาก Locals แล้วกำหนดให้ payload
-	tenantID, ok := c.Locals("tenant_id").(uint)
-	if !ok || tenantID == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid tenant ID",
-		})
-	}
-	payload.TenantID = tenantID
+    // 3) ดึง tenant_id จาก path params แล้วแปลงเป็น uint
+    tidStr := c.Params("tenant_id")
+    tid64, err := strconv.ParseUint(tidStr, 10, 64)
+    if err != nil || tid64 == 0 {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid tenant ID",
+        })
+    }
+    tenantID := uint(tid64)
 
-	// ตรวจสอบความถูกต้องของข้อมูล
-	payload.Name = strings.TrimSpace(payload.Name)
-	if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid service input",
-		})
-	}
+    // 4) ดึง branch_id จาก path params แล้วแปลงเป็น uint
+    bidStr := c.Params("branch_id")
+    bid64, err := strconv.ParseUint(bidStr, 10, 64)
+    if err != nil || bid64 == 0 {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid branch ID",
+        })
+    }
+    branchID := uint(bid64)
 
-	// เรียก service
-	if err := ctrl.ServiceService.CreateService(&payload); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed to create service",
-			"error":   err.Error(),
-		})
-	}
+    // 5) ตรวจสอบข้อมูลเบื้องต้นใน payload
+    payload.Name = strings.TrimSpace(payload.Name)
+    if payload.Name == "" || len(payload.Name) > 100 || payload.Duration <= 0 || payload.Price <= 0 {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid service input",
+        })
+    }
 
-	// ส่ง response สำเร็จ
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"status":  "success",
-		"message": "Service created",
-	})
+    // 6) เรียก Service Layer
+    if err := ctrl.ServiceService.CreateService(tenantID, branchID, &payload); err != nil {
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to create service",
+            "error":   err.Error(),
+        })
+    }
+
+    // 7) ส่ง response สำเร็จ (HTTP 201 Created)
+    return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+        "status":  "success",
+        "message": "Service created",
+    })
 }
+
 
 
 // UpdateService godoc
@@ -187,7 +225,7 @@ func (ctrl *ServiceController) CreateService(c *fiber.Ctx) error {
 // @Failure      403   {object}  map[string]string             "Permission denied"
 // @Failure      404   {object}  map[string]string             "Service not found"
 // @Failure      500   {object}  map[string]string             "Failed to update service"
-// @Router       /tenants/:tenant_id/services/:service_id [put]
+// @Router       /tenants/:tenant_id/branch/:branch_id/services/:service_id [put]
 // @Security     ApiKeyAuth
 func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 	// 1. ตรวจสอบ role
@@ -200,7 +238,7 @@ func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 	}
 
 	// 2. อ่าน ID จาก path param
-	idParam := c.Params("id")
+	idParam := c.Params("service_id")
 	serviceID, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil || serviceID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -269,7 +307,7 @@ func (ctrl *ServiceController) UpdateService(c *fiber.Ctx) error {
 // @Failure      400  {object}  map[string]string  "Invalid service ID"
 // @Failure      403  {object}  map[string]string  "Permission denied"
 // @Failure      500  {object}  map[string]string  "Failed to delete service"
-// @Router       /tenants/:tenant_id/services/:service_id [delete]
+// @Router       /services/:service_id [delete]
 // @Security     ApiKeyAuth
 func (ctrl *ServiceController) DeleteService(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
@@ -279,7 +317,7 @@ func (ctrl *ServiceController) DeleteService(c *fiber.Ctx) error {
 			"message": "Permission denied",
 		})
 	}
-	idParam := c.Params("id")
+	idParam := c.Params("service_id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{

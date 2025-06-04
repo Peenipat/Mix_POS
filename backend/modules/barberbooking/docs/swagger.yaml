@@ -36,7 +36,7 @@ definitions:
   barberBookingModels.Appointment:
     properties:
       barber:
-        $ref: '#/definitions/barberBookingModels.Barber'
+        $ref: '#/definitions/coreModels.User'
       barber_id:
         type: integer
       branch_id:
@@ -145,7 +145,7 @@ definitions:
         type: integer
       phone_number:
         type: string
-      tenantID:
+      tenant_id:
         type: integer
       updated_at:
         type: string
@@ -191,6 +191,8 @@ definitions:
     type: object
   barberBookingModels.Service:
     properties:
+      branch_id:
+        type: integer
       created_at:
         type: string
       deleted_at:
@@ -273,6 +275,21 @@ definitions:
         example: 4
         type: integer
     type: object
+  barberBookingPort.UpdateBarberRequest:
+    properties:
+      branch_id:
+        type: integer
+      email:
+        description: ถ้าต้องการอัปเดตอีเมลด้วย
+        type: string
+      phone_number:
+        type: string
+      user_id:
+        type: integer
+      username:
+        description: ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย
+        type: string
+    type: object
   barberBookingPort.UpsertBarberWorkloadRequest:
     properties:
       appointments:
@@ -287,6 +304,124 @@ definitions:
         description: จำนวนชั่วโมงทำงาน
         example: 8
         type: integer
+    type: object
+  coreModels.Branch:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      name:
+        description: composite unique with TenantID
+        type: string
+      tenant:
+        $ref: '#/definitions/coreModels.Tenant'
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/coreModels.User'
+        type: array
+    type: object
+  coreModels.Module:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        description: เช่น barber_booking
+        type: string
+    type: object
+  coreModels.Role:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      module:
+        $ref: '#/definitions/coreModels.Module'
+      module_id:
+        type: integer
+      name:
+        type: string
+      tenant:
+        $ref: '#/definitions/coreModels.Tenant'
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  coreModels.Tenant:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      domain:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  coreModels.TenantUser:
+    properties:
+      tenant:
+        $ref: '#/definitions/coreModels.Tenant'
+      tenant_id:
+        type: integer
+      user:
+        $ref: '#/definitions/coreModels.User'
+      user_id:
+        type: integer
+    type: object
+  coreModels.User:
+    properties:
+      avatar_name:
+        type: string
+      avatar_url:
+        type: string
+      branch:
+        $ref: '#/definitions/coreModels.Branch'
+      branch_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        type: string
+      id:
+        type: integer
+      role:
+        $ref: '#/definitions/coreModels.Role'
+      role_id:
+        type: integer
+      tenant_users:
+        items:
+          $ref: '#/definitions/coreModels.TenantUser'
+        type: array
+      updated_at:
+        type: string
+      username:
+        type: string
     type: object
   gorm.DeletedAt:
     properties:
@@ -1111,26 +1246,33 @@ paths:
       description: อัปเดตข้อมูล Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant
         หรือ BranchAdmin)
       parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
       - description: รหัส Barber
         in: path
         name: barber_id
         required: true
         type: integer
-      - description: Payload สำหรับอัปเดต Barber (เช่น BranchID, ชื่อ-นามสกุล ฯลฯ)
+      - description: Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username,
+          Email)
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/barberBookingModels.Barber'
+          $ref: '#/definitions/barberBookingPort.UpdateBarberRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: คืนค่า status success และข้อมูล Barber ที่อัปเดตใน key `data`
+          description: คืนค่า status success และข้อมูล Barber ใน key `data`
           schema:
-            $ref: '#/definitions/barberBookingModels.Barber'
+            additionalProperties: true
+            type: object
         "400":
-          description: Invalid barber_id หรือ Invalid request body
+          description: Invalid tenant_id/barber_id หรือ Invalid request body
           schema:
             additionalProperties:
               type: string
@@ -1454,6 +1596,218 @@ paths:
       summary: สรุปปริมาณงานรายสาขา
       tags:
       - Workload
+  /tenants/:tenant_id/branch/:branch_id/services:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Service ทั้งหมดในระบบ
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Service ใน key
+            `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch services
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงรายการบริการทั้งหมด
+      tags:
+      - Service
+    post:
+      consumes:
+      - application/json
+      description: เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin,
+        Tenant หรือ TenantAdmin)
+      parameters:
+      - description: Payload สำหรับสร้าง Service (Name, Duration, Price)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Service'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success และข้อความยืนยันการสร้าง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body หรือ Invalid tenant ID หรือ Invalid service
+            input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างบริการใหม่
+      tags:
+      - Service
+  /tenants/:tenant_id/branch/:branch_id/services/:service_id:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
+        หรือ TenantAdmin)
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid service ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบบริการ
+      tags:
+      - Service
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Service ตามรหัสที่ระบุ
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Service ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid service ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Service not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงข้อมูลบริการตาม ID
+      tags:
+      - Service
+    put:
+      consumes:
+      - application/json
+      description: อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
+        หรือ TenantAdmin)
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payload สำหรับอัปเดต Service (Name, Duration, Price)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Service'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน
+            key `data`
+          schema:
+            $ref: '#/definitions/barberBookingModels.Service'
+        "400":
+          description: Invalid service ID หรือ Invalid request body หรือ Invalid service
+            input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Service not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขข้อมูลบริการ
+      tags:
+      - Service
   /tenants/:tenant_id/branches/:branch_id/available-barbers:
     get:
       consumes:
@@ -1846,218 +2200,6 @@ paths:
       summary: ดึงรีวิวตาม ID
       tags:
       - Review
-  /tenants/:tenant_id/services:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการ Service ทั้งหมดในระบบ
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และ array ของ Service ใน key
-            `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Failed to fetch services
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: ดึงรายการบริการทั้งหมด
-      tags:
-      - Service
-    post:
-      consumes:
-      - application/json
-      description: เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin,
-        Tenant หรือ TenantAdmin)
-      parameters:
-      - description: Payload สำหรับสร้าง Service (Name, Duration, Price)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/barberBookingModels.Service'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: คืนค่า status success และข้อความยืนยันการสร้าง
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Invalid request body หรือ Invalid tenant ID หรือ Invalid service
-            input
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to create service
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: สร้างบริการใหม่
-      tags:
-      - Service
-  /tenants/:tenant_id/services/:service_id:
-    delete:
-      consumes:
-      - application/json
-      description: ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
-        หรือ TenantAdmin)
-      parameters:
-      - description: รหัส Service
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success และข้อความยืนยันการลบ
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Invalid service ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to delete service
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ลบบริการ
-      tags:
-      - Service
-    get:
-      consumes:
-      - application/json
-      description: คืนข้อมูล Service ตามรหัสที่ระบุ
-      parameters:
-      - description: รหัส Service
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และข้อมูล Service ใน key `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid service ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Service not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to fetch service
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: ดึงข้อมูลบริการตาม ID
-      tags:
-      - Service
-    put:
-      consumes:
-      - application/json
-      description: อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
-        หรือ TenantAdmin)
-      parameters:
-      - description: รหัส Service
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Payload สำหรับอัปเดต Service (Name, Duration, Price)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/barberBookingModels.Service'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน
-            key `data`
-          schema:
-            $ref: '#/definitions/barberBookingModels.Service'
-        "400":
-          description: Invalid service ID หรือ Invalid request body หรือ Invalid service
-            input
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Service not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to update service
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: แก้ไขข้อมูลบริการ
-      tags:
-      - Service
   /tenants/:tenant_id/unavailability:
     post:
       consumes:

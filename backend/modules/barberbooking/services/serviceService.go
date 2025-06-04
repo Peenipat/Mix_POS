@@ -30,12 +30,15 @@ func validateServiceInput(svc *barberBookingModels.Service) error {
 	return nil
 }
 
-func (s *ServiceService) GetAllServices() ([]barberBookingModels.Service, error) {
-	var services []barberBookingModels.Service
-	if err := s.DB.Find(&services).Error; err != nil {
-		return nil, err
-	}
-	return services, nil
+func (s *ServiceService) GetAllServices(tenantID uint, branchID uint) ([]barberBookingModels.Service, error) {
+    var services []barberBookingModels.Service
+
+    if err := s.DB.
+        Where("tenant_id = ? AND branch_id = ?", tenantID, branchID).Order("id asc").
+        Find(&services).Error; err != nil {
+        return nil, err
+    }
+    return services, nil
 }
 
 func (s *ServiceService) GetServiceByID(id uint) (*barberBookingModels.Service, error) {
@@ -49,14 +52,23 @@ func (s *ServiceService) GetServiceByID(id uint) (*barberBookingModels.Service, 
 	return &service, nil
 }
 
-func (s *ServiceService) CreateService(service *barberBookingModels.Service) error {
+func (s *ServiceService) CreateService(tenantID uint, branchID uint,service *barberBookingModels.Service) error {
+	if service.ID != 0 {
+        return errors.New("invalid request: service ID must be zero")
+    }
+	
 	if service.Name == "" || service.Duration <= 0 || service.Price < 0 {
 		return errors.New("invalid service data")
+	}
+	if tenantID == 0 || branchID == 0 {
+		return errors.New("tenant_id and branch_id can't zero")
 	}
 
 	if err := validateServiceInput(service) ; err != nil{
 		return err
 	}
+	service.TenantID = tenantID
+    service.BranchID = branchID
 	service.CreatedAt = time.Now()
 	service.UpdatedAt = time.Now()
 	

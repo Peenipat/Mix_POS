@@ -115,8 +115,9 @@ func main() {
 	}
 
 	tenantID := uint(1)
+	branchID := uint(1)
 	// 7) Seed Customers → เป็นลูกค้าจากภายนอก ไม่ต้องพึ่ง tenant_id
-	if err := seeds.SeedCustomers(database.DB, tenantID); err != nil {
+	if err := seeds.SeedCustomers(database.DB, tenantID,&branchID); err != nil {
 		log.Fatalf("seed customers failed: %v", err)
 	}
 

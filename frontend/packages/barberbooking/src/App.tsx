@@ -14,6 +14,9 @@ import { ManageBarber } from "./page/admin/ManageBarber";
 import { ManageService } from "./page/admin/ManageService";
 import { ManageCustomer } from "./page/admin/ManageCustomer";
 import { ManageAppointments } from "./page/admin/ManageAppointments";
+import ServicePage from "./page/ServicePage";
+import MainLayout from "./layouts/MainLayout";
+import BarberPage from "./page/BarberPage";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -25,7 +28,7 @@ export default function App() {
 
   useEffect(() => {
     if (!didFetchMe.current && location.pathname.startsWith("/admin")) {
-      didFetchMe.current = true; // ตั้ง flag ว่าเรียก /me ไปแล้ว
+      didFetchMe.current = true;
       dispatch(loadCurrentUser())
         .catch(() => {
           dispatch(logout());
@@ -34,7 +37,7 @@ export default function App() {
           setInitialized(true);
         });
     }
-    
+
     setInitialized(true);
   }, [dispatch,]);
 
@@ -45,7 +48,11 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
 
-      {/* Protected /admin/* */}
+      <Route element={<MainLayout />}>
+      <Route path="service" element={<ServicePage />} />
+      <Route path="barbers" element={<BarberPage />} />
+      </Route>
+
       <Route
         path="/admin"
         element={
@@ -54,10 +61,11 @@ export default function App() {
           </RequireRole>
         }
       >
+
         <Route index element={<AdminDashboard />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="barber" element={<ManageBarber />} />
-        <Route path="service" element={<ManageService/>}/>
+        <Route path="service" element={<ManageService />} />
         <Route path="customer" element={<ManageCustomer />} />
         <Route path="appointments" element={<ManageAppointments />} />
       </Route>

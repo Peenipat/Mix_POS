@@ -24,6 +24,7 @@ export function ManageCustomer() {
 
   // 2) ดึง tenantId (สมมติว่า customer ถูกผูกกับ tenant เท่านั้น)
   const tenantId = me?.tenant_ids[0];
+  const branchId = me?.branch_id;
 
   // 3) state สำหรับเก็บรายการ customer
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -44,7 +45,7 @@ export function ManageCustomer() {
       try {
         // เรียก API สมมติเป็น /barberbooking/tenants/{tenantId}/customers
         const res = await axios.get<{ status: string; data: Customer[] }>(
-          `/barberbooking/tenants/${tenantId}/customers`
+          `/barberbooking/tenants/${tenantId}/branch/${branchId}/customers`
         );
         if (res.data.status !== "success") {
           throw new Error(res.data.status);
@@ -84,6 +85,12 @@ export function ManageCustomer() {
     { header: "Phone",       accessor: "Phone" },
   ];
 
+  const viewAction: Action<Customer> = {
+    label: "ดูประวัติการจอง",
+    onClick: (row) => console.log("edit customer", row),
+    className: "text-blue-600",
+  };
+
   const editAction: Action<Customer> = {
     label: "Edit",
     onClick: (row) => console.log("edit customer", row),
@@ -103,7 +110,7 @@ export function ManageCustomer() {
         data={customers}
         columns={columns}
         onRowClick={(r) => console.log("row clicked", r)}
-        actions={[editAction, deleteAction]}
+        actions={[viewAction,editAction, deleteAction]}
         showEdit={false}
         showDelete={false}
       />

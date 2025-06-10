@@ -8,7 +8,8 @@ import (
 
 type Customer struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement"`
-	TenantID  uint      `gorm:"not null;index:idx_tenant_email,priority:1"` // Composite Index
+	TenantID  uint      `gorm:"not null;index:idx_tenant_email,priority:1" json:"tenant_id"` // Composite Index
+	BranchID  uint 		`gorm:"not null;index" json:"branch_id"`
 	Name      string    `gorm:"not null"`
 	Phone     string    `gorm:"type:text"`    // optional
 	Email     string    `gorm:"type:text;index:idx_tenant_email,priority:2" json:"email"` // Composite Index

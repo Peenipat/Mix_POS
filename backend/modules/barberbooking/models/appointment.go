@@ -12,12 +12,12 @@ import (
 type AppointmentStatus string
 
 const (
-	StatusPending     AppointmentStatus = "PENDING"
-	StatusConfirmed   AppointmentStatus = "CONFIRMED"
-	StatusCancelled   AppointmentStatus = "CANCELLED"
-	StatusComplete    AppointmentStatus = "COMPLETED"
+	StatusPending     AppointmentStatus = "PENDING" //รอดำเนินการ
+	StatusConfirmed   AppointmentStatus = "CONFIRMED" //รับ
+	StatusCancelled   AppointmentStatus = "CANCELLED" //ยกเลิก
+	StatusComplete    AppointmentStatus = "COMPLETED" //จบงาน
 	StatusNoShow      AppointmentStatus = "NO_SHOW"
-	StatusRescheduled AppointmentStatus = "RESCHEDULED"
+	StatusRescheduled AppointmentStatus = "RESCHEDULED" //เปลี่ยนเวลา
 )
 
 type Appointment struct {

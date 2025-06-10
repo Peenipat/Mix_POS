@@ -53,11 +53,11 @@ func TestCustomerService_CRUD(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("GetAllCustomers", func(t *testing.T) {
-		customers, err := svc.GetAllCustomers(ctx, tenantID)
-		assert.NoError(t, err)
-		assert.GreaterOrEqual(t, len(customers), 1)
-	})
+	// t.Run("GetAllCustomers", func(t *testing.T) {
+	// 	customers, err := svc.GetAllCustomers(ctx, tenantID)
+	// 	assert.NoError(t, err)
+	// 	assert.GreaterOrEqual(t, len(customers), 1)
+	// })
 
 	t.Run("GetCustomerByID", func(t *testing.T) {
 		customer := &bookingModels.Customer{

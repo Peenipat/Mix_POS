@@ -6,15 +6,7 @@ CREATE TABLE IF NOT EXISTS barbers (
   tenant_id   INT            NOT NULL, 
   created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่สร้างแถว
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่แก้ไขล่าสุด
-  deleted_at  TIMESTAMPTZ    NULL,                      -- soft‐delete timestamp
-
-  CONSTRAINT fk_barbers_branch FOREIGN KEY (branch_id)
-    REFERENCES branches(id)
-    ON DELETE CASCADE,                              -- หากลบสาขา ให้ลบช่างที่สังกัดด้วย
-
-  CONSTRAINT fk_barbers_user   FOREIGN KEY (user_id)
-    REFERENCES users(id)
-    ON DELETE CASCADE                               -- หากลบบัญชีผู้ใช้ ให้ลบ record ช่างด้วย
+  deleted_at  TIMESTAMPTZ    NULL                     -- soft‐delete timestamp
 );
 
 -- ดัชนีช่วยค้นหา

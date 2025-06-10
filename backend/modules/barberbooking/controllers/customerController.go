@@ -40,7 +40,7 @@ var RolesCanManageCustomer = []coreModels.RoleName{
 // @Success      200        {object}  map[string]interface{}            "คืนค่า status success, message และ array ของ Customer ใน key `data`"
 // @Failure      400        {object}  map[string]string                 "Invalid tenant ID หรือ Failed to fetch customer"
 // @Failure      403        {object}  map[string]string                 "Permission denied"
-// @Router       /tenants/:tenant_id/customers [get]
+// @Router       /tenants/:tenant_id/branch/:branch_id/customers [get]
 // @Security     ApiKeyAuth
 func (ctrl *CustomerController) GetAllCustomers(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
@@ -60,7 +60,16 @@ func (ctrl *CustomerController) GetAllCustomers(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-	customerList, err := ctrl.CustomerService.GetAllCustomers(c.Context(), uint(tenantId))
+
+	branchId, err := helperFunc.ParseUintParam(c, "branch_id")
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid branch ID",
+			"error":   err.Error(),
+		})
+	}
+	customerList, err := ctrl.CustomerService.GetAllCustomers(c.Context(), uint(tenantId),uint(branchId))
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
@@ -374,3 +383,61 @@ func (ctrl *CustomerController) FindCustomerByEmail(c *fiber.Ctx) error {
 		"data":    customer,
 	})
 }
+
+
+func (ctrl *CustomerController) GetPendingAndCancelledByCustomer(c *fiber.Ctx) error {
+    // 1. ดึงค่า tenant_id และ branch_id จาก URL parameter
+    // Fiber ใช้ c.Params("name") หรือ c.Params("name", "defaultValue") ได้
+    tenantIDParam := c.Params("tenant_id")
+    branchIDParam := c.Params("branch_id")
+	customerIDParam := c.Params("cus_id")
+	
+
+    tenantID64, err := strconv.ParseUint(tenantIDParam, 10, 0)
+    if err != nil {
+        // คืน HTTP 400 พร้อม JSON error
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid tenant_id parameter",
+        })
+    }
+    branchID64, err := strconv.ParseUint(branchIDParam, 10, 0)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid branch_id parameter",
+        })
+    }
+	customerID64, err := strconv.ParseUint(customerIDParam, 10, 0)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid cus_id parameter",
+        })
+    }
+    tenantID := uint(tenantID64)
+    branchID := uint(branchID64)
+	customerID := uint(customerID64)
+
+    // 2. เรียก service ให้ทำงาน
+    results, err := ctrl.CustomerService.GetPendingAndCancelledCount(
+        c.Context(),
+        tenantID,
+        branchID,
+		customerID,
+    )
+    if err != nil {
+        // 500 Internal Server Error
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": err.Error(),
+        })
+    }
+
+    // 3. ส่งผลลัพธ์กลับ (status success + data)
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "status": "success",
+        "data":   results,
+    })
+}
+

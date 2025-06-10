@@ -3,9 +3,13 @@ module.exports = {
     './src/**/*.{js,ts,jsx,tsx}',
     './node_modules/flowbite-react/**/*.js',
     './node_modules/flowbite/**/*.js',
+    './node_modules/flowbite-datepicker/**/*.js', 
   ],
   theme: { extend: {} },
   plugins: [
     require('flowbite/plugin'),
+    require('tailwindcss-filters'),
+    require('@tailwindcss/forms'),
+    require('flowbite-datepicker/plugin'),
   ],
 }

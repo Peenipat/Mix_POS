@@ -8,7 +8,7 @@ import (
 )
 
 
-func SeedCustomers(db *gorm.DB, tenantID uint) error {
+func SeedCustomers(db *gorm.DB, tenantID uint,branchID *uint) error {
 	customers := []bookingModels.Customer{
 		{
 			Name:  "สมชาย ใจดี",
@@ -31,6 +31,7 @@ func SeedCustomers(db *gorm.DB, tenantID uint) error {
 	for _, c := range customers {
 		record := bookingModels.Customer{
 			TenantID: tenantID,
+			BranchID: *branchID,
 			Email:    c.Email,
 		}
 		attrs := bookingModels.Customer{

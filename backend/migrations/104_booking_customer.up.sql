@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS customers (
   id         SERIAL PRIMARY KEY,
-  tenant_id  INT NOT NULL REFERENCES tenants(id),
+  tenant_id  INT NOT NULL,
+  branch_id   INT NOT NULL, 
   name       TEXT NOT NULL,
   phone      TEXT,
   email      TEXT,

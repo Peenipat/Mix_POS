@@ -100,9 +100,10 @@ export default function Login() {
 
       {/* ฝั่งขวา: รูป + overlay */}
       <div className="relative overflow-hidden">
-        <img src="./login_img.jpg" alt="Login" className="w-full h-full object-cover" />
+        <img src="" alt="Login" className="w-full h-full object-cover" />
         <div className="absolute bottom-0 left-0 w-full flex justify-center">
           <div className="bg-white/30 backdrop-blur-md w-full p-3 shadow-inner" />
+          <img src="" alt="dde" />
         </div>
       </div>
     </div>

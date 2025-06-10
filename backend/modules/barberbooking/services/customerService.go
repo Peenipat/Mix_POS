@@ -19,9 +19,9 @@ func NewCustomerService(db *gorm.DB) barberBookingPort.ICustomer {
 }
 
 //  ดึงรายชื่อลูกค้าทั้งหมดของ tenant
-func (s *customerService) GetAllCustomers(ctx context.Context, tenantID uint) ([]barberBookingModels.Customer, error) {
+func (s *customerService) GetAllCustomers(ctx context.Context, tenantID uint, branchID uint) ([]barberBookingModels.Customer, error) {
 	var customers []barberBookingModels.Customer
-	if err := s.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Find(&customers).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("tenant_id = ? AND branch_id = ?", tenantID,branchID).Find(&customers).Error; err != nil {
 		return nil, err
 	}
 	return customers, nil
@@ -133,5 +133,37 @@ func (s *customerService) FindCustomerByEmail(ctx context.Context, tenantID uint
 		return nil, err
 	}
 	return &customer, nil
+}
+
+
+func (s *customerService) GetPendingAndCancelledCount(
+    ctx context.Context,
+    tenantID uint,
+    branchID uint,
+	customerID uint,
+	
+) ([]barberBookingPort.CountByCustomerStatus, error) {
+    // สร้าง slice เพื่อเก็บผลลัพธ์
+    var results []barberBookingPort.CountByCustomerStatus
+
+    // รายการสถานะที่สนใจ (PENDING และ CANCELLED)
+    statuses := []barberBookingModels.AppointmentStatus{
+        barberBookingModels.StatusPending,
+        barberBookingModels.StatusCancelled,
+    }
+
+    err := s.db.WithContext(ctx).
+        Model(&barberBookingModels.Appointment{}).
+        Select("customer_id, status, COUNT(*) AS total").
+        Where("tenant_id = ? AND branch_id = ? AND customer_id = ? AND status IN ?", tenantID, branchID,customerID, statuses).
+        Group("customer_id, status").
+        Scan(&results).Error
+
+    if err != nil {
+        return nil, err
+    }
+
+    // คืนผลลัพธ์ (ถ้าไม่มีแถวใด ๆ ก็จะคืน slice ว่าง)
+    return results, nil
 }
 

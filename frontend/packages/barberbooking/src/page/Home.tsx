@@ -100,14 +100,12 @@ export default function Home() {
           <div
             className="
               flex-1 m-4 p-6
-              bg-white/20           /* ครึ่งโปร่งแสง */
-              backdrop-blur-md      /* เบลอภาพหลัง */
               rounded-lg
               flex items-center justify-center
             "
           >
             <h2 className="text-3xl font-semibold text-white text-center">
-              Hello, Left!
+              ตัดง่าย ดูดี ครบจบในที่เดียว
             </h2>
           </div>
 

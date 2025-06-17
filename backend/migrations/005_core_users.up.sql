@@ -6,6 +6,8 @@ CREATE TABLE users (
   password    TEXT           NOT NULL,                  -- รหัสผ่าน bcrypt hash
   role_id     INT            NOT NULL,                  -- FK ไปยัง roles.id
   branch_id   INT            NULL,                      -- FK ไปยัง branches.id
+  img_path    TEXT           NULL,
+  img_name    TEXT           NULL,
   created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่สร้าง
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่อัปเดตล่าสุด
   deleted_at  TIMESTAMPTZ    NULL,                      -- soft‐delete

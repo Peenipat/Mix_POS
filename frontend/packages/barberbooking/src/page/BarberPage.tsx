@@ -1,5 +1,5 @@
 // src/page/ServicePage.tsx
-import React from "react";
+import { useState } from "react";
 
 interface Barber {
     id: number;
@@ -49,7 +49,18 @@ const mockBarbers: Barber[] = [
     },
 ];
 
+const dummySlots: TimeSlot[] = [
+    { id: 1, date: "2025-06-12", time: "10:00 – 11:00", available: true },
+    { id: 2, date: "2025-06-12", time: "11:00 – 12:00", available: false },
+    { id: 3, date: "2025-06-13", time: "13:00 – 14:00", available: true },
+    // … เพิ่มตามจริง
+];
+
+
+
+
 export default function BarberPage() {
+    const [isModalOpen, setModalOpen] = useState(false);
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200">
             <div className="container mx-auto py-12 px-6">
@@ -75,18 +86,121 @@ export default function BarberPage() {
                                     <p className="text-gray-400 text-sm mb-2">
                                         {barber.specialization}
                                     </p>
-                                    <p className="text-gray-400 text-sm">
-                                        ประสบการณ์ {barber.experienceYears} ปี
-                                    </p>
                                 </div>
                                 <div className="flex items-center justify-between text-gray-100 mt-4">
-                                    <span className="text-sm bg-gray-700 px-2 py-1 rounded">
+                                    <span className="text-sm bg-gray-700 p-1.5 rounded">
                                         ⭐ {barber.rating.toFixed(1)}
                                     </span>
+
+                                    <button className="px-3 py-1.5 bg-blue-600 rounded text-white hover:bg-blue-700 transition"
+                                        onClick={() => setModalOpen(true)}>
+                                        ดูคิวของช่าง
+                                    </button>
+
+                                    <BarberScheduleModal
+                                        isOpen={isModalOpen}
+                                        onClose={() => setModalOpen(false)}
+                                        slots={dummySlots}
+                                        barberName="สมชาย ศรีสุข"
+                                    />
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface TimeSlot {
+    id: number;
+    date: string;       // ex: "2025-06-12"
+    time: string;       // ex: "10:00 – 11:00"
+    available: boolean; // true = ว่าง, false = ไม่ว่าง
+}
+
+interface BarberScheduleModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    slots: TimeSlot[];
+    barberName: string;
+}
+
+function BarberScheduleModal({
+    isOpen,
+    onClose,
+    slots,
+    barberName,
+}: BarberScheduleModalProps) {
+    if (!isOpen) return null;
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={onClose}
+        >
+            <div
+                className="bg-white rounded-lg w-full max-w-2xl mx-4 shadow-lg overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex justify-between items-center px-6 py-4 border-b text-black">
+                    <h3 className="text-xl font-semibold">
+                        ตารางงานของ {barberName}
+                    </h3>
+                    <button
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={onClose}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 max-h-[60vh] overflow-auto text-black">
+                    {slots.length === 0 ? (
+                        <p className="text-center text-gray-500">ยังไม่มีข้อมูลตารางงาน</p>
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="px-4 py-2">วันที่</th>
+                                    <th className="px-4 py-2">ช่วงเวลา</th>
+                                    <th className="px-4 py-2">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {slots.map((slot) => (
+                                    <tr key={slot.id} className="border-b last:border-none">
+                                        <td className="px-4 py-3">{slot.date}</td>
+                                        <td className="px-4 py-3">{slot.time}</td>
+                                        <td className="px-4 py-3">
+                                            {slot.available ? (
+                                                <span className="inline-block px-3 py-1 text-sm bg-green-100 text-green-800 rounded">
+                                                    ว่าง
+                                                </span>
+                                            ) : (
+                                                <span className="inline-block px-3 py-1 text-sm bg-red-100 text-red-800 rounded">
+                                                    ไม่ว่าง
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end px-6 py-4 border-t">
+                    <button
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                        onClick={onClose}
+                    >
+                        ปิด
+                    </button>
                 </div>
             </div>
         </div>

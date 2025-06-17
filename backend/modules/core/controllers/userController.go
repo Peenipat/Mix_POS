@@ -1,13 +1,13 @@
 package Core_controllers
 
 import (
+	"errors"
+	"log"
+	aws "myapp/cmd/worker"
 	corePort "myapp/modules/core/port"
 	coreServices "myapp/modules/core/services"
-    aws "myapp/cmd/worker"
-	"errors"
-	"strconv"
 	"net/http"
-    "log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -45,59 +45,67 @@ func (ctrl *UserController) CreateUserFromRegister(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User registered successfully"})
 }
 
-// CreateUserFromAdmin godoc
 // @Summary      สร้างผู้ใช้โดย Super Admin
 // @Description  ใช้สำหรับ SUPER_ADMIN สร้าง User role อื่น ๆ แต่ไม่สามารถใช้สร้าง SUPER_ADMIN ได้
 // @Tags         User
-// @Accept       json
+// @Accept       multipart/form-data
 // @Produce      json
-// @Param        body  body  corePort.CreateUserInput  true  "ข้อมูลผู้ใช้งาน"
-// @Success      200  {object}  coreModels.User
-// @Failure 400 {object} map[string]string
+// @Param        username   formData  string  true  "ชื่อผู้ใช้"
+// @Param        email      formData  string  true  "อีเมล"
+// @Param        password   formData  string  true  "รหัสผ่าน"
+// @Param        role       formData  string  true  "บทบาทของผู้ใช้ (เช่น ADMIN, USER)"
+// @Param        branch_id  formData  uint    false "รหัสสาขา (ถ้ามี)"
+// @Param        avatar     formData  file    false "รูปภาพโปรไฟล์"
+// @Success      201        {object}  map[string]interface{}
+// @Failure      400        {object}  map[string]string
+// @Failure      500        {object}  map[string]string
 // @Router       /admin/create_users [post]
 // @Security     ApiKeyAuth
 func (ctrl *UserController) CreateUserFromAdmin(c *fiber.Ctx) error {
-    // 1) อ่านค่าฟิลด์ต่าง ๆ จาก form-data
-    input := new(corePort.CreateUserInput)
-    input.Username = c.FormValue("username")
-    input.Email    = c.FormValue("email")
-    input.Password = c.FormValue("password")
-    input.Role     = c.FormValue("role")
+	input := new(corePort.CreateUserInput)
 
-    // แปลง branch_id (ถ้ามี)
-    if b := c.FormValue("branch_id"); b != "" {
-        if bid, err := strconv.ParseUint(b, 10, 64); err == nil {
-            u := uint(bid)
-            input.BranchID = &u
-        }
-    }
+	input.Username = c.FormValue("username")
+	input.Email = c.FormValue("email")
+	input.Password = c.FormValue("password")
+	input.Role = c.FormValue("role")
 
-    // 2) รับไฟล์ avatar แล้วอัปโหลดขึ้น S3
-    if fileHeader, err := c.FormFile("avatar"); err == nil {
-        url, filename, err := aws.UploadToS3(fileHeader)
-        if err != nil {
-            // log ลง console เพื่อดีบัก
-            log.Printf("uploadToS3 error: %v", err)
-            return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-        }
-        // if err != nil {
-        //     return c.Status(500).JSON(fiber.Map{"error": "failed to upload avatar"})
-        // }
-        input.AvatarURL  = url
-        input.AvatarName = filename
-    }
+	// แปลงค่า branch_id จาก string → uint
+	if b := c.FormValue("branch_id"); b != "" {
+		if bid, err := strconv.ParseUint(b, 10, 64); err == nil {
+			u := uint(bid)
+			input.BranchID = &u
+		}
+	}
 
-    // 3) เรียก Service เพื่อสร้าง User
-    if err := ctrl.UserService.CreateUserFromAdmin(*input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-    }
+	keyPrefix := c.FormValue("keyprefix")
+	if keyPrefix == "" {
+		keyPrefix = "avatars/"
+	}
+    log.Printf("keyPrefix : %s",keyPrefix)
+	// ตรวจสอบและอัปโหลด avatar (ถ้ามี)
+	fileHeader, err := c.FormFile("file")
+	if err == nil && fileHeader != nil {
+		url, filename, err := aws.UploadToS3(fileHeader,keyPrefix)
+		if err != nil {
+			log.Printf("UploadToS3 error: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to upload avatar"})
+		}
+		input.Img_path = url
+		input.Img_name = filename
+	}
 
-    // 4) ตอบกลับสำเร็จ พร้อมสถานะ 201
-    return c.Status(201).JSON(fiber.Map{
-        "message":    "User created successfully",
-        "avatar_url": input.AvatarURL,
-    })
+	// เรียกใช้ service เพื่อสร้าง user
+	if err := ctrl.UserService.CreateUserFromAdmin(*input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message":  "User created successfully",
+		"img_path": input.Img_path,
+		"img_name": input.Img_name,
+	})
 }
+
 // ChangeUserRole godoc
 // @Summary      เปลี่ยน Role ของผู้ใช้
 // @Description  สำหรับ Super Admin เพื่อเปลี่ยน Role ของผู้ใช้
@@ -109,7 +117,7 @@ func (ctrl *UserController) CreateUserFromAdmin(c *fiber.Ctx) error {
 // @Failure      400 {object} map[string]string
 // @Router       /admin/change_role [put]
 // @Security     ApiKeyAuth
-func (ctrl *UserController)  ChangeUserRole(c *fiber.Ctx) error {
+func (ctrl *UserController) ChangeUserRole(c *fiber.Ctx) error {
 	var input corePort.ChangeRoleInput
 
 	// รับข้อมูลจาก body
@@ -143,7 +151,7 @@ func (ctrl *UserController)  ChangeUserRole(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /admin/users [get]
 // @Security ApiKeyAuth
-func (ctrl *UserController)  GetAllUsers(c *fiber.Ctx) error {
+func (ctrl *UserController) GetAllUsers(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 
@@ -170,7 +178,7 @@ func (ctrl *UserController)  GetAllUsers(c *fiber.Ctx) error {
 // @Failure      500 {object} map[string]string
 // @Router       /admin/user-by-role [get]
 // @Security     ApiKeyAuth
-func  (ctrl *UserController) FilterUsersByRole(c *fiber.Ctx) error {
+func (ctrl *UserController) FilterUsersByRole(c *fiber.Ctx) error {
 	// ดึง role ของคนที่ login (จาก JWT Middleware ที่ c.Locals())
 	userRole := c.Locals("userRole")
 	if userRole != "SUPER_ADMIN" {
@@ -192,102 +200,102 @@ func  (ctrl *UserController) FilterUsersByRole(c *fiber.Ctx) error {
 }
 
 type ChangePasswordRequest struct {
-    OldPassword string `json:"old_password"`
-    NewPassword string `json:"new_password"`
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
 }
 
 // ChangePassword handles PUT /users/:id/password
 func (ctrl *UserController) ChangePassword(c *fiber.Ctx) error {
-    // 1. Authorization (optional): check role / ownership
-    // e.g. userIDFromToken := c.Locals("user_id").(uint)
-    // if userIDFromToken != targetID && !IsAdmin(...) { return 403 }
+	// 1. Authorization (optional): check role / ownership
+	// e.g. userIDFromToken := c.Locals("user_id").(uint)
+	// if userIDFromToken != targetID && !IsAdmin(...) { return 403 }
 
-    // 2. Parse user ID from path
-    idParam := c.Params("id")
-    id64, err := strconv.ParseUint(idParam, 10, 64)
-    if err != nil || id64 == 0 {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Invalid user ID",
-        })
-    }
-    userID := uint(id64)
+	// 2. Parse user ID from path
+	idParam := c.Params("id")
+	id64, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil || id64 == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid user ID",
+		})
+	}
+	userID := uint(id64)
 
-    // 3. Parse JSON body
-    var body ChangePasswordRequest
-    if err := c.BodyParser(&body); err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Malformed JSON",
-        })
-    }
+	// 3. Parse JSON body
+	var body ChangePasswordRequest
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Malformed JSON",
+		})
+	}
 
-    // 4. Call service
-    err = ctrl.UserService.ChangePassword(c.Context(), userID, body.OldPassword, body.NewPassword)
-    if err != nil {
-        switch {
-        case errors.Is(err, coreServices.ErrUserNotFound):
-            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-                "status":  "error",
-                "message": "User not found",
-            })
-        case errors.Is(err, coreServices.ErrInvalidOldPassword):
-            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-                "status":  "error",
-                "message": "Old password is incorrect",
-            })
-        default:
-            return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-                "status":  "error",
-                "message": "Failed to change password",
-            })
-        }
-    }
+	// 4. Call service
+	err = ctrl.UserService.ChangePassword(c.Context(), userID, body.OldPassword, body.NewPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, coreServices.ErrUserNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"status":  "error",
+				"message": "User not found",
+			})
+		case errors.Is(err, coreServices.ErrInvalidOldPassword):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Old password is incorrect",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Failed to change password",
+			})
+		}
+	}
 
-    // 5. Success
-    return c.Status(fiber.StatusOK).JSON(fiber.Map{
-        "status":  "success",
-        "message": "Password changed successfully",
-    })
+	// 5. Success
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "success",
+		"message": "Password changed successfully",
+	})
 }
 
 func (ac *UserController) Me(c *fiber.Ctx) error {
-    // 1. ดึง user_id จาก middleware RequireAuth
-    uidVal := c.Locals("user_id")
-    if uidVal == nil {
-        return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-            "status":  "error",
-            "message": "User not authenticated",
-        })
-    }
-    userID, ok := uidVal.(uint)
-    if !ok {
-        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Invalid user_id type in context",
-        })
-    }
+	// 1. ดึง user_id จาก middleware RequireAuth
+	uidVal := c.Locals("user_id")
+	if uidVal == nil {
+		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "User not authenticated",
+		})
+	}
+	userID, ok := uidVal.(uint)
+	if !ok {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid user_id type in context",
+		})
+	}
 
-    // 2. เรียก service Me
-    meDTO, err := ac.UserService.Me(c.Context(), userID)
-    if err != nil {
-        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Failed to fetch user info",
-            "error":   err.Error(),
-        })
-    }
-    if meDTO == nil {
-        return c.Status(http.StatusNotFound).JSON(fiber.Map{
-            "status":  "error",
-            "message": "User not found",
-        })
-    }
+	// 2. เรียก service Me
+	meDTO, err := ac.UserService.Me(c.Context(), userID)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to fetch user info",
+			"error":   err.Error(),
+		})
+	}
+	if meDTO == nil {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"status":  "error",
+			"message": "User not found",
+		})
+	}
 
-    // 3. ตอบกลับ
-    return c.Status(http.StatusOK).JSON(fiber.Map{
-        "status":  "success",
-        "message": "User profile retrieved",
-        "data":    meDTO,
-    })
+	// 3. ตอบกลับ
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"status":  "success",
+		"message": "User profile retrieved",
+		"data":    meDTO,
+	})
 }

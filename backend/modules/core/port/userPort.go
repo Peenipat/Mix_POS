@@ -17,9 +17,10 @@ type CreateUserInput struct {
 	Password string `json:"password" validate:"required,min=6"`
 	Role     string `json:"role" validate:"required"`
 
-    BranchID   *uint
-	AvatarURL  string
-    AvatarName string
+    BranchID   *uint 
+	Img_path  string `json:"img_path,omitempty"`
+    Img_name string `json:"img_name,omitempty"`
+	KeyPrefix string
 }
 
 type ChangeRoleInput struct {
@@ -34,8 +35,8 @@ type UserInfoResponse struct {
 	RoleID   uint   `json:"role_id"`
 	Role     string `json:"role"`
 
-	AvatarURL   string `json:"avatar_url,omitempty"`   
-    AvatarName  string `json:"avatar_name,omitempty"` 
+	Img_path  string `json:"img_path,omitempty" `
+    Img_name string `json:"img_name,omitempty"`
 }
 
 type MeDTO struct {

@@ -10,8 +10,8 @@ export const UserResponseSchema = z.object({
   updatedAt: z.string().datetime({ message: "Invalid updatedAt format" }).optional(),
   deletedAt: z.string().datetime({ message: "Invalid deletedAt format "}).nullable().optional(),
 
-  avatar_url: z.string().url({ message: "Invalid avatar URL" }).optional(),
-  avatar_name: z.string().optional(),
+  img_path: z.string().optional(),
+  img_name: z.string().optional(),
 });
 export const UsersSchema = z.array(UserResponseSchema);
 export type User = z.infer<typeof UserResponseSchema>;

@@ -8,32 +8,43 @@ import (
     "os"
     "path/filepath"
     "time"
+    "crypto/rand"
+    "encoding/hex"
 
     "github.com/aws/aws-sdk-go-v2/aws"
     "github.com/aws/aws-sdk-go-v2/service/s3"
+    "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-// uploadToS3 รับ FileHeader แล้วคืน public URL กับชื่อไฟล์
-func UploadToS3(fileHeader *multipart.FileHeader) (string, string, error) {
+func generateRandomFilename(original string) string {
+    ext := filepath.Ext(original)
+    b := make([]byte, 8)
+    _, _ = rand.Read(b)
+    randomStr := hex.EncodeToString(b)
+    return fmt.Sprintf("%d_%s%s", time.Now().Unix(), randomStr, ext)
+}
+
+func UploadToS3(fileHeader *multipart.FileHeader, keyPrefix string) (string, string, error) {
     f, err := fileHeader.Open()
     if err != nil {
         return "", "", err
     }
     defer f.Close()
 
-    // ตั้งชื่อไฟล์ไม่ซ้ำ
-    base := filepath.Base(fileHeader.Filename)
-    filename := fmt.Sprintf("%d_%s", time.Now().Unix(), base)
-    key := "avatars/" + filename
+    filename := generateRandomFilename(fileHeader.Filename)
+    key := filepath.Join(keyPrefix, filename) 
 
-    out, err := S3Uploader.Upload(context.TODO(), &s3.PutObjectInput{
+    // อัปโหลดขึ้น S3
+    _, err = S3Uploader.Upload(context.TODO(), &s3.PutObjectInput{
         Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
         Key:    aws.String(key),
         Body:   f,
+        ACL:    types.ObjectCannedACLPublicRead,
     })
     if err != nil {
         return "", "", err
     }
 
-    return out.Location, filename, nil
+    return keyPrefix, filename, nil
 }
+

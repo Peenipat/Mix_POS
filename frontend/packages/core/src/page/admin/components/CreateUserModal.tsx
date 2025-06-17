@@ -54,7 +54,8 @@ export function CreateUserModal({ isOpen, onClose, onCreate }: CreateUserModalPr
       formData.append("password", password);
       formData.append("role", role);
       if (branchId) formData.append("branch_id", branchId.toString());
-      if (avatarFile) formData.append("avatar", avatarFile);
+      if (avatarFile) formData.append("file", avatarFile);
+      formData.append("keyprefix", "user_profile")
 
       await axios.post("/admin/create_users", formData, {
         headers: { "Content-Type": "multipart/form-data" },

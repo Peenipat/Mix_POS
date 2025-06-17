@@ -123,8 +123,8 @@ func (u *UserService) CreateUserFromAdmin(input corePort.CreateUserInput) error 
         RoleID:     role.ID,
 
         BranchID:   input.BranchID,
-        AvatarURL:  input.AvatarURL,
-        AvatarName: input.AvatarName,
+        Img_path:  input.Img_path,
+        Img_name: input.Img_name,
     }
 
     if err := tx.Create(&user).Error; err != nil {
@@ -229,8 +229,8 @@ func (u *UserService) GetAllUsers(limit int, offset int) ([]corePort.UserInfoRes
 			RoleID:   u.RoleID,      // รหัสบทบาท
             Role:     u.Role.Name,
 
-            AvatarURL:   u.AvatarURL,   // เอา URL มาใส่
-            AvatarName:  u.AvatarName,
+            Img_path:   u.Img_path,   // เอา URL มาใส่
+            Img_name:  u.Img_name,
 
 		}
 	})

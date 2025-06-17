@@ -9,9 +9,9 @@ interface UserCardProps {
 export function UserCard({ user }: UserCardProps) {
   return (
     <div className="flex items-center space-x-4 p-4 bg-white rounded-lg shadow">
-      {user.avatar_url && (
+      {user.img_path && (
         <img
-          src={user.avatar_url}
+          src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${user.img_path}/${user.img_name}`}
           alt={`${user.username} avatar`}
           className="w-12 h-12 rounded-full object-cover"
         />

@@ -13,6 +13,7 @@ import { UserList } from '../components/UserList';
 export default function ManageUsers() {
   // State
   const [users, setUsers] = useState<UserResponse[]>([]);
+  console.log(users)
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);

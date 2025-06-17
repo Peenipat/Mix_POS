@@ -18,8 +18,8 @@ type User struct {
 
 	TenantUsers []TenantUser   `gorm:"foreignKey:UserID" json:"tenant_users,omitempty"`
 
-	AvatarURL  	string 			`gorm:"type:text" json:"avatar_url,omitempty"`
-    AvatarName 	string 			`gorm:"type:text" json:"avatar_name,omitempty"`
+	Img_path  	string 			`gorm:"column:img_path" json:"Img_path,omitempty"`
+    Img_name 	string 			`gorm:"column:img_name" json:"Img_name,omitempty"`
 
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`

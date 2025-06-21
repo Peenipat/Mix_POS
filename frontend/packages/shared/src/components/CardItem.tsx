@@ -44,24 +44,18 @@ export const CardItem: React.FC<IDCardProps> = ({
                     className="absolute top-2 left-2 h-12 w-auto object-contain"
                 />
             )}
-            {/* ส่วน Background ด้านบน (สีน้ำเงิน) */}
-            <div className="h-auto bg-green-100 flex justify-center">
-                {/* โลโก้ (ถ้าไม่มีโลโก้ ให้ไม่แสดง) */}
-
-                {/* รูปโพรไฟล์วงกลม จะวางให้ลอยข้ามกรอบระหว่างพื้นน้ำเงินกับพื้นขาว */}
-                <div className="flex items-center">
-                    {avatarSrc ? (
-                        <img
-                            src={avatarSrc}
-                            alt={avatarAlt}
-                            className="w-15 h-25 rounded-sm border-4 border-white  bg-gray-100 my-2"
-                        />
-                    ) : (
-                        <div className="w-20 h-20 rounded-full border-4 border-white bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-500 text-sm">No Photo</span>
-                        </div>
-                    )}
-                </div>
+            <div className="h-48 bg-green-100 overflow-hidden">
+                {avatarSrc ? (
+                    <img
+                        src={avatarSrc}
+                        alt={avatarAlt}
+                        className="w-full h-full object-cover object-top"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <span className="text-gray-500 text-sm">No Photo</span>
+                    </div>
+                )}
             </div>
 
             {/* เนื้อหาด้านล่าง (พื้นขาว) */}
@@ -74,11 +68,6 @@ export const CardItem: React.FC<IDCardProps> = ({
                 {/* ข้อมูลต่าง ๆ แบบ Grid สองคอลัมน์ */}
                 <div className="mt-4 text-left">
                     <div className="grid grid-cols-3 gap-2 text-sm text-gray-700">
-                        {/* <span className="font-semibold">ID No:</span> */}
-                        {/* <span className="col-span-2">{idNo}</span> */}
-
-                        {/* <span className="font-semibold">DOB:</span> */}
-                        {/* <span className="col-span-2">{dob}</span> */}
                         <span className="col-span-3">
                             <span className="font-semibold">Email: </span>{email}
                         </span>

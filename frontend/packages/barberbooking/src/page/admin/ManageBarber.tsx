@@ -11,12 +11,15 @@ import { Modal } from "@object/shared"
 import type { EditBarberFormData } from "../../schemas/barberSchema";
 import { editBarberSchema } from "../../schemas/barberSchema";
 import type { ChangeEvent } from "react";
+import { CardItem } from "@object/shared/components/CardItem";
+import { TableCellsIcon } from "../../components/icons/TableCellsIcon";
+import { GridViewIcon } from "../../components/icons/GridViewIcon"
 
 export function ManageBarber() {
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
 
-  const tenantId = me?.tenant_ids?.[0]; 
+  const tenantId = me?.tenant_ids?.[0];
   const branchId = Number(me?.branch_id);
 
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -30,13 +33,14 @@ export function ManageBarber() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
+  const [viewMode, setViewMode] = useState<"table" | "card">("card");
+
   const handleDeleteSuccess = () => {
     if (deleteBarber) {
       setBarbers(prev => prev.filter(b => b.id !== deleteBarber.id));
     }
   };
 
-  // ฟังก์ชันดึงข้อมูล barbers
   const loadBarbers = useCallback(async () => {
     if (!tenantId || !branchId) return;
     setLoadingBarbers(true);
@@ -93,64 +97,110 @@ export function ManageBarber() {
 
   return (
     <div className="space-y-6">
-      {/* ปุ่มเปิด Modal */}
-      <div>
-        <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
+      {/* ปุ่มควบคุม */}
+      <div className="flex flex-wrap items-center gap-4 justify-between">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="btn btn-primary"
+        >
           + เพิ่มช่างคนใหม่
         </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("card")}
+            className={`px-4 py-2 rounded-md border ${viewMode === "card"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-800 border-gray-300"
+              }`}
+          >
+            <GridViewIcon className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setViewMode("table")}
+            className={`px-4 py-2 rounded-md border ${viewMode === "table"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-800 border-gray-300"
+              }`}
+          >
+            <TableCellsIcon className="w-6 h-6" />
+          </button>
+
+        </div>
       </div>
 
-      {/* Modal สร้าง Barber */}
-      <CreateBarberModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreated}
-      />
-
-      {/* แสดงสถานะ Loading/Error ของ barbers */}
+      {/* Loading/Error */}
       {loadingBarbers && <p>Loading barbers…</p>}
-      {errorBarbers && <p className="text-red-500">Error loading barbers: {errorBarbers}</p>}
+      {errorBarbers && (
+        <p className="text-red-500">Error loading barbers: {errorBarbers}</p>
+      )}
 
-      {/* ตารางบาร์เบอร์ */}
+      {/* แสดงข้อมูล */}
       {!loadingBarbers && !errorBarbers && (
         <>
-          <h2 className="text-xl font-semibold">ช่างในสาขาที่ {branchId}</h2>
-          <DataTable<Barber>
-            data={barbers}
-            columns={[
-              {
-                header: "#",
-                accessor: (_row, rowIndex) => rowIndex + 1,
-              },
-              { header: "ชื่อผู้ใช้", accessor: "username" },
-              { header: "อีเมล์", accessor: "email" },
-              { header: "เบอร์โทร", accessor: "phone_number" },
-            ]}
-            onRowClick={(r) => console.log("row clicked", r)}
-            actions={[]}
-            onEdit={(barber) => {
-              setEditBarber(barber)
-              setIsEditOpen(true)
-            }}
-            showEdit={true}
-            onDelete={(barber) => {
-              setDeleteBarber(barber)
-              setIsDeleteOpen(true)
-            }}
-            showDelete={true}
-          />
-          <EditBarberModal
-            isOpen={isEditOpen}
-            barber={editBarber}
-            onClose={() => setIsEditOpen(false)}
-            onCreate={handleCreated}
-          />
+          <h2 className="text-xl font-semibold">
+            ช่างในสาขาที่ {branchId}
+          </h2>
 
+          {viewMode === "table" ? (
+            <DataTable<Barber>
+              data={barbers}
+              columns={[
+                { header: "#", accessor: (_row, i) => i + 1 },
+                { header: "ชื่อผู้ใช้", accessor: "username" },
+                { header: "อีเมล์", accessor: "email" },
+                { header: "เบอร์โทร", accessor: "phone_number" },
+              ]}
+              onEdit={(b) => {
+                setEditBarber(b);
+                setIsEditOpen(true);
+              }}
+              onDelete={(b) => {
+                setDeleteBarber(b);
+                setIsDeleteOpen(true);
+              }}
+              showEdit
+              showDelete
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {barbers.map((barber) => (
+                <CardItem
+                  key={barber.id}
+                  logoSrc={barber.logoSrc}
+                  avatarSrc={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${barber.img_path}/${barber.img_name}`}
+                  avatarAlt={barber.avatarAlt}
+                  name={barber.username}
+                  jobTitle={barber.jobTitle}
+                  email={barber.email}
+                  phone={barber.phone_number}
+                  sex={barber.sex}
+                  onView={() => handleView(barber.id)}
+                  onEdit={() => {
+                    setEditBarber(barber);
+                    setIsEditOpen(true);
+                  }}
+                  onDelete={() => {
+                    setDeleteBarber(barber);
+                    setIsDeleteOpen(true);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* โมดัล */}
           <DeleteBarberModal
             isOpen={isDeleteOpen}
             barber={deleteBarber}
             onDelete={handleDeleteSuccess}
             onClose={() => setIsDeleteOpen(false)}
+            onCreate={handleCreated}
+          />
+          <EditBarberModal
+            isOpen={isEditOpen}
+            barber={editBarber}
+            onClose={() => setIsEditOpen(false)}
             onCreate={handleCreated}
           />
         </>
@@ -273,7 +323,7 @@ function CreateBarberModal({
   if (statusMe === "loading") return null;
   if (statusMe === "succeeded" && !me) return null;
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <form
@@ -368,17 +418,21 @@ function EditBarberModal({
   onClose,
   onCreate,
 }: EditBarberModalProps) {
+  if (!isOpen || !barber) {
+    return null;
+  }
+
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
 
   const tenantId = me?.tenant_ids?.[0];
   const branchId = me?.branch_id;
 
-  // 1. ตั้ง React Hook Form พร้อม Zod resolver
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<EditBarberFormData>({
     resolver: zodResolver(editBarberSchema),
@@ -386,38 +440,39 @@ function EditBarberModal({
       username: "",
       email: "",
       phone_number: "",
+      img_path: "",
+      img_name: "",
+      profilePicture: "",
     },
   });
 
-  // 2. เมื่อเปิด modal ให้ reset ค่าจาก barber prop เข้า form
   useEffect(() => {
     if (isOpen && barber) {
       reset({
         username: barber.username,
         email: barber.email,
         phone_number: barber.phone_number,
+        img_path: barber.img_path,
+        img_name: barber.img_name,
       });
     }
   }, [isOpen, barber, reset]);
 
-
-  // 3. ถ้ายังโหลดข้อมูล me หรือไม่มี barber หรือ isOpen = false, return null
   if (statusMe === "loading") return null;
   if (statusMe === "succeeded" && !me) return null;
-  if (!isOpen || !barber) return null;
+  const [previewUrl, setPreviewUrl] = useState<string | null>(`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${barber.img_path}/${barber.img_name}`);
 
-  // 4. ฟังก์ชันส่งข้อมูล
   const onSubmit = async (data: EditBarberFormData) => {
     if (!tenantId || !branchId) {
-      return; 
+      return;
     }
 
     try {
       const res = await axios.put<{ status: string }>(
         `/barberbooking/tenants/${tenantId}/barbers/${barber.id}`,
         {
-          branch_id: branchId,         // ถ้าไม่ต้องเปลี่ยนสาขา ให้ส่งค่าเดิม
-          user_id: barber.user_id,     // ส่งค่าเดิมของ user_id
+          branch_id: branchId,
+          user_id: barber.user_id,
           phone_number: data.phone_number,
           username: data.username,
           email: data.email,
@@ -433,10 +488,42 @@ function EditBarberModal({
     }
   };
 
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Barber">
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Username */}
+        <div className="mb-4">
+          <label className="block text-gray-700 dark:text-gray-200 mb-1">
+            รูปภาพโปรไฟล์
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            {...register("profilePicture")}
+            className="file-input file-input-bordered w-full"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const url = URL.createObjectURL(file);
+                setPreviewUrl(url);
+              }
+            }}
+          />
+          {/* {errors.profilePicture && (
+            <p className="text-red-600 text-sm mt-1">
+              {errors.profilePicture.message}
+            </p>
+          )} */}
+          {previewUrl && previewUrl !== "" && (
+            <div className="mt-3">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-20 w-24 object-cover rounded-md border object-top"
+              />
+            </div>
+          )}
+        </div>
         <div className="mb-4">
           <label className="block text-gray-700 dark:text-gray-200 mb-1">
             ชื่อผู้ใช้
@@ -462,8 +549,8 @@ function EditBarberModal({
           <input
             type="email"
             {...register("email")}
-            className={`w-full input input-bordered ${errors.email ? "border-red-500" : ""
-              }`}
+            readOnly
+            className={`w-full input input-bordered bg-gray-200 ${errors.email ? "border-red-500" : ""}`}
           />
           {errors.email && (
             <p className="text-red-600 text-sm mt-1">
@@ -517,7 +604,7 @@ function EditBarberModal({
 interface DeleteBarberModalProps {
   isOpen: boolean;
   barber: Barber | undefined;
-  onDelete:()=> void;
+  onDelete: () => void;
   onClose: () => void;
   onCreate: () => void;
 }

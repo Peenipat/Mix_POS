@@ -4,5 +4,9 @@ export interface Barber {
     username: string;
     email: string;
     phone_number?: string;
+    img_path:string;
+    img_name:string;
+    description:string;
+
 }
    

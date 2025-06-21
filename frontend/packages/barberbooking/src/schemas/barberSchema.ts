@@ -13,7 +13,9 @@ export const editBarberSchema = z.object({
       .regex(/^\d+$/, "เบอร์โทรต้องเป็นตัวเลขเท่านั้น")
       .min(10, "เบอร์โทร 10 หลัก")
       .max(10, "เบอร์โทร 10 หลัก"),
+    img_path:z.string().optional(),
+    img_name:z.string().optional(),
+    profilePicture: z.any().optional(),
   });
   
-  // ถ้าต้องการ type ของ data ที่ผ่าน validation
   export type EditBarberFormData = z.infer<typeof editBarberSchema>;

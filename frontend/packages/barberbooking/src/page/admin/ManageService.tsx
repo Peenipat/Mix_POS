@@ -7,17 +7,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAppSelector } from "../../store/hook";
 import axios from "../../lib/axios";
 import Modal from "@object/shared/components/Modal";
+import { TableCellsIcon } from "../../components/icons/TableCellsIcon";
+import { GridViewIcon } from "../../components/icons/GridViewIcon"
 
 interface Service {
   id: number;
-  name: string ;
+  name: string;
   price: number | null;
   duration: number | null;
+  description: string;
+  Img_path: string;
+  Img_name: string;
   branch_id: number;
   tenant_id: number;
 }
 
 import { z } from "zod";
+import { CardViewIcon } from "../../components/icons/CardViewIcon";
 export const editServiceSchema = z.object({
   name: z.string().min(1, "กรุณากรอกชื่อบริการ").max(100, "ชื่อผู้ใช้ต้องไม่เกิน 100 ตัวอักษร"),
   price: z.number().nullable(),
@@ -45,6 +51,8 @@ export function ManageService() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
+  const [viewMode, setViewMode] = useState<"table" | "card">("card");
+
   const handleDeleteSuccess = () => {
     if (deleteService) {
       setServices(prev => prev.filter(b => b.id !== deleteService.id));
@@ -57,9 +65,9 @@ export function ManageService() {
       prevServices.map(s => {
         const currentId = String(s.id);
         const editedId = String(editService.id);
-  
+
         return currentId === editedId
-          ? editService 
+          ? editService
           : s;
       })
     );
@@ -112,6 +120,7 @@ export function ManageService() {
     return <p className="text-red-500">Error loading services: {errorServices}</p>;
   }
 
+
   // === กำหนด columns และ actions สำหรับ DataTable ===
   const columns: Column<Service>[] = [
     {
@@ -119,6 +128,7 @@ export function ManageService() {
       accessor: (_row, rowIndex) => rowIndex + 1,
     },
     { header: "ชื่อบริการ", accessor: "name" },
+    { header: "คำอธิบาย", accessor: "description" },
     { header: "ราคา", accessor: "price" },
     { header: "ระยะเวลา (นาที)", accessor: "duration" },
   ];
@@ -130,31 +140,111 @@ export function ManageService() {
 
   return (
     <div>
-      <div>
+      <div className="flex flex-wrap items-center gap-4 justify-between">
         <button onClick={() => setIsCreateOpen(true)} className="btn btn-primary">
           + เพิ่มบริการใหม่
         </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("card")}
+            className={`px-4 py-2 rounded-md border ${viewMode === "card"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-800 border-gray-300"
+              }`}
+          >
+            <GridViewIcon className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setViewMode("table")}
+            className={`px-4 py-2 rounded-md border ${viewMode === "table"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-800 border-gray-300"
+              }`}
+          >
+            <TableCellsIcon className="w-6 h-6 " />
+          </button>
+        </div>
       </div>
 
       <h2 className="text-xl mt-4">Services for Tenant {tenantId}</h2>
 
-      <DataTable<Service>
-        data={services}
-        columns={columns}
-        onRowClick={(r) => console.log("row clicked", r)}
-        actions={[]}
-        showEdit={true}
-        onEdit={(service)=>{
-          console.log(service)
-          setEditService(service)
-          setIsEditOpen(true)
-        }}
-        onDelete={(service) => {
-          setDeleteService(service)
-          setIsDeleteOpen(true)
-        }}
-        showDelete={true}
-      />
+      {viewMode === "table" && (
+        <DataTable<Service>
+          data={services}
+          columns={columns}
+          onRowClick={(r) => console.log("row clicked", r)}
+          actions={[]}
+          showEdit
+          onEdit={(service) => {
+            setEditService(service);
+            setIsEditOpen(true);
+          }}
+          showDelete
+          onDelete={(service) => {
+            setDeleteService(service);
+            setIsDeleteOpen(true);
+          }}
+        />
+      )}
+
+      {/* --- มุมมอง Card --- */}
+      {viewMode === "card" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {services.map((sv) => (
+            <div
+              key={sv.id}
+              className=" rounded-lg shadow-lg hover:shadow-xl transition flex flex-col"
+            >
+              {sv.Img_path && sv.Img_name && (
+                <img
+                  src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${sv.Img_path}/${sv.Img_name}`}
+                  alt={sv.name}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                />
+              )}
+
+              {/* เนื้อหา */}
+              <div className="p-4 flex flex-col flex-1 justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">{sv.name}</h3>
+                  <p className="text-gray-400 text-sm line-clamp-3">
+                    {sv.description}
+                  </p>
+                  <p className="text-gray-400 text-sm line-clamp-3"> {sv.duration} นาที</p>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="font-bold text-lg text-green-400">
+                    ฿{sv.price}
+                  </span>
+
+                  {/* ปุ่มจัดการ */}
+                  <div className="flex gap-2">
+                    <button
+                      className="text-sm text-blue-400 underline"
+                      onClick={() => {
+                        setEditService(sv);
+                        setIsEditOpen(true);
+                      }}
+                    >
+                      แก้ไข
+                    </button>
+                    <button
+                      className="text-sm text-red-400 underline"
+                      onClick={() => {
+                        setDeleteService(sv);
+                        setIsDeleteOpen(true);
+                      }}
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <CreateServiceModal
         isOpen={isCreateOpen}
@@ -357,7 +447,7 @@ function CreateServiceModal({
 interface EditServiceModalProps {
   isOpen: boolean;
   service: Service | undefined;
-  onEdit:(updatedService: Service)=> void;
+  onEdit: (updatedService: Service) => void;
   onClose: () => void;
   onCreate: () => void;
 }
@@ -419,8 +509,8 @@ function EditServiceModal({
         throw new Error(res.data.status);
       }
       const updatedService: Service = {
-        ...service,       
-        name: data.name,   
+        ...service,
+        name: data.name,
         price: data.price,
         duration: data.duration,
       };

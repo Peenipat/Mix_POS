@@ -36,6 +36,7 @@ func SeedBarbers(db *gorm.DB) error {
             BranchID: branch.ID,
             UserID:   u.ID,
             TenantID: branch.TenantID,
+            Description: "ช่าง",
         }
         if err := db.FirstOrCreate(&record, record).Error; err != nil {
             return err

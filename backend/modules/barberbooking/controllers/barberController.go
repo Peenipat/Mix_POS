@@ -81,7 +81,6 @@ func (ctrl *BarberController) GetBarberByID(c *fiber.Ctx) error {
 // @Router       /tenants/:tenant_id/barbers/branches/:branch_id/barbers [get]
 // @Security     ApiKeyAuth
 func (ctrl *BarberController) ListBarbersByBranch(c *fiber.Ctx) error {
-    // 1. Parse the branch_id URL param
     branchID, err := helperFunc.ParseUintParam(c, "branch_id")
     if err != nil {
         return c.Status(http.StatusBadRequest).JSON(fiber.Map{

@@ -54,13 +54,13 @@ func SeedUsers(db *gorm.DB) error {
         // SaaS SuperAdmin (ไม่ผูกสาขา)
         {"saas_admin", "saas_admin@gmail.com", "12345678", roleSA.ID, nil,"barbers","barber1.jpg"},
         // Tenant Admin (ดูแลหลายสาขา)
-        {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, &branch.ID,"barbers","barber1.jpg"},
+        {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, &branch.ID,"barbers","barber3.jpg"},
         // Branch Admin (เฉพาะสาขา)
-        {"branch_admin", "branch_admin@gmail.com", "12345678", roleBA.ID, &branch.ID,"barbers","barber1.jpg"},
+        {"branch_admin", "branch_admin@gmail.com", "12345678", roleBA.ID, &branch.ID,"barbers","barber2.jpg"},
         // Assistant Manager
-        {"assistant_mgr", "assistant@gmail.com", "12345678", roleAM.ID, &branch.ID,"barbers","barber1.jpg"},
+        {"assistant_mgr", "assistant@gmail.com", "12345678", roleAM.ID, &branch.ID,"barbers","barber4.jpg"},
         // Staff
-        {"staff_user", "staff@gmail.com", "12345678", roleST.ID, &branch.ID,"barbers","barber1.jpg"},
+        {"staff_user", "staff@gmail.com", "12345678", roleST.ID, &branch.ID,"barbers","barber2.jpg"},
         // End-customer / general user
         {"generic_user", "user@gmail.com", "12345678", roleUS.ID, &branch.ID,"barbers","barber1.jpg"},
     }

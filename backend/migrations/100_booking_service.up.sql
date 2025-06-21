@@ -5,8 +5,11 @@ CREATE TABLE services (
   tenant_id  INT NOT NULL,
   branch_id  INT NOT NULL,
   name       VARCHAR(100) NOT NULL,
+  description VARCHAR(100)   NOT NULL,
   duration   INT NOT NULL,
   price      NUMERIC NOT NULL,
+  img_path    TEXT           NULL,
+  img_name    TEXT           NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ

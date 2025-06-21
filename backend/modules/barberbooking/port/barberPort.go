@@ -13,6 +13,9 @@ type BarberWithUser struct {
     Username  string    `json:"username"`
     Email     string    `json:"email"`
 	PhoneNumber string    `json:"phone_number"`
+    Description string    `json:"description"`
+    ImgPath     *string   `json:"img_path"` 
+    ImgName     *string   `json:"img_name"`
     CreatedAt time.Time `json:"created_at"`
     UpdatedAt time.Time `json:"updated_at"`
 }

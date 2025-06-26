@@ -5,11 +5,17 @@ module.exports = {
     './node_modules/flowbite/**/*.js',
     './node_modules/flowbite-datepicker/**/*.js', 
   ],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"K2D"', 'sans-serif'], 
+      },
+    },
   plugins: [
     require('flowbite/plugin'),
     require('tailwindcss-filters'),
     require('@tailwindcss/forms'),
     require('flowbite-datepicker/plugin'),
   ],
+}
 }

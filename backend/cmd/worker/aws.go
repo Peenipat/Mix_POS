@@ -14,7 +14,6 @@ import (
 var S3Uploader *manager.Uploader
 
 func InitAWS() {
-    // โหลด config จาก ENV: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
     cfg, err := config.LoadDefaultConfig(context.TODO(),
         config.WithRegion(os.Getenv("AWS_REGION")),
     )

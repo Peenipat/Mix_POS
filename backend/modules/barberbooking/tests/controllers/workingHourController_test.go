@@ -22,7 +22,7 @@ type MockWorkingHourService struct {
 	mock.Mock
 }
 
-func (m *MockWorkingHourService) GetWorkingHours(ctx context.Context, branchID uint) ([]barberBookingModels.WorkingHour, error) {
+func (m *MockWorkingHourService) GetWorkingHours(ctx context.Context, branchID uint,tenantID uint) ([]barberBookingModels.WorkingHour, error) {
 	args := m.Called(ctx, branchID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -30,7 +30,7 @@ func (m *MockWorkingHourService) GetWorkingHours(ctx context.Context, branchID u
 	return args.Get(0).([]barberBookingModels.WorkingHour), args.Error(1)
 }
 
-func (m *MockWorkingHourService) UpdateWorkingHours(ctx context.Context, branchID uint, input []barberBookingDto.WorkingHourInput) error {
+func (m *MockWorkingHourService) UpdateWorkingHours(ctx context.Context, branchID uint, tenantID uint,input []barberBookingDto.WorkingHourInput) error {
 	args := m.Called(ctx, branchID, input)
 	return args.Error(0)
 }

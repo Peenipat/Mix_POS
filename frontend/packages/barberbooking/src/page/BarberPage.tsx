@@ -3,14 +3,11 @@ import { useState, useCallback,useEffect } from "react";
 import axios from "../lib/axios";
 import type { Barber } from "../types/barber";
 
-
 const dummySlots: TimeSlot[] = [
     { id: 1, date: "2025-06-12", time: "10:00 – 11:00", available: true },
     { id: 2, date: "2025-06-12", time: "11:00 – 12:00", available: false },
     { id: 3, date: "2025-06-13", time: "13:00 – 14:00", available: true },
-    // … เพิ่มตามจริง
 ];
-
 
 export default function BarberPage() {
 const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -36,13 +33,12 @@ const loadBarbers = useCallback(async () => {
 }, []);
 
 useEffect(() => {
-
       loadBarbers();
   }, []);
     const [isModalOpen, setModalOpen] = useState(false);
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-200">
-            <div className="container mx-auto py-12 px-6">
+        <div className="min-h-screen bg-gradient-to-b from-white via-slate-100 to-slate-200 text-gray-900">
+            <div className="container mx-auto py-6 px-6">
                 <h1 className="text-4xl font-extrabold mb-8">ช่างของเรา</h1>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -51,7 +47,7 @@ useEffect(() => {
                     {barbers.map((barber) => (
                         <div
                             key={barber.id}
-                            className="bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition flex flex-col h-full"
+                            className="bg-gray-200 rounded-lg shadow-lg hover:shadow-xl transition flex flex-col h-full"
                         >
                             <img
                                 src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${barber.img_path}/${barber.img_name}`}
@@ -68,12 +64,12 @@ useEffect(() => {
                                         {barber.description}
                                     </p>
                                 </div>
-                                <div className="flex items-center justify-between text-gray-100 mt-4">
-                                    <span className="text-sm bg-gray-700 p-1.5 rounded">
+                                <div className="flex items-center justify-between text-gray-900 mt-4">
+                                    <span className="text-sm bg-gray-300 p-1.5 rounded">
                                         ⭐ 4.5
                                     </span>
 
-                                    <button className="px-3 py-1.5 bg-blue-600 rounded text-white hover:bg-blue-700 transition"
+                                    <button className="px-3 py-1.5 bg-gray-400 rounded text-white hover:bg-blue-700 transition"
                                         onClick={() => setModalOpen(true)}>
                                         ดูคิวของช่าง
                                     </button>

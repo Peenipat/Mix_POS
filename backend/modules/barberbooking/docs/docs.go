@@ -237,6 +237,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/services/:service_id": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ลบบริการ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tenants/:tenant_id/appointments": {
             "get": {
                 "security": [
@@ -1761,6 +1828,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/tenants/:tenant_id/branch/:branch_id/customers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ดึงรายชื่อลูกค้า",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Customer ใน key ` + "`" + `data` + "`" + `",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant ID หรือ Failed to fetch customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tenants/:tenant_id/branch/:branch_id/services": {
             "get": {
                 "description": "คืนรายการ Service ทั้งหมดในระบบ",
@@ -2008,71 +2131,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "ลบบริการ",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Service",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid service ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to delete service",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
             }
         },
         "/tenants/:tenant_id/branches/:branch_id/available-barbers": {
@@ -2158,60 +2216,6 @@ const docTemplate = `{
             }
         },
         "/tenants/:tenant_id/customers": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Customer"
-                ],
-                "summary": "ดึงรายชื่อลูกค้า",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Tenant",
-                        "name": "tenant_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และ array ของ Customer ใน key ` + "`" + `data` + "`" + `",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid tenant ID หรือ Failed to fetch customer",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -3052,6 +3056,82 @@ const docTemplate = `{
             }
         },
         "/tenants/:tenant_id/workinghour/branches/:branch_id": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "สร้าง WorkingHour ใหม่สำหรับสาขาที่ระบุ กำหนดวันในสัปดาห์ (0=อาทิตย์,...,6=เสาร์) และเวลาเปิด-ปิด",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingHour"
+                ],
+                "summary": "สร้างวันทำการใหม่ (เฉพาะ 1 วัน)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้างวันทำการ (weekday, start_time, end_time)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingDto.WorkingHourInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status และข้อความยืนยันการสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid branch ID, weekday ไม่ถูกต้อง หรือ JSON ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create working hour",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/workinghour/branches/{branch_id}": {
             "get": {
                 "security": [
                     {
@@ -3074,6 +3154,13 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "รหัสสาขา",
                         "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา",
+                        "name": "tenant_id",
                         "in": "path",
                         "required": true
                     }
@@ -3141,6 +3228,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "integer",
+                        "description": "รหัสผู้เช่า",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
                         "description": "Array ของ WorkingHourInput — ตัวอย่าง: [{\\",
                         "name": "body",
                         "in": "body",
@@ -3191,14 +3285,16 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/working-day-overrides": {
             "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "สร้าง WorkingHour ใหม่สำหรับสาขาที่ระบุ กำหนดวันในสัปดาห์ (0=อาทิตย์,...,6=เสาร์) และเวลาเปิด-ปิด",
+                "description": "ใช้สำหรับเพิ่มวันเปิดหรือปิดเฉพาะกิจของสาขา เช่น วันหยุดประจำปีหรือวันเปิดพิเศษ",
                 "consumes": [
                     "application/json"
                 ],
@@ -3206,39 +3302,81 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "WorkingHour"
+                    "WorkingDayOverride"
                 ],
-                "summary": "สร้างวันทำการใหม่ (เฉพาะ 1 วัน)",
+                "summary": "สร้างวันเปิด-ปิดเฉพาะกิจ",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "รหัสสาขา",
-                        "name": "branch_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Payload สำหรับสร้างวันทำการ (weekday, start_time, end_time)",
+                        "description": "ข้อมูลวันที่และเวลาที่ต้องการ override",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/barberBookingDto.WorkingHourInput"
+                            "$ref": "#/definitions/barberBookingPort.WorkingDayOverrideInput"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "คืนค่า status และข้อความยืนยันการสร้าง",
+                        "description": "สร้างสำเร็จ",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid branch ID, weekday ไม่ถูกต้อง หรือ JSON ไม่ถูกต้อง",
+                        "description": "กรณี input ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "กรณีสร้างไม่สำเร็จหรือเกิด error ภายใน",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/working-day-overrides/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้ดึงข้อมูลวันเปิด-ปิดเฉพาะกิจตาม ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "ดึงข้อมูล override ตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "WorkingDayOverride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.WorkingDayOverride"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3246,8 +3384,121 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "403": {
-                        "description": "Permission denied",
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้สำหรับแก้ไขวัน override ของสาขา เช่น เปลี่ยนเวลาเปิด-ปิด หรือเปลี่ยนวัน",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "แก้ไขวันเปิด-ปิดเฉพาะกิจ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส override ที่ต้องการแก้ไข",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูลที่ต้องการอัปเดต",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.WorkingDayOverrideInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "อัปเดตสำเร็จ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "ข้อมูลไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "ไม่พบข้อมูล",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "เกิดข้อผิดพลาดภายใน",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้ลบ override เฉพาะวันจาก branch ที่ระบุ",
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "ลบวันเปิด-ปิดร้านเฉพาะวัน",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "WorkingDayOverride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3256,7 +3507,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Failed to create working hour",
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3422,6 +3673,13 @@ const docTemplate = `{
                 "NO_SHOW",
                 "RESCHEDULED"
             ],
+            "x-enum-comments": {
+                "StatusCancelled": "ยกเลิก",
+                "StatusComplete": "จบงาน",
+                "StatusConfirmed": "รับ",
+                "StatusPending": "รอดำเนินการ",
+                "StatusRescheduled": "เปลี่ยนเวลา"
+            },
             "x-enum-varnames": [
                 "StatusPending",
                 "StatusConfirmed",
@@ -3475,6 +3733,9 @@ const docTemplate = `{
                 "deleted_at": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -3518,6 +3779,9 @@ const docTemplate = `{
         "barberBookingModels.Customer": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
                 "createdAt": {
                     "type": "string"
                 },
@@ -3538,7 +3802,7 @@ const docTemplate = `{
                     "description": "optional",
                     "type": "string"
                 },
-                "tenantID": {
+                "tenant_id": {
                     "description": "Composite Index",
                     "type": "integer"
                 },
@@ -3550,6 +3814,12 @@ const docTemplate = `{
         "barberBookingModels.Service": {
             "type": "object",
             "properties": {
+                "Img_name": {
+                    "type": "string"
+                },
+                "Img_path": {
+                    "type": "string"
+                },
                 "branch_id": {
                     "type": "integer"
                 },
@@ -3559,8 +3829,10 @@ const docTemplate = `{
                 "deleted_at": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "duration": {
-                    "description": "ระยะเวลาโดยประมาณ",
                     "type": "integer"
                 },
                 "id": {
@@ -3570,7 +3842,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "description": "ราคาบริการ",
                     "type": "number"
                 },
                 "tenant_id": {
@@ -3608,6 +3879,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingModels.WorkingDayOverride": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "end_time": {
+                    "$ref": "#/definitions/barberbooking.TimeOnly"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "$ref": "#/definitions/barberbooking.TimeOnly"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "work_date": {
                     "type": "string"
                 }
             }
@@ -3710,6 +4010,40 @@ const docTemplate = `{
                     "description": "จำนวนชั่วโมงทำงาน",
                     "type": "integer",
                     "example": 8
+                }
+            }
+        },
+        "barberBookingPort.WorkingDayOverrideInput": {
+            "type": "object",
+            "required": [
+                "branch_id",
+                "end_time",
+                "start_time",
+                "work_date"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "end_time": {
+                    "description": "HH:mm",
+                    "type": "string"
+                },
+                "start_time": {
+                    "description": "HH:mm",
+                    "type": "string"
+                },
+                "work_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                }
+            }
+        },
+        "barberbooking.TimeOnly": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
                 }
             }
         },
@@ -3848,10 +4182,10 @@ const docTemplate = `{
         "coreModels.User": {
             "type": "object",
             "properties": {
-                "avatar_name": {
+                "Img_name": {
                     "type": "string"
                 },
-                "avatar_url": {
+                "Img_path": {
                     "type": "string"
                 },
                 "branch": {

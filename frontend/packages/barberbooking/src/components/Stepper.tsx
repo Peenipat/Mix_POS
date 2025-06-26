@@ -11,6 +11,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 interface StepperProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   initialStep?: number;
+  step?: number;
   onStepChange?: (step: number) => void;
   onFinalStepCompleted?: () => void;
   stepCircleContainerClassName?: string;
@@ -31,7 +32,8 @@ interface StepperProps extends HTMLAttributes<HTMLDivElement> {
 
 export default function Stepper({
   children,
-  initialStep = 1,
+  initialStep = 0,
+  step,
   onStepChange = () => { },
   onFinalStepCompleted = () => { },
   stepCircleContainerClassName = "",
@@ -46,16 +48,22 @@ export default function Stepper({
   renderStepIndicator,
   ...rest
 }: StepperProps) {
-  const [currentStep, setCurrentStep] = useState<number>(initialStep);
+  const [internalStep, setInternalStep] = useState<number>(initialStep);
+  const isControlled = typeof step === "number";
+  const currentStep = isControlled ? step! : internalStep;
+
   const [direction, setDirection] = useState<number>(0);
   const stepsArray = Children.toArray(children);
   const totalSteps = stepsArray.length;
-  const isCompleted = currentStep > totalSteps;
-  const isLastStep = currentStep === totalSteps;
+  const isCompleted = currentStep === totalSteps;
+  const isLastStep = currentStep === totalSteps - 1;
 
   const updateStep = (newStep: number) => {
-    setCurrentStep(newStep);
-    if (newStep > totalSteps) {
+    if (!isControlled) {
+      setInternalStep(newStep);
+    }
+
+    if (newStep === totalSteps) {
       onFinalStepCompleted();
     } else {
       onStepChange(newStep);
@@ -63,7 +71,7 @@ export default function Stepper({
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setDirection(-1);
       updateStep(currentStep - 1);
     }
@@ -78,14 +86,11 @@ export default function Stepper({
 
   const handleComplete = () => {
     setDirection(1);
-    updateStep(totalSteps + 1);
+    updateStep(totalSteps);
   };
 
   return (
-    <div
-      className="w-full"
-      {...rest}
-    >
+    <div className="w-full" {...rest}>
       <div
         className={`max-w-lg mx-auto rounded-2xl shadow-xl ${stepCircleContainerClassName}`}
         style={{ border: "1px solid #222" }}
@@ -93,6 +98,7 @@ export default function Stepper({
         <div className="px-8 py-4 text-center">
           <h1 className="">จองแบบด่วน</h1>
         </div>
+
         <div
           className={`${stepContainerClassName} flex w-full items-center px-8 pb-8`}
         >
@@ -103,7 +109,7 @@ export default function Stepper({
               <React.Fragment key={stepNumber}>
                 {renderStepIndicator ? (
                   renderStepIndicator({
-                    step: stepNumber,
+                    step: index,
                     currentStep,
                     onStepClick: (clicked) => {
                       setDirection(clicked > currentStep ? 1 : -1);
@@ -112,7 +118,7 @@ export default function Stepper({
                   })
                 ) : (
                   <StepIndicator
-                    step={stepNumber}
+                    step={index}
                     disableStepIndicators={disableStepIndicators}
                     currentStep={currentStep}
                     onClickStep={(clicked) => {
@@ -135,27 +141,24 @@ export default function Stepper({
           direction={direction}
           className={`space-y-2 px-8 ${contentClassName}`}
         >
-          {stepsArray[currentStep - 1]}
+          {stepsArray[currentStep]}
         </StepContentWrapper>
 
         {!isCompleted && (
           <div className={`px-5 pb-5  ${footerClassName}`}>
-            <div
-              className={`mt-10 flex ${currentStep !== 1 ? "justify-between" : "justify-end"
-                }`}
-            >
-              {currentStep !== 1 && (
+            <div className={`mt-10 flex justify-between`}>
+              {currentStep > 0 ? (
                 <button
                   onClick={handleBack}
-                  className={`duration-350 rounded px-2 py-1 transition ${currentStep === 1
-                      ? "pointer-events-none opacity-50 text-neutral-400"
-                      : "text-neutral-400 hover:text-neutral-700"
-                    }`}
+                  className="duration-350 rounded px-2 py-1 transition text-neutral-400 hover:text-neutral-700"
                   {...backButtonProps}
                 >
                   {backButtonText}
                 </button>
+              ) : (
+                <div />
               )}
+
               <button
                 onClick={isLastStep ? handleComplete : handleNext}
                 className="duration-350 flex items-center justify-center rounded-full bg-green-500 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-green-600 active:bg-green-700"
@@ -260,14 +263,6 @@ const stepVariants: Variants = {
   }),
 };
 
-interface StepProps {
-  children: ReactNode;
-}
-
-export function Step({ children }: StepProps) {
-  return <div className="px-8">{children}</div>;
-}
-
 interface StepIndicatorProps {
   step: number;
   currentStep: number;
@@ -315,7 +310,7 @@ function StepIndicator({
         ) : status === "active" ? (
           <div className="h-3 w-3 rounded-full bg-[#060606]" />
         ) : (
-          <span className="text-sm">{step}</span>
+          <span className="text-sm">{step + 1}</span>
         )}
       </motion.div>
     </motion.div>
@@ -328,7 +323,6 @@ interface StepConnectorProps {
 
 function StepConnector({ isComplete }: StepConnectorProps) {
   const lineVariants: Variants = {
-    incomplete: { width: 0, backgroundColor: "transparent" },
     complete: { width: "100%", backgroundColor: "#00d8ff" },
   };
 
@@ -371,4 +365,12 @@ function CheckIcon(props: CheckIconProps) {
       />
     </svg>
   );
+}
+
+interface StepProps {
+  children: ReactNode;
+}
+
+export function Step({ children }: StepProps) {
+  return <div className="px-8">{children}</div>;
 }

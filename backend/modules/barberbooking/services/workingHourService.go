@@ -1,16 +1,15 @@
 package barberBookingService
 
-
 import (
 	"context"
-	
+	"errors"
+
 	"fmt"
 	"gorm.io/gorm"
-	"strings"
-	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingDto "myapp/modules/barberbooking/dto"
+	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
-
+	"strings"
 )
 
 type WorkingHourService struct {
@@ -21,10 +20,10 @@ func NewWorkingHourService(db *gorm.DB) barberBookingPort.IWorkingHourService {
 	return &WorkingHourService{DB: db}
 }
 
-func (s *WorkingHourService) GetWorkingHours(ctx context.Context, branchID uint) ([]barberBookingModels.WorkingHour, error) {
+func (s *WorkingHourService) GetWorkingHours(ctx context.Context, branchID uint, tenantID uint) ([]barberBookingModels.WorkingHour, error) {
 	var hours []barberBookingModels.WorkingHour
 	err := s.DB.WithContext(ctx).
-		Where("branch_id = ? AND deleted_at IS NULL", branchID).
+		Where("branch_id = ? AND tenant_id = ? AND deleted_at IS NULL", branchID, tenantID).
 		Order("weekday asc").
 		Find(&hours).Error
 	if err != nil {
@@ -33,7 +32,7 @@ func (s *WorkingHourService) GetWorkingHours(ctx context.Context, branchID uint)
 	return hours, nil
 }
 
-func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID uint, input []barberBookingDto.WorkingHourInput) error {
+func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID uint, tenantID uint, input []barberBookingDto.WorkingHourInput) error {
 	tx := s.DB.WithContext(ctx).Begin()
 
 	for _, wh := range input {
@@ -41,24 +40,42 @@ func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID ui
 			tx.Rollback()
 			return fmt.Errorf("invalid weekday: %d", wh.Weekday)
 		}
-		data := barberBookingModels.WorkingHour{
-			BranchID:  branchID,
-			Weekday:   wh.Weekday,
-			StartTime: wh.StartTime,
-			EndTime:   wh.EndTime,
-		}
+
+		var existing barberBookingModels.WorkingHour
 		err := tx.
-			Where("branch_id = ? AND weekday = ?", branchID, wh.Weekday).
-			Assign(data). // UPDATE IF EXISTS
-			FirstOrCreate(&data).Error
-		if err != nil {
+			Where("branch_id = ? AND tenant_id = ? AND weekday = ?", branchID, tenantID, wh.Weekday).
+			First(&existing).Error
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			newWH := barberBookingModels.WorkingHour{
+				BranchID:  branchID,
+				TenantID:  tenantID,
+				Weekday:   wh.Weekday,
+				StartTime: wh.StartTime,
+				EndTime:   wh.EndTime,
+				IsClosed:  wh.IsClosed,
+			}
+			if err := tx.Create(&newWH).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		} else if err == nil {
+			// อัปเดต
+			existing.StartTime = wh.StartTime
+			existing.EndTime = wh.EndTime
+			existing.IsClosed = wh.IsClosed
+			if err := tx.Save(&existing).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		} else {
 			tx.Rollback()
 			return err
 		}
 	}
+
 	return tx.Commit().Error
 }
-
 
 
 func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID uint, input barberBookingDto.WorkingHourInput) error {
@@ -76,7 +93,6 @@ func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID ui
 		EndTime:   input.EndTime,
 	}
 
-	// สร้างใหม่เท่านั้น ถ้ามีแล้วห้ามซ้ำ
 	if err := s.DB.WithContext(ctx).Create(&wh).Error; err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
 			return fmt.Errorf("working hour for weekday %d already exists", input.Weekday)
@@ -86,4 +102,3 @@ func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID ui
 
 	return nil
 }
-

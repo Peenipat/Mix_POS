@@ -17,6 +17,9 @@ import { ManageAppointments } from "./page/admin/ManageAppointments";
 import ServicePage from "./page/ServicePage";
 import MainLayout from "./layouts/MainLayout";
 import BarberPage from "./page/BarberPage";
+import ManageTime from "./page/admin/ManageTime";
+import NotReady from "./page/NotReady";
+import ContractDev from "./page/admin/ContractDev";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -51,6 +54,9 @@ export default function App() {
       <Route element={<MainLayout />}>
       <Route path="service" element={<ServicePage />} />
       <Route path="barbers" element={<BarberPage />} />
+      <Route path="booking" element={<NotReady  message="ขออภัยในความไม่สะดวก"/>} />
+      <Route path="reviews" element={<NotReady  message="ขออภัยในความไม่สะดวก"/>} />
+      <Route path="history" element={<NotReady  message="ขออภัยในความไม่สะดวก"/>} />
       </Route>
 
       <Route
@@ -62,12 +68,22 @@ export default function App() {
         }
       >
 
+
+
         <Route index element={<AdminDashboard />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="barber" element={<ManageBarber />} />
         <Route path="service" element={<ManageService />} />
         <Route path="customer" element={<ManageCustomer />} />
         <Route path="appointments" element={<ManageAppointments />} />
+        <Route path="working" element={<ManageTime />} />
+        
+        <Route path="report" element={<NotReady message="ขออภัยในความไม่สะดวก"/>} />
+        <Route path="branch" element={<NotReady message="ขออภัยในความไม่สะดวก"/>} />
+        <Route path="billing" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
+        <Route path="help" element={<ContractDev/>} />
+
+        <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 
       {/* ไม่ match route ใด ๆ → redirect ไป Home */}

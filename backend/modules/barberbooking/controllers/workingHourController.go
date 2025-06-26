@@ -25,14 +25,14 @@ func NewWorkingHourController(service barberBookingPort.IWorkingHourService) *Wo
 // @Accept       json
 // @Produce      json
 // @Param        branch_id   path      uint   true  "รหัสสาขา"
+// @Param        tenant_id   path      uint   true  "รหัสสาขา"
 // @Success      200         {object}  map[string]interface{}  "คืนค่า status, message และ array ของ WorkingHour"
 // @Failure      400         {object}  map[string]string       "Invalid branch ID"
 // @Failure      404         {object}  map[string]string       "No working hours found for this branch"
 // @Failure      500         {object}  map[string]string       "Failed to fetch working hours"
-// @Router       /tenants/:tenant_id/workinghour/branches/:branch_id [get]
+// @Router       /tenants/{tenant_id}/workinghour/branches/{branch_id} [get]
 // @Security     ApiKeyAuth
 func (ctrl *WorkingHourController) GetWorkingHours(c *fiber.Ctx) error {
-	// 1. Parse branch_id จาก URL param
 	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -41,8 +41,16 @@ func (ctrl *WorkingHourController) GetWorkingHours(c *fiber.Ctx) error {
 		})
 	}
 
+	tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid tenant ID",
+		})
+	}
+
 	// 2. เรียก service
-	workingHours, err := ctrl.Service.GetWorkingHours(c.Context(), branchID)
+	workingHours, err := ctrl.Service.GetWorkingHours(c.Context(), branchID, tenantID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -79,16 +87,16 @@ var RolesCanManageWorkingHour = []coreModels.RoleName{
 // @Tags         WorkingHour
 // @Accept       json
 // @Produce      json
-// @Param        branch_id   path      uint                        true  "รหัสสาขา"
+// @Param 		branch_id 	path 	uint true "รหัสสาขา"
+// @Param 		tenant_id 	path 	uint true "รหัสผู้เช่า"                           
 // @Param        body        body      []barberBookingDto.WorkingHourInput  true  "Array ของ WorkingHourInput — ตัวอย่าง: [{\"weekday\":1,\"open_time\":\"09:00\",\"close_time\":\"17:00\"}, ...]"
 // @Success      200         {object}  map[string]string  "คืนค่า status และข้อความยืนยันการอัปเดต"
 // @Failure      400         {object}  map[string]string  "Invalid branch ID, ไม่มีข้อมูลใน body หรือ JSON ไม่ถูกต้อง"
 // @Failure      403         {object}  map[string]string  "Permission denied"
 // @Failure      500         {object}  map[string]string  "Failed to update working hours"
-// @Router       /tenants/:tenant_id/workinghour/branches/:branch_id  [put]
+// @Router       /tenants/{tenant_id}/workinghour/branches/{branch_id}  [put]
 // @Security     ApiKeyAuth
 func (ctrl *WorkingHourController) UpdateWorkingHours(c *fiber.Ctx) error {
-
 	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -97,21 +105,38 @@ func (ctrl *WorkingHourController) UpdateWorkingHours(c *fiber.Ctx) error {
 		})
 	}
 
-	var input []barberBookingDto.WorkingHourInput
-	if err := c.BodyParser(&input); err != nil {
+	tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Invalid request body",
+			"message": "Invalid tenant ID",
 		})
 	}
 
-	if len(input) == 0 {
+	var inputArray []barberBookingDto.WorkingHourInput
+
+	// ลอง parse เป็น array ก่อน
+	err = c.BodyParser(&inputArray)
+	if err != nil || len(inputArray) == 0 {
+		// ถ้าไม่สำเร็จ ลอง parse เป็น object เดียว
+		var singleInput barberBookingDto.WorkingHourInput
+		if err := c.BodyParser(&singleInput); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid request body",
+			})
+		}
+		inputArray = []barberBookingDto.WorkingHourInput{singleInput}
+	}
+
+	if len(inputArray) == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "No working hours provided",
 		})
 	}
 
+	// ตรวจสอบสิทธิ์
 	roleStr, ok := c.Locals("role").(string)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageWorkingHour) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -120,8 +145,8 @@ func (ctrl *WorkingHourController) UpdateWorkingHours(c *fiber.Ctx) error {
 		})
 	}
 
-	err = ctrl.Service.UpdateWorkingHours(c.Context(), branchID, input)
-	if err != nil {
+	// ส่งไป Service
+	if err := ctrl.Service.UpdateWorkingHours(c.Context(), branchID, tenantID, inputArray); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to update working hours",
@@ -134,6 +159,7 @@ func (ctrl *WorkingHourController) UpdateWorkingHours(c *fiber.Ctx) error {
 		"message": "Working hours updated",
 	})
 }
+
 
 // CreateWorkingHours godoc
 // @Summary      สร้างวันทำการใหม่ (เฉพาะ 1 วัน)
@@ -206,6 +232,3 @@ func (ctrl *WorkingHourController) CreateWorkingHours(c *fiber.Ctx) error {
 		"message": "Working hour created",
 	})
 }
-
-
-

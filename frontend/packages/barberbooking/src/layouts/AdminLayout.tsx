@@ -5,17 +5,16 @@ import { useAppDispatch } from "../store/hook";
 import { logout } from "../store/authSlice";
 
 const crumbsMap: Record<string, string> = {
-  dashboard: "Dashboard",
-  users: "Manage Users",
-  tenant: "Manage Tenant",
-  appointments: "Manage Appointments",
-  barber: "Manage Barber",
-  service: "Manage Services",
-  customer: "Manage Customers",
-  report: "Reports & Analytics",
-  billing: "Billing & Expenses",
-  user: "User Management",
-  help: "Help & Support",
+  dashboard: "หน้าหลัก",
+  barber: "จัดการข้อมูลช่าง",
+  service: "จัดการข้อมูลบริการร้าน",
+  customer: "จัดการข้อมูลลูกค้า",
+  appointments: "จัดการข้อมูลการนัดหมาย",
+  working: "จัดการเวลา เปิด - ปิดร้าน",
+  report: "รายงานผลประกอบการ",
+  billing:"ค่าใจ้จ่าย",
+  branch:"ระบบจัดการสาขา",
+  help:"ความช่วยเหลือ & ติดต่อผู้พัฒนา"
 };
 
 interface MenuItem {
@@ -24,15 +23,16 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { to: "dashboard", label: "Dashboard" },
-  { to: "barber", label: "Manage Barber" },
-  { to: "service", label: "Manage Services" },
-  { to: "customer", label: "Manage Customers" },
-  { to: "appointments", label: "Manage Appointment" },
-  { to: "report", label: "Reports & Analytics" },
-  { to: "billing", label: "Billing & Expenses" },
-  { to: "user", label: "User Management" },
-  { to: "help", label: "Help & Support" },
+  { to: "dashboard", label: "หน้าหลัก" },
+  { to: "barber", label: "จัดการข้อมูลช่าง" },
+  { to: "service", label: "จัดการข้อมูลบริการร้าน" },
+  { to: "customer", label: "จัดการข้อมูลลูกค้า" },
+  { to: "appointments", label: "จัดการข้อมูลการนัดหมาย" },
+  { to: "working", label: "จัดการเวลา เปิด - ปิดร้าน" },
+  { to: "report", label: "รายงานผลประกอบการ" },
+  { to: "billing", label: "ค่าใช้จ่ายร้าน" },
+  { to: "branch", label: "ระบบจัดการสาขา" },
+  { to: "help", label: "ความช่วยเหลือ & ติดต่อผู้พัฒนา" },
 ];
 
 export default function AdminLayout() {
@@ -44,9 +44,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // 1) เคลียร์ state ใน Redux
     dispatch(logout());
-    // 2) พาไปหน้า login
     navigate("/login");
   };
 
@@ -141,13 +139,13 @@ export default function AdminLayout() {
                       viewBox="0 0 20 20"
                     >
                     </svg>
-                    Dashboard
+                    หน้าหลัก
                   </Link>
                 </li>
               ) : (
                 <li>
                   <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    Dashboard
+                    หน้าหลัก
                   </span>
                 </li>
               )}

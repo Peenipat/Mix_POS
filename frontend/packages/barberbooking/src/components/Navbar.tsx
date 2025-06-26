@@ -21,10 +21,11 @@ export default function Navbar() {
   const mainMenu: MenuItem[] = [
     { name: "หน้าหลัก", href: "/" },
     { name: "บริการของทางร้าน", href: "/service" },
-    { name: "จองคิวออนไลน์", href: "/booking" },
     { name: "ข้อมูลช่างตัดผม", href: "/barbers" },
+    { name: "จองคิวออนไลน์", href: "/booking" },
     { name: "รีวิว & ให้คะแนน", href: "/reviews" },
     { name: "ประวัติการจอง", href: "/history" },
+    { name: "เข้าสู่ระบบ", href: "/login" },
   ];
 
   const userDropdownMenu: UserMenuItem[] = [
@@ -51,19 +52,15 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className="bg-gray-900 border-gray-700">
+    <nav className=" bg-slate-50 shadow-md border-gray-700">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         {/* Logo */}
         <button
           onClick={() => navigate("/")}
-          className="flex items-center space-x-3 text-white"
+          className="flex items-center space-x-3 text-gray-900"
         >
-          <img
-            src="https://flowbite.com/docs/images/logo.svg"
-            className="h-8"
-            alt="Logo"
-          />
-          <span className="self-center text-2xl font-semibold">Flowbite</span>
+    
+          <span className="self-center text-2xl font-semibold">Barber Shop</span>
         </button>
 
         {/* User + Mobile toggle */}
@@ -88,8 +85,8 @@ export default function Navbar() {
               className="z-50 absolute top-16 right-4 w-48 bg-gray-700 divide-y divide-gray-600 rounded-lg shadow-lg"
             >
               <div className="px-4 py-3">
-                <span className="block text-sm text-white">Bonnie Green</span>
-                <span className="block text-xs text-gray-400 truncate">
+                <span className="block text-sm text-gray-900">Bonnie Green</span>
+                <span className="block text-xs text-gray-900 truncate">
                   name@flowbite.com
                 </span>
               </div>
@@ -101,7 +98,7 @@ export default function Navbar() {
                         setIsUserDropdownOpen(false);
                         navigate(item.href);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-600"
                     >
                       {item.name}
                     </button>
@@ -114,7 +111,7 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <button
             onClick={() => setIsNavOpen((o) => !o)}
-            className="inline-flex items-center p-2 ml-2 text-gray-200 rounded-lg md:hidden hover:bg-gray-700 focus:ring-2 focus:ring-gray-600"
+            className="inline-flex items-center p-2 ml-2 text-gray-900 rounded-lg md:hidden hover:bg-gray-700 focus:ring-2 focus:ring-gray-600"
           >
             <span className="sr-only">Open main menu</span>
             <svg
@@ -143,7 +140,7 @@ export default function Navbar() {
                     navigate(item.href);
                     setIsNavOpen(false);
                   }}
-                  className="block py-2 px-3 rounded-sm text-gray-200 hover:text-white hover:bg-gray-700"
+                  className="block py-2 px-3 rounded-sm text-gray-900 hover:text-gray-900 hover:bg-gray-200"
                 >
                   {item.name}
                 </button>

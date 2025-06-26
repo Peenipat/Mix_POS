@@ -104,6 +104,12 @@ definitions:
     - NO_SHOW
     - RESCHEDULED
     type: string
+    x-enum-comments:
+      StatusCancelled: ยกเลิก
+      StatusComplete: จบงาน
+      StatusConfirmed: รับ
+      StatusPending: รอดำเนินการ
+      StatusRescheduled: เปลี่ยนเวลา
     x-enum-varnames:
     - StatusPending
     - StatusConfirmed
@@ -141,6 +147,8 @@ definitions:
         type: string
       deleted_at:
         $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
       id:
         type: integer
       phone_number:
@@ -169,6 +177,8 @@ definitions:
     type: object
   barberBookingModels.Customer:
     properties:
+      branch_id:
+        type: integer
       createdAt:
         type: string
       deleted_at:
@@ -183,7 +193,7 @@ definitions:
       phone:
         description: optional
         type: string
-      tenantID:
+      tenant_id:
         description: Composite Index
         type: integer
       updated_at:
@@ -191,21 +201,25 @@ definitions:
     type: object
   barberBookingModels.Service:
     properties:
+      Img_name:
+        type: string
+      Img_path:
+        type: string
       branch_id:
         type: integer
       created_at:
         type: string
       deleted_at:
         $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
       duration:
-        description: ระยะเวลาโดยประมาณ
         type: integer
       id:
         type: integer
       name:
         type: string
       price:
-        description: ราคาบริการ
         type: number
       tenant_id:
         type: integer
@@ -231,6 +245,25 @@ definitions:
       reason:
         type: string
       updated_at:
+        type: string
+    type: object
+  barberBookingModels.WorkingDayOverride:
+    properties:
+      branch_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      end_time:
+        $ref: '#/definitions/barberbooking.TimeOnly'
+      id:
+        type: integer
+      start_time:
+        $ref: '#/definitions/barberbooking.TimeOnly'
+      updated_at:
+        type: string
+      work_date:
         type: string
     type: object
   barberBookingPort.CreateAppointmentRequest:
@@ -304,6 +337,30 @@ definitions:
         description: จำนวนชั่วโมงทำงาน
         example: 8
         type: integer
+    type: object
+  barberBookingPort.WorkingDayOverrideInput:
+    properties:
+      branch_id:
+        type: integer
+      end_time:
+        description: HH:mm
+        type: string
+      start_time:
+        description: HH:mm
+        type: string
+      work_date:
+        description: YYYY-MM-DD
+        type: string
+    required:
+    - branch_id
+    - end_time
+    - start_time
+    - work_date
+    type: object
+  barberbooking.TimeOnly:
+    properties:
+      time.Time:
+        type: string
     type: object
   coreModels.Branch:
     properties:
@@ -394,9 +451,9 @@ definitions:
     type: object
   coreModels.User:
     properties:
-      avatar_name:
+      Img_name:
         type: string
-      avatar_url:
+      Img_path:
         type: string
       branch:
         $ref: '#/definitions/coreModels.Branch'
@@ -584,6 +641,50 @@ paths:
       summary: ดึงคะแนนเฉลี่ยของช่างตัดผม
       tags:
       - Review
+  /services/:service_id:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
+        หรือ TenantAdmin)
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid service ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบบริการ
+      tags:
+      - Service
   /tenants/:tenant_id/appointments:
     get:
       consumes:
@@ -1596,6 +1697,44 @@ paths:
       summary: สรุปปริมาณงานรายสาขา
       tags:
       - Workload
+  /tenants/:tenant_id/branch/:branch_id/customers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin,
+        Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Customer ใน key
+            `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant ID หรือ Failed to fetch customer
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อลูกค้า
+      tags:
+      - Customer
   /tenants/:tenant_id/branch/:branch_id/services:
     get:
       consumes:
@@ -1671,49 +1810,6 @@ paths:
       tags:
       - Service
   /tenants/:tenant_id/branch/:branch_id/services/:service_id:
-    delete:
-      consumes:
-      - application/json
-      description: ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
-        หรือ TenantAdmin)
-      parameters:
-      - description: รหัส Service
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success และข้อความยืนยันการลบ
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Invalid service ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to delete service
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ลบบริการ
-      tags:
-      - Service
     get:
       consumes:
       - application/json
@@ -1864,43 +1960,6 @@ paths:
       tags:
       - Appointment
   /tenants/:tenant_id/customers:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin,
-        Tenant, TenantAdmin หรือ BranchAdmin)
-      parameters:
-      - description: รหัส Tenant
-        in: path
-        name: tenant_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และ array ของ Customer ใน key
-            `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid tenant ID หรือ Failed to fetch customer
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงรายชื่อลูกค้า
-      tags:
-      - Customer
     post:
       consumes:
       - application/json
@@ -2466,47 +2525,6 @@ paths:
       tags:
       - Unavailability
   /tenants/:tenant_id/workinghour/branches/:branch_id:
-    get:
-      consumes:
-      - application/json
-      description: ดึงรายการ WorkingHour ทั้งหมดสำหรับสาขาที่ระบุ
-      parameters:
-      - description: รหัสสาขา
-        in: path
-        name: branch_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status, message และ array ของ WorkingHour
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid branch ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: No working hours found for this branch
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to fetch working hours
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงเวลาเปิด-ปิดของสาขา
-      tags:
-      - WorkingHour
     post:
       consumes:
       - application/json
@@ -2556,6 +2574,53 @@ paths:
       summary: สร้างวันทำการใหม่ (เฉพาะ 1 วัน)
       tags:
       - WorkingHour
+  /tenants/{tenant_id}/workinghour/branches/{branch_id}:
+    get:
+      consumes:
+      - application/json
+      description: ดึงรายการ WorkingHour ทั้งหมดสำหรับสาขาที่ระบุ
+      parameters:
+      - description: รหัสสาขา
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: รหัสสาขา
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message และ array ของ WorkingHour
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid branch ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No working hours found for this branch
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch working hours
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงเวลาเปิด-ปิดของสาขา
+      tags:
+      - WorkingHour
     put:
       consumes:
       - application/json
@@ -2565,6 +2630,11 @@ paths:
       - description: รหัสสาขา
         in: path
         name: branch_id
+        required: true
+        type: integer
+      - description: รหัสผู้เช่า
+        in: path
+        name: tenant_id
         required: true
         type: integer
       - description: 'Array ของ WorkingHourInput — ตัวอย่าง: [{\'
@@ -2607,4 +2677,154 @@ paths:
       summary: อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)
       tags:
       - WorkingHour
+  /working-day-overrides:
+    post:
+      consumes:
+      - application/json
+      description: ใช้สำหรับเพิ่มวันเปิดหรือปิดเฉพาะกิจของสาขา เช่น วันหยุดประจำปีหรือวันเปิดพิเศษ
+      parameters:
+      - description: ข้อมูลวันที่และเวลาที่ต้องการ override
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.WorkingDayOverrideInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: สร้างสำเร็จ
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: กรณี input ไม่ถูกต้อง
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: กรณีสร้างไม่สำเร็จหรือเกิด error ภายใน
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างวันเปิด-ปิดเฉพาะกิจ
+      tags:
+      - WorkingDayOverride
+  /working-day-overrides/{id}:
+    delete:
+      description: ใช้ลบ override เฉพาะวันจาก branch ที่ระบุ
+      parameters:
+      - description: WorkingDayOverride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบวันเปิด-ปิดร้านเฉพาะวัน
+      tags:
+      - WorkingDayOverride
+    get:
+      consumes:
+      - application/json
+      description: ใช้ดึงข้อมูลวันเปิด-ปิดเฉพาะกิจตาม ID
+      parameters:
+      - description: WorkingDayOverride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/barberBookingModels.WorkingDayOverride'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูล override ตาม ID
+      tags:
+      - WorkingDayOverride
+    put:
+      consumes:
+      - application/json
+      description: ใช้สำหรับแก้ไขวัน override ของสาขา เช่น เปลี่ยนเวลาเปิด-ปิด หรือเปลี่ยนวัน
+      parameters:
+      - description: รหัส override ที่ต้องการแก้ไข
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ข้อมูลที่ต้องการอัปเดต
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.WorkingDayOverrideInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: อัปเดตสำเร็จ
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: ข้อมูลไม่ถูกต้อง
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: ไม่พบข้อมูล
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: เกิดข้อผิดพลาดภายใน
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขวันเปิด-ปิดเฉพาะกิจ
+      tags:
+      - WorkingDayOverride
 swagger: "2.0"

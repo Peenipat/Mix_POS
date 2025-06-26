@@ -1,14 +1,26 @@
-// src/page/Home.tsx
-import React, { useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import Navbar from "../components/Navbar";
 import GridMotion from "../components/GridMotion";
 import Stepper, { Step } from "../components/Stepper";
-import { useForm } from "react-hook-form";
-import { EditBarberFormData } from "../schemas/barberSchema";
-import { useState } from 'react'
+import { useForm, } from "react-hook-form";
+import { appointmentForm } from "../schemas/appointmentSchema";
 // @ts-ignore
 import { Datepicker } from "flowbite-datepicker";
 import TimeSelector from "../components/TimeSelector";
+import axios from "../lib/axios";
+import type { Barber } from "../types/barber";
+import { appointmentSchema } from "../schemas/appointmentSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+interface Service {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  duration: string;
+  Img_path: string;
+  Img_name: string
+}
 
 export default function Home() {
   const items: React.ReactNode[] = [
@@ -43,47 +55,151 @@ export default function Home() {
   const {
     register,
     handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<EditBarberFormData>({
+    setValue,
+    watch,
+    formState: { errors },
+    trigger,
+  } = useForm<appointmentForm>({
+    resolver: zodResolver(appointmentSchema),
     defaultValues: {
-      username: "",
-      email: "",
-      phone_number: "",
+      cusName: "",
+      phoneNumber: "",
+      barberId: 0,
+      serviceId: 0,
+      date: "",
+      time: "",
+      note: ""
     },
   });
-  interface User {
-    user_id: number;
-    username: string;
-    email: string;
-  }
 
-  const [users, setUsers] = useState<User[]>([]);
+  const onSubmit = (data: appointmentForm) => {
+    console.log(data);
+  };
+
+
+  const stepFields: (keyof appointmentForm)[][] = [
+    ["cusName", "phoneNumber"],
+    ["barberId", "serviceId"],
+    ["date", "time", "note"],
+  ];
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const onStepChange = async (nextStep: number) => {
+    if (nextStep <= currentStep) {
+      console.log('next : ', nextStep, "cur : ", currentStep)
+      setCurrentStep(nextStep);
+      return;
+    }
+
+    const fieldsToValidate = stepFields[currentStep];
+
+    if (!fieldsToValidate) {
+      console.warn("No fields to validate for step:", currentStep - 1);
+      setCurrentStep(nextStep);
+      return;
+    }
+
+    const isValid = await trigger(fieldsToValidate);
+
+    if (isValid) {
+      setCurrentStep(nextStep);
+    }
+    if (!isValid) {
+      console.log("Validation failed at step", currentStep - 1);
+      console.log(errors);
+    }
+  };
+
 
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!inputRef.current) return;
-
-    // สร้าง instance ของ Datepicker
     const picker = new Datepicker(inputRef.current, {
       autohide: true,
-      // คุณสามารถใส่ option เพิ่มได้ เช่น format, minDate, maxDate ฯลฯ
       format: "mm/dd/yyyy",
     });
 
-    // ถ้าต้องการ cleanup เมื่อ component unmount
     return () => {
       picker.hide();
       picker.destroy();
     };
   }, []);
 
-  const [selectedTime, setSelectedTime] = useState("00:00");
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [loadingBarbers, setLoadingBarbers] = useState<boolean>(false);
+  const [errorBarbers, setErrorBarbers] = useState<string | null>(null);
+
+  const loadBarbers = useCallback(async () => {
+    setLoadingBarbers(true);
+    setErrorBarbers(null);
+    try {
+      const res = await axios.get<{ status: string; data: Barber[] }>(
+        `/barberbooking/tenants/1/barbers/branches/1/barbers`
+      );
+      if (res.data.status !== "success") {
+        throw new Error(res.data.status);
+      }
+      setBarbers(res.data.data);
+    } catch (err: any) {
+      setErrorBarbers(err.response?.data?.message || err.message || "Failed to load barbers");
+    } finally {
+      setLoadingBarbers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBarbers();
+  }, []);
+
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState<boolean>(false);
+  const [errorServices, setErrorServices] = useState<string | null>(null);
+
+  const loadServices = useCallback(async () => {
+    setLoadingServices(true);
+    setErrorServices(null);
+    try {
+      const res = await axios.get<{ status: string; data: Service[] }>(
+        `/barberbooking/tenants/1/branch/1/services`
+      );
+      if (res.data.status !== "success") {
+        throw new Error(res.data.status);
+      }
+      setServices(res.data.data);
+    } catch (err: any) {
+      setErrorServices(err.response?.data?.message || err.message || "Failed to load barbers");
+    } finally {
+      setLoadingServices(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const serviceMap = useMemo(() => {
+    const map: Record<number, typeof services[0]> = {};
+    services.forEach((s) => {
+      map[s.id] = s;
+    });
+    return map;
+  }, [services]);
+
+  const barberMap = useMemo(() => {
+    const map: Record<number, typeof barbers[0]> = {};
+    barbers.forEach((b) => {
+      map[b.id] = b;
+    });
+    return map;
+  }, [barbers]);
+
+  const selectedService = serviceMap[watch("serviceId")];
+  const selectedBarber = barberMap[watch("barberId")];
+  const isCompleted = currentStep === 4;
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
-      {/* === GridMotion as animated “background” === */}
       <div className="absolute inset-0 z-0">
         <GridMotion items={items} gradientColor="rgba(0,0,0,0.5)" />
       </div>
@@ -113,119 +229,124 @@ export default function Home() {
           <div className=" flex-1 m-4 p-6 bg-white/50 rounded-lg">
             <div className="border-2 min-h-screen  rounded-lg ">
               <Stepper
-                initialStep={1}
-                onStepChange={(step) => console.log(step)}
-                onFinalStepCompleted={() => console.log("All steps completed!")}
-                backButtonText="Previous"
-                nextButtonText="Next"
+                step={currentStep}
+                onStepChange={onStepChange}
+                nextButtonText="ถัดไป"
+                backButtonText="ย้อนกลับ"
+                onFinalStepCompleted={() => {
+                  handleSubmit(onSubmit)
+                  setCurrentStep(4);
+                }}
               >
                 <Step>
-                  <h2>ขั้นตอนที่ 1 รายละเอียดลูกค้า</h2>
-                  <label className="block text-black dark:text-gray-200 mb-1">
-                    ชื่อลูกค้า
-                  </label>
+                  <h2>ขั้นตอนที่ {currentStep + 1} รายละเอียดลูกค้า</h2>
+                  <label className="block">ชื่อลูกค้า</label>
                   <input
                     type="text"
-                    {...register("username")}
-                    placeholder="กรอกชื่อลูกค้า"
-                    className={`w-full input input-bordered ${errors.username ? "border-red-500" : ""
-                      }`}
+                    {...register("cusName")}
+                    placeholder="กรุณากรอกชื่อลูกค้า"
+                    className={`input input-bordered w-full ${errors.cusName ? "border-red-500" : ""}`}
                   />
+                  {errors.cusName && <p className="text-red-500">{errors.cusName.message}</p>}
 
-                  <label className="block text-black dark:text-gray-200 mb-1">
-                    เบอร์โทร
-                  </label>
+                  <label className="block mt-4">เบอร์โทร</label>
                   <input
                     type="text"
-                    placeholder="กรอกเบอร์โทร"
-                    {...register("username")}
-                    className={`w-full input input-bordered ${errors.username ? "border-red-500" : ""
-                      }`}
+                    {...register("phoneNumber")}
+                    placeholder="กรุณากรอกเบอร์โทร"
+                    className={`input input-bordered w-full ${errors.phoneNumber ? "border-red-500" : ""}`}
                   />
+                  {errors.phoneNumber && <p className="text-red-500">{errors.phoneNumber.message}</p>}
                 </Step>
                 <Step>
-                  <h2>ขั้นตอนที่ 2 เลือกบริการ</h2>
-                  <label htmlFor="user" className="block  dark:text-gray-200 mb-1">
-                    เลือกช่าง
-                  </label>
+                  <h2>ขั้นตอนที่ {currentStep + 1} เลือกบริการ</h2>
+                  <label>เลือกช่าง</label>
+                  {loadingBarbers && <p>Loading barbers…</p>}
+                  {errorBarbers && <p className="text-red-500">Error loading barbers: {errorBarbers}</p>}
                   <select
-                    id="user"
-                    // value={selectedUserId || undefined}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      // setSelectedUserId(v === "" ? "" : Number(v));
-                    }}
-                    className="w-full select select-bordered"
+                    {...register("barberId", { valueAsNumber: true })}
+                    className={`select select-bordered w-full ${errors.barberId ? "border-red-500" : ""}`}
                   >
-                    {users.length != 0 ? (
-                      <option value="">-- เลือกผู้ใช้ --</option>
-                    ) : <option value="">-- ไม่พบข้อมูล --</option>}
+                    <option value={0}>-- เลือกช่าง --</option>
+                    {barbers.map((barber) => (
+                      <option key={barber.id} value={barber.id}>{barber.username}</option>
+                    ))}
+                  </select>
+                  {errors.barberId && <p className="text-red-500">{errors.barberId.message}</p>}
 
-                    {users.map((u) => (
-                      <option key={u.user_id} value={u.user_id}>
-                        {u.username} ({u.email})
+                  <label className="mt-4">เลือกบริการ</label>
+                  {loadingServices && <p>Loading barbers…</p>}
+                  {errorServices && <p className="text-red-500">Error loading barbers: {errorServices}</p>}
+                  <select
+                    {...register("serviceId", { valueAsNumber: true })}
+                    className={`select select-bordered w-full ${errors.serviceId ? "border-red-500" : ""}`}
+                  >
+                    <option value={0}>-- เลือกบริการ --</option>
+                    {services.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name} {service.price} บาท {service.duration} นาที
                       </option>
                     ))}
                   </select>
-
-                  <label htmlFor="user" className="block  dark:text-gray-200 mb-1">
-                    เลือกบริการ
-                  </label>
-                  <select
-                    id="user"
-                    // value={selectedUserId || undefined}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      // setSelectedUserId(v === "" ? "" : Number(v));
-                    }}
-                    className="w-full select select-bordered"
-                  >
-                    {users.length != 0 ? (
-                      <option value="">-- เลือกผู้ใช้ --</option>
-                    ) : <option value="">-- ไม่พบข้อมูล --</option>}
-
-                    {users.map((u) => (
-                      <option key={u.user_id} value={u.user_id}>
-                        {u.username} ({u.email})
-                      </option>
-                    ))}
-                  </select>
-
+                  {errors.serviceId && <p className="text-red-500">{errors.serviceId.message}</p>}
                 </Step>
+
                 <Step>
-                  <h2>ขั้นตอนที่ 3 เลือกวันเวลาที่ใช้บริการ</h2>
+                  <h2>ขั้นตอนที่ {currentStep + 1} เลือกวันเวลาที่ใช้บริการ</h2>
 
-                  <div className="relative max-w-sm mx-auto">
-                    <div className="absolute inset-y-0  flex items-center pl-3 pointer-events-none">
-                      <svg
-                        className="w-4 h-4 text-gray-500 dark:text-gray-400"
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z" />
-                      </svg>
-                    </div>
-                    <input
-                      ref={inputRef}
-                      id="datepicker-autohide"
-                      type="text"
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      placeholder="Select date"
-                    />
-                  </div>
-                  <TimeSelector />
+                  <label>เลือกวันที่</label>
+                  <input
+                    type="date"
+                    {...register("date")}
+                    className={`input input-bordered w-full ${errors.date ? "border-red-500" : ""}`}
+                  />
+                  {errors.date && <p className="text-red-500">{errors.date.message}</p>}
+
+                  <label className="">เลือกเวลา</label>
+                  <TimeSelector setValue={setValue} />
+                  {errors.time && <p className="text-red-500">{errors.time.message}</p>}
+                  {/* <p className="mt-2 text-sm text-gray-600">วันที่เลือก: {watch("date") || "ยังไม่ได้เลือก"}</p>
+                  <p className="mt-2 text-sm text-gray-600">เวลาที่เลือก: {watch("time") || "ยังไม่ได้เลือก"}</p> */}
+                  <label className="block ">ข้อความถึงช่าง</label>
+                  <input
+                    type="text"
+                    {...register("note")}
+                    placeholder="ฝากข้อความถึงช่าง"
+                    className={`input input-bordered w-full ${errors.cusName ? "border-red-500" : ""}`}
+                  />
                 </Step>
+
                 <Step>
                   <h2>ตรวจสอบข้อมูล</h2>
-                  <h2>ชื่อลูกค้า : </h2>
-                  <h2>เบอร์โทรลูกค้า : </h2>
-                  <h2>บริการที่เลือก : </h2>
-                  <h2>ช่างที่เลือก : </h2>
-                  <h2>วันที่ใช้บริการ : </h2>
-                  <h2>เวลาที่ใช้บริการ : </h2>
+                  <p>ชื่อลูกค้า: {watch("cusName")}</p>
+                  <p>เบอร์โทร: {watch("phoneNumber")}</p>
+
+                  <p>บริการที่เลือก:</p>
+                  {selectedService ? (
+                    <ul className="list-disc list-inside ">
+                      <li>ชื่อบริการ: {selectedService.name}</li>
+                      <li>ราคา: {selectedService.price} บาท</li>
+                      <li>ระยะเวลา: {selectedService.duration} นาที</li>
+                    </ul>
+                  ) : (
+                    <p className="text-red-500">ไม่พบข้อมูล</p>
+                  )}
+
+                  <p>
+                    ช่างที่เลือก: {selectedBarber?.username || "ไม่พบข้อมูล"}
+                  </p>
+                  <p>วันที่: {watch("date")}</p>
+                  <p>เวลา: {watch("time")}</p>
+                  <p>ฝากข้อความถึงช่าง: {watch("note")}</p>
                 </Step>
+
+                {isCompleted && (
+                  <div className="text-center py-10">
+                    <h2 className="text-2xl font-bold text-green-600">🎉 การจองเสร็จสมบูรณ์</h2>
+                    <p className="text-gray-500 mt-2">เราจะติดต่อคุณเร็ว ๆ นี้</p>
+                  </div>
+                )}
+
               </Stepper>
             </div>
           </div>

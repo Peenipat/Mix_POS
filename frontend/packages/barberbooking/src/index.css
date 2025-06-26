@@ -1,3 +1,6 @@
 @import "tailwindcss";
 @import "flowbite";
 
+body {
+    font-family: K2D
+  }

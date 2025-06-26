@@ -39,8 +39,8 @@ export default function ServicePage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-200">
-            <div className="container mx-auto py-12 px-6">
+        <div className="min-h-screen bg-gradient-to-b from-white via-slate-100 to-slate-200 text-gray-900 flex flex-col">
+            <div className="container mx-auto py-6 px-6 flex-grow">
                 <h1 className="text-4xl font-extrabold mb-8">บริการของเรา</h1>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -51,7 +51,7 @@ export default function ServicePage() {
                         return (
                             <div
                                 key={service.id}
-                                className="bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition flex flex-col h-full"
+                                className="bg-gray-100 rounded-lg shadow-lg hover:shadow-xl transition flex flex-col h-full"
                             >
                                 <img
                                     src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${service.Img_path}/${service.Img_name}`}
@@ -64,9 +64,9 @@ export default function ServicePage() {
                                         <h2 className="text-2xl font-semibold mb-2">{service.name}</h2>
                                         <p className="text-gray-400 text-sm mb-4">{service.description}</p>
                                     </div>
-                                    <div className="flex items-center justify-between text-gray-100">
+                                    <div className="flex items-center justify-between text-gray-900">
                                         <span className="font-bold text-lg">฿{service.price}</span>
-                                        <span className="text-sm bg-gray-700 px-2 py-1 rounded">
+                                        <span className="text-sm bg-gray-400 px-2 py-1 rounded">
                                             {service.duration} นาที
                                         </span>
                                     </div>

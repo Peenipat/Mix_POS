@@ -91,7 +91,7 @@ func TestWorkingHourService(t *testing.T) {
 			{Weekday: 0, StartTime: parseTimeToDateToday("09:00"), EndTime: parseTimeToDateToday("18:00")},
 			{Weekday: 1, StartTime: parseTimeToDateToday("10:00"), EndTime: parseTimeToDateToday("17:00")},
 		}
-		err := svc.UpdateWorkingHours(ctx, 1, input)
+		err := svc.UpdateWorkingHours(ctx, 1, 1,input)
 		assert.NoError(t, err)
 
 		var results []barberBookingModels.WorkingHour
@@ -100,7 +100,7 @@ func TestWorkingHourService(t *testing.T) {
 	})
 
 	t.Run("GetWorkingHours_ReturnsSorted", func(t *testing.T) {
-		results, err := svc.GetWorkingHours(ctx, 1)
+		results, err := svc.GetWorkingHours(ctx, 1,1)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, results[0].Weekday)
 		assert.Equal(t, 1, results[1].Weekday)
@@ -114,13 +114,13 @@ func TestWorkingHourService(t *testing.T) {
 		input := []barberBookingDto.WorkingHourInput{
 			{Weekday: 7, StartTime: parseTimeToDateToday("09:00"), EndTime: parseTimeToDateToday("17:00")}, //  invalid
 		}
-		err := svc.UpdateWorkingHours(ctx, 1, input)
+		err := svc.UpdateWorkingHours(ctx, 1, 1,input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid weekday")
 	})
 
 	t.Run("GetWorkingHours_NoData", func(t *testing.T) {
-		results, err := svc.GetWorkingHours(ctx, 9999) // ใช้ branchID ที่ไม่มี
+		results, err := svc.GetWorkingHours(ctx, 9999,1) // ใช้ branchID ที่ไม่มี
 		assert.NoError(t, err)
 		assert.Len(t, results, 0)
 	})

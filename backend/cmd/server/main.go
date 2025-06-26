@@ -212,6 +212,9 @@ func main() {
 	workingHourService := bookingServices.NewWorkingHourService(database.DB)
 	workingHourController := bookingControllers.NewWorkingHourController(workingHourService)
 
+	workingDayOverrideService := bookingServices.NewWorkingDayOverrideService(database.DB)
+	workingDayOverrideController := bookingControllers.NewWorkingDayOverrideController(workingDayOverrideService)
+
 	barberWorkloadService := bookingServices.NewBarberWorkloadService(database.DB)
 	barberWorkloadController := bookingControllers.NewBarberWorkloadController(barberWorkloadService)
 
@@ -221,6 +224,8 @@ func main() {
 
 	appointmentStatusLogController := bookingControllers.NewAppointmentStatusLogController(apppointmentStatusLogService)
 
+	
+
 	bookingGroup := app.Group("/api/v1/barberbooking")
 
 	// Register routes
@@ -229,9 +234,11 @@ func main() {
 	bookingRoutes.RegisterBarberRoutes(bookingGroup, barberController)
 	bookingRoutes.RegisterUnavailabilityRoute(bookingGroup, unavailabilityController)
 	bookingRoutes.RegisterWorkingHourRoute(bookingGroup, *workingHourController)
+	bookingRoutes.RegisterWorkingDayOverrideRoutes(bookingGroup, workingDayOverrideController)
 	bookingRoutes.RegisterBarberWorkloadRoute(bookingGroup, *barberWorkloadController)
 	bookingRoutes.RegisterAppointmentRoute(bookingGroup, appointmentController)
 	bookingRoutes.RegisterAppointmentStatusLogRoute(bookingGroup, appointmentStatusLogController)
+	
 
 	for _, r := range app.GetRoutes() {
 		fmt.Printf("%-6s %s\n", r.Method, r.Path)

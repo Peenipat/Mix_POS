@@ -7,7 +7,7 @@ import(
 )
 
 type IWorkingHourService interface{
-	GetWorkingHours(ctx context.Context, branchID uint) ([]barberBookingModels.WorkingHour, error) 
-	UpdateWorkingHours(ctx context.Context, branchID uint, input []barberBookingDto.WorkingHourInput) error
+	GetWorkingHours(ctx context.Context, branchID uint,tenantID uint) ([]barberBookingModels.WorkingHour, error) 
+	UpdateWorkingHours(ctx context.Context, branchID uint,tenantID uint ,input []barberBookingDto.WorkingHourInput) error
 	CreateWorkingHours(ctx context.Context, branchID uint, input barberBookingDto.WorkingHourInput) error
 }

@@ -12,5 +12,6 @@ func RegisterWorkingDayOverrideRoutes(router fiber.Router, ctrl *barberBookingCo
 	router.Put("/working-day-overrides/:id", ctrl.Update)
 	router.Get("/working-day-overrides/:id", ctrl.GetByID)
 	router.Delete("/working-day-overrides/:id", ctrl.DeleteWorkingDayOverride)
+	router.Get("/tenants/:tenant_id/branches/:branch_id/working-day-overrides/date", ctrl.GetOverridesByDateRange)
 
 }

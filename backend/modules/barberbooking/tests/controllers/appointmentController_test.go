@@ -46,12 +46,12 @@ func (m *MockAppointmentService) CheckBarberAvailability(
 func (m *MockAppointmentService) CreateAppointment(
 	ctx context.Context,
 	input *barberBookingModels.Appointment,
-) (*barberBookingModels.Appointment, error) {
+) (*barberBookingDto.AppointmentResponseDTO, error) {
 	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*barberBookingModels.Appointment), args.Error(1)
+	return args.Get(0).(*barberBookingDto.AppointmentResponseDTO), args.Error(1)
 }
 
 func (m *MockAppointmentService) GetAvailableBarbers(

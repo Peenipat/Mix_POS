@@ -21,11 +21,26 @@ definitions:
       new_start_time:
         type: string
     type: object
+  barberBookingDto.CalendarSlot:
+    properties:
+      end:
+        example: "2025-07-01T09:30:00Z"
+        type: string
+      start:
+        example: "2025-07-01T09:00:00Z"
+        type: string
+      status:
+        description: '"open" or "closed"'
+        example: open
+        type: string
+    type: object
   barberBookingDto.WorkingHourInput:
     properties:
       end_time:
         description: เวลาปิด
         type: string
+      is_closed:
+        type: boolean
       start_time:
         description: เวลาเปิด
         type: string
@@ -259,6 +274,8 @@ definitions:
         $ref: '#/definitions/barberbooking.TimeOnly'
       id:
         type: integer
+      isClosed:
+        type: boolean
       start_time:
         $ref: '#/definitions/barberbooking.TimeOnly'
       updated_at:
@@ -343,13 +360,12 @@ definitions:
       branch_id:
         type: integer
       end_time:
-        description: HH:mm
         type: string
+      is_closed:
+        type: boolean
       start_time:
-        description: HH:mm
         type: string
       work_date:
-        description: YYYY-MM-DD
         type: string
     required:
     - branch_id
@@ -760,47 +776,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: ดึงรายการนัดหมายของ Tenant
-      tags:
-      - Appointment
-    post:
-      consumes:
-      - application/json
-      description: สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service,
-        customer, optional barber, start_time (RFC3339) และ notes
-      parameters:
-      - description: รหัส Tenant
-        in: path
-        name: tenant_id
-        required: true
-        type: integer
-      - description: Payload สำหรับสร้างนัดหมาย
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/barberBookingPort.CreateAppointmentRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง
-          schema:
-            $ref: '#/definitions/barberBookingModels.Appointment'
-        "400":
-          description: Missing required fields หรือ Invalid format
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: สร้างนัดหมายใหม่ (Create Appointment)
       tags:
       - Appointment
   /tenants/:tenant_id/appointments/:appointment_id:
@@ -2574,6 +2549,153 @@ paths:
       summary: สร้างวันทำการใหม่ (เฉพาะ 1 วัน)
       tags:
       - WorkingHour
+  /tenants/{tenant_id}/appointments:
+    post:
+      consumes:
+      - application/json
+      description: สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service,
+        customer, optional barber, start_time (RFC3339) และ notes
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้างนัดหมาย
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.CreateAppointmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง
+          schema:
+            $ref: '#/definitions/barberBookingModels.Appointment'
+        "400":
+          description: Missing required fields หรือ Invalid format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างนัดหมายใหม่ (Create Appointment)
+      tags:
+      - Appointment
+  /tenants/{tenant_id}/branches/{branch_id}/available-slots:
+    get:
+      description: ดึงช่วงเวลาที่สามารถนัดหมายได้ของสาขาในช่วงวันที่กำหนด
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'Start date (format: YYYY-MM-DD)'
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: 'End date (format: YYYY-MM-DD)'
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/barberBookingDto.CalendarSlot'
+            type: array
+        "400":
+          description: Invalid input parameters (e.g. missing or invalid tenant_id,
+            branch_id, start or end)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Data not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get available time slots
+      tags:
+      - Calendar
+  /tenants/{tenant_id}/branches/{branch_id}/working-day-overrides/date:
+    get:
+      description: ใช้ดึงข้อมูล override ของวันทำการในช่วงวันที่กำหนดจากสาขาที่ระบุ
+      parameters:
+      - description: Branch ID
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Tenant ID
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'Start Date (format: YYYY-MM-DD)'
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: 'End Date (format: YYYY-MM-DD)'
+        in: query
+        name: end
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/barberBookingModels.WorkingDayOverride'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงวันเปิด-ปิดร้านเฉพาะช่วงวันที่กำหนด
+      tags:
+      - WorkingDayOverride
   /tenants/{tenant_id}/workinghour/branches/{branch_id}:
     get:
       consumes:

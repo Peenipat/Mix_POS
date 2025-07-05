@@ -93,7 +93,7 @@ func (s *appointmentService) CheckBarberAvailability(
 func (s *appointmentService) CreateAppointment(
 	ctx context.Context,
 	input *barberBookingModels.Appointment,
-) (*barberBookingModels.Appointment, error) {
+) (*barberBookingDto.AppointmentResponseDTO, error) {
 	// ตรวจ input เบื้องต้น
 	if input == nil {
 		return nil, errors.New("input appointment data is required")
@@ -154,7 +154,7 @@ func (s *appointmentService) CreateAppointment(
 
 		// 4. ตั้งค่า Status/Timestamps แล้วสร้างแถว appointment
 		if input.Status == "" {
-			input.Status = barberBookingModels.StatusPending
+			input.Status = barberBookingModels.StatusConfirmed
 		}
 		now := time.Now().UTC()
 		input.CreatedAt = now
@@ -195,7 +195,23 @@ func (s *appointmentService) CreateAppointment(
 		log.Printf("warning: failed to write status log: %v", logErr)
 	}
 
-	return appt, nil
+	resp := &barberBookingDto.AppointmentResponseDTO{
+		ID:         appt.ID,
+		TenantID:   appt.TenantID,
+		BranchID:   appt.BranchID,
+		ServiceID:  appt.ServiceID,
+		BarberID:   appt.BarberID,
+		CustomerID: appt.CustomerID,
+		StartTime:  appt.StartTime,
+		EndTime:    appt.EndTime,
+		Status:     string(appt.Status),
+		Notes:      appt.Notes,
+		CreatedAt:  appt.CreatedAt,
+		UpdatedAt:  appt.UpdatedAt,
+	}
+	return resp, nil
+	
+
 }
 
 func (s *appointmentService) GetAvailableBarbers(ctx context.Context, tenantID, branchID uint, start, end time.Time) ([]barberBookingModels.Barber, error) {

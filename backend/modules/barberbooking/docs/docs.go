@@ -417,68 +417,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service, customer, optional barber, start_time (RFC3339) และ notes",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Appointment"
-                ],
-                "summary": "สร้างนัดหมายใหม่ (Create Appointment)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Tenant",
-                        "name": "tenant_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Payload สำหรับสร้างนัดหมาย",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingPort.CreateAppointmentRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง",
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Appointment"
-                        }
-                    },
-                    "400": {
-                        "description": "Missing required fields หรือ Invalid format",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
             }
         },
         "/tenants/:tenant_id/appointments/:appointment_id": {
@@ -3131,6 +3069,228 @@ const docTemplate = `{
                 }
             }
         },
+        "/tenants/{tenant_id}/appointments": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service, customer, optional barber, start_time (RFC3339) และ notes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "สร้างนัดหมายใหม่ (Create Appointment)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้างนัดหมาย",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.CreateAppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing required fields หรือ Invalid format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/available-slots": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ดึงช่วงเวลาที่สามารถนัดหมายได้ของสาขาในช่วงวันที่กำหนด",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calendar"
+                ],
+                "summary": "Get available time slots",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Tenant ID",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Branch ID",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (format: YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (format: YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/barberBookingDto.CalendarSlot"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input parameters (e.g. missing or invalid tenant_id, branch_id, start or end)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/working-day-overrides/date": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้ดึงข้อมูล override ของวันทำการในช่วงวันที่กำหนดจากสาขาที่ระบุ",
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "ดึงวันเปิด-ปิดร้านเฉพาะช่วงวันที่กำหนด",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Branch ID",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Tenant ID",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start Date (format: YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End Date (format: YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/barberBookingModels.WorkingDayOverride"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tenants/{tenant_id}/workinghour/branches/{branch_id}": {
             "get": {
                 "security": [
@@ -3553,12 +3713,33 @@ const docTemplate = `{
                 }
             }
         },
+        "barberBookingDto.CalendarSlot": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string",
+                    "example": "2025-07-01T09:30:00Z"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "2025-07-01T09:00:00Z"
+                },
+                "status": {
+                    "description": "\"open\" or \"closed\"",
+                    "type": "string",
+                    "example": "open"
+                }
+            }
+        },
         "barberBookingDto.WorkingHourInput": {
             "type": "object",
             "properties": {
                 "end_time": {
                     "description": "เวลาปิด",
                     "type": "string"
+                },
+                "is_closed": {
+                    "type": "boolean"
                 },
                 "start_time": {
                     "description": "เวลาเปิด",
@@ -3901,6 +4082,9 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "isClosed": {
+                    "type": "boolean"
+                },
                 "start_time": {
                     "$ref": "#/definitions/barberbooking.TimeOnly"
                 },
@@ -4026,15 +4210,15 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "end_time": {
-                    "description": "HH:mm",
                     "type": "string"
                 },
+                "is_closed": {
+                    "type": "boolean"
+                },
                 "start_time": {
-                    "description": "HH:mm",
                     "type": "string"
                 },
                 "work_date": {
-                    "description": "YYYY-MM-DD",
                     "type": "string"
                 }
             }

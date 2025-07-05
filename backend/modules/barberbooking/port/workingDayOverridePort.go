@@ -2,6 +2,7 @@ package barberBookingPort
 
 import (
 	"context"
+	"time"
 	barberBookingModels "myapp/modules/barberbooking/models"
 )
 
@@ -37,6 +38,7 @@ type IWorkingDayOverrideService interface {
 
 	// ลบ override
 	Delete(ctx context.Context, id uint) error
+	GetOverridesByDateRange(ctx context.Context, branchID uint, startDate, endDate time.Time) ([]barberBookingModels.WorkingDayOverride, error)
 }
 
 

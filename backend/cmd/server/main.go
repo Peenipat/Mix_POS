@@ -30,6 +30,7 @@ import (
 	bookingRoutes "myapp/modules/barberbooking/routes"
 	bookingServices "myapp/modules/barberbooking/services"
 	coreControllers "myapp/modules/core/controllers"
+	
 	_ "myapp/modules/core/docs" // registers as "core"
 	coreModels "myapp/modules/core/models"
 	coreRoutes "myapp/modules/core/routes"
@@ -218,6 +219,10 @@ func main() {
 	barberWorkloadService := bookingServices.NewBarberWorkloadService(database.DB)
 	barberWorkloadController := bookingControllers.NewBarberWorkloadController(barberWorkloadService)
 
+	calendarService := bookingServices.NewCalendarService(database.DB,workingHourService,workingDayOverrideService)
+	calendarController :=  bookingControllers.NewCalendarController(calendarService)
+
+
 	apppointmentStatusLogService := bookingServices.NewAppointmentStatusLogService(database.DB)
 	appointmentService := bookingServices.NewAppointmentService(database.DB, apppointmentStatusLogService)
 	appointmentController := bookingControllers.NewAppointmentController(appointmentService)
@@ -238,6 +243,7 @@ func main() {
 	bookingRoutes.RegisterBarberWorkloadRoute(bookingGroup, *barberWorkloadController)
 	bookingRoutes.RegisterAppointmentRoute(bookingGroup, appointmentController)
 	bookingRoutes.RegisterAppointmentStatusLogRoute(bookingGroup, appointmentStatusLogController)
+	bookingRoutes.RegisterCalendarRoute(bookingGroup,calendarController)
 	
 
 	for _, r := range app.GetRoutes() {

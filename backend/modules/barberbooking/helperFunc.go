@@ -65,3 +65,11 @@ func (t *TimeOnly) Scan(value interface{}) error {
 func (t TimeOnly) Value() (driver.Value, error) {
 	return t.Format("15:04:05"), nil
 }
+
+func (t TimeOnly) ToTime(baseDate time.Time) time.Time {
+	return time.Date(
+		baseDate.Year(), baseDate.Month(), baseDate.Day(),
+		t.Hour(), t.Minute(), t.Second(), 0,
+		baseDate.Location(),
+	)
+}

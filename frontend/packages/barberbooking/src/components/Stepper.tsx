@@ -92,7 +92,7 @@ export default function Stepper({
   return (
     <div className="w-full" {...rest}>
       <div
-        className={`max-w-lg mx-auto rounded-2xl shadow-xl ${stepCircleContainerClassName}`}
+        className={`max-w-full mx-auto rounded-2xl shadow-xl ${stepCircleContainerClassName}`}
         style={{ border: "1px solid #222" }}
       >
         <div className="px-8 py-4 text-center">
@@ -150,7 +150,7 @@ export default function Stepper({
               {currentStep > 0 ? (
                 <button
                   onClick={handleBack}
-                  className="duration-350 rounded px-2 py-1 transition text-neutral-400 hover:text-neutral-700"
+                  className="duration-350 rounded px-2 py-1  bg-red-500 text-white transition hover:text-neutral-700"
                   {...backButtonProps}
                 >
                   {backButtonText}
@@ -161,10 +161,10 @@ export default function Stepper({
 
               <button
                 onClick={isLastStep ? handleComplete : handleNext}
-                className="duration-350 flex items-center justify-center rounded-full bg-green-500 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-green-600 active:bg-green-700"
+                className="duration-350 flex items-center justify-center p-2 rounded-md bg-green-500 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-green-600 active:bg-green-700"
                 {...nextButtonProps}
               >
-                {isLastStep ? "Complete" : nextButtonText}
+                {isLastStep ? "ยืนยัน" : nextButtonText}
               </button>
             </div>
           </div>

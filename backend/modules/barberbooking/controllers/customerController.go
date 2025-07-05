@@ -44,7 +44,6 @@ var RolesCanManageCustomer = []coreModels.RoleName{
 // @Security     ApiKeyAuth
 func (ctrl *CustomerController) GetAllCustomers(c *fiber.Ctx) error {
 	roleStr, ok := c.Locals("role").(string)
-	fmt.Println("roleStr:", roleStr)
 	if !ok || !helperFunc.IsAuthorizedRole(roleStr, RolesCanManageCustomer) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  "error",

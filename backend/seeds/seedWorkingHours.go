@@ -28,7 +28,7 @@ func SeedWorkingHours(db *gorm.DB) error {
 			BranchID: branch.ID,
 			TenantID: 1,
 			Weekday:  wd,
-			IsClosed: wd == 0 || wd == 6, // ✅ ปิด เสาร์–อาทิตย์
+			IsClosed: wd == 0 || wd == 6, // 
 		}
 
 		if !wh.IsClosed {

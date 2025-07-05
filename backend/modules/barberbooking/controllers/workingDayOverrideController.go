@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 	"errors"
+	"context"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	barberBookingPort "myapp/modules/barberbooking/port"
@@ -165,5 +167,58 @@ func (c *WorkingDayOverrideController) DeleteWorkingDayOverride(ctx *fiber.Ctx) 
 	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+// GetOverridesByDateRange godoc
+// @Summary      ดึงวันเปิด-ปิดร้านเฉพาะช่วงวันที่กำหนด
+// @Description  ใช้ดึงข้อมูล override ของวันทำการในช่วงวันที่กำหนดจากสาขาที่ระบุ
+// @Tags         WorkingDayOverride
+// @Param        tenant_id  path      uint     true   "Branch ID"
+// @Param        branch_id  path      uint     true   "Tenant ID"
+// @Param        start      query     string  true   "Start Date (format: YYYY-MM-DD)"
+// @Param        end        query     string  true   "End Date (format: YYYY-MM-DD)"
+// @Success      200        {array}   barberBookingModels.WorkingDayOverride
+// @Failure      400        {object}  map[string]string
+// @Failure      500        {object}  map[string]string
+// @Router       /tenants/{tenant_id}/branches/{branch_id}/working-day-overrides/date [get]
+// @Security     ApiKeyAuth
+func (c *WorkingDayOverrideController) GetOverridesByDateRange(ctx *fiber.Ctx) error {
+	branchIDParam := ctx.Params("branch_id")
+	startDateStr := ctx.Query("start")
+	endDateStr := ctx.Query("end")
+
+	// Convert branch_id to uint
+	branchID64, err := strconv.ParseUint(branchIDParam, 10, 32)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid branch_id",
+		})
+	}
+	branchID := uint(branchID64)
+
+	// Parse dates
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid start date format. Use YYYY-MM-DD",
+		})
+	}
+
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid end date format. Use YYYY-MM-DD",
+		})
+	}
+
+	// Call service
+	overrides, err := c.Service.GetOverridesByDateRange(context.Background(), branchID, startDate, endDate)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch working day overrides",
+		})
+	}
+
+	return ctx.JSON(overrides)
 }
 

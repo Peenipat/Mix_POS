@@ -9,6 +9,7 @@ import axios from "../../lib/axios";
 import Modal from "@object/shared/components/Modal";
 import { TableCellsIcon } from "../../components/icons/TableCellsIcon";
 import { GridViewIcon } from "../../components/icons/GridViewIcon"
+import { Card } from "@object/shared/components/Card";
 
 interface Service {
   id: number;
@@ -191,60 +192,46 @@ export function ManageService() {
       {viewMode === "card" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((sv) => (
-            <div
+            <Card
               key={sv.id}
-              className=" rounded-lg shadow-lg hover:shadow-xl transition flex flex-col"
+              onEdit={() => {
+                setEditService(sv);
+                setIsEditOpen(true);
+              }}
+              onDelete={() => {
+                setDeleteService(sv);
+                setIsDeleteOpen(true);
+              }}
+              showActions={true} // หรือไม่ใส่ก็ได้ ถ้า default = true
             >
               {sv.Img_path && sv.Img_name && (
                 <img
                   src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${sv.Img_path}/${sv.Img_name}`}
                   alt={sv.name}
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-48 object-cover rounded"
                 />
               )}
 
-              {/* เนื้อหา */}
-              <div className="p-4 flex flex-col flex-1 justify-between">
+              <div className="mt-2  flex justify-between flex-1">
                 <div>
                   <h3 className="text-lg font-semibold mb-1">{sv.name}</h3>
                   <p className="text-gray-400 text-sm line-clamp-3">
                     {sv.description}
                   </p>
-                  <p className="text-gray-400 text-sm line-clamp-3"> {sv.duration} นาที</p>
+                  <p className="text-gray-400 text-sm">⏱ {sv.duration} นาที</p>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
                   <span className="font-bold text-lg text-green-400">
                     ฿{sv.price}
                   </span>
-
-                  {/* ปุ่มจัดการ */}
-                  <div className="flex gap-2">
-                    <button
-                      className="text-sm text-blue-400 underline"
-                      onClick={() => {
-                        setEditService(sv);
-                        setIsEditOpen(true);
-                      }}
-                    >
-                      แก้ไข
-                    </button>
-                    <button
-                      className="text-sm text-red-400 underline"
-                      onClick={() => {
-                        setDeleteService(sv);
-                        setIsDeleteOpen(true);
-                      }}
-                    >
-                      ลบ
-                    </button>
-                  </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
+
 
       <CreateServiceModal
         isOpen={isCreateOpen}

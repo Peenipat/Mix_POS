@@ -8,13 +8,9 @@ import axios from "../../lib/axios";
 
 
 interface Customer {
-    /** รหัสของ Customer */
     id: number;
-    /** ชื่อเต็มของ Customer */
     Name: string;
-    /** อีเมล (ถ้ามี) */
     email: string;
-    /** เบอร์โทรศัพท์ */
     Phone: string;
   }
 

@@ -2,22 +2,24 @@
 import React, { useEffect, useState, useRef, useCallback, FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { DataTable } from "../../components/DataTable";
-import type { Action, Column } from "../../components/DataTable";
-import type { Barber } from "../../types/barber";
-import { useAppSelector } from "../../store/hook";
-import axios from "../../lib/axios";
+import { DataTable } from "../../../components/DataTable";
+import type { Action, Column } from "../../../components/DataTable";
+import type { Barber } from "../../../types/barber";
+import { useAppSelector } from "../../../store/hook";
+import axios from "../../../lib/axios";
 import { Modal } from "@object/shared"
-import type { EditBarberFormData } from "../../schemas/barberSchema";
-import { editBarberSchema } from "../../schemas/barberSchema";
+import type { EditBarberFormData } from "../../../schemas/barberSchema";
+import { editBarberSchema } from "../../../schemas/barberSchema";
 import type { ChangeEvent } from "react";
-import { CardItem } from "@object/shared/components/CardItem";
-import { TableCellsIcon } from "../../components/icons/TableCellsIcon";
-import { GridViewIcon } from "../../components/icons/GridViewIcon"
+import { Card } from "@object/shared/components/Card";
+import { TableCellsIcon } from "../../../components/icons/TableCellsIcon";
+import { GridViewIcon } from "../../../components/icons/GridViewIcon"
+import { useNavigate } from "react-router-dom";
 
 export function ManageBarber() {
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
+  const navigate = useNavigate();
 
   const tenantId = me?.tenant_ids?.[0];
   const branchId = Number(me?.branch_id);
@@ -29,7 +31,7 @@ export function ManageBarber() {
   const [errorBarbers, setErrorBarbers] = useState<string | null>(null);
   const didFetchBarbers = useRef(false);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
@@ -40,6 +42,10 @@ export function ManageBarber() {
       setBarbers(prev => prev.filter(b => b.id !== deleteBarber.id));
     }
   };
+  const handleView = (barberId:number)=>{
+    console.log(barberId)
+    navigate(`/admin/barber/${barberId}`)
+  }
 
   const loadBarbers = useCallback(async () => {
     if (!tenantId || !branchId) return;
@@ -84,7 +90,6 @@ export function ManageBarber() {
     className: "text-red-600",
   };
 
-  // เมื่อสร้างเสร็จ ให้รีเซ็ต flag แล้ว load ใหม่
   const handleCreated = () => {
     didFetchBarbers.current = false;
     loadBarbers();
@@ -100,7 +105,7 @@ export function ManageBarber() {
       {/* ปุ่มควบคุม */}
       <div className="flex flex-wrap items-center gap-4 justify-between">
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setIsCreateOpen(true)}
           className="btn btn-primary"
         >
           + เพิ่มช่างคนใหม่
@@ -165,16 +170,8 @@ export function ManageBarber() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {barbers.map((barber) => (
-                <CardItem
+                <Card
                   key={barber.id}
-                  logoSrc={barber.logoSrc}
-                  avatarSrc={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${barber.img_path}/${barber.img_name}`}
-                  avatarAlt={barber.avatarAlt}
-                  name={barber.username}
-                  jobTitle={barber.jobTitle}
-                  email={barber.email}
-                  phone={barber.phone_number}
-                  sex={barber.sex}
                   onView={() => handleView(barber.id)}
                   onEdit={() => {
                     setEditBarber(barber);
@@ -184,9 +181,31 @@ export function ManageBarber() {
                     setDeleteBarber(barber);
                     setIsDeleteOpen(true);
                   }}
-                />
+                >
+                  <img
+                    src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${barber.img_path}/${barber.img_name}`}
+                    alt={barber.avatarAlt || "Barber"}
+                    className="w-full h-64 object-cover object-top"
+                  />
+                  <div className="mt-2">
+                    <h3 className="text-lg font-semibold">{barber.username}</h3>
+                    {barber.jobTitle && (
+                      <p className="text-sm text-gray-500">{barber.jobTitle}</p>
+                    )}
+                    {barber.email && (
+                      <p className="text-sm text-gray-400">📧 {barber.email}</p>
+                    )}
+                    {barber.phone_number && (
+                      <p className="text-sm text-gray-400">📞 {barber.phone_number}</p>
+                    )}
+                    {barber.sex && (
+                      <p className="text-sm text-gray-400">👤 {barber.sex}</p>
+                    )}
+                  </div>
+                </Card>
               ))}
             </div>
+
           )}
 
           {/* โมดัล */}
@@ -201,6 +220,11 @@ export function ManageBarber() {
             isOpen={isEditOpen}
             barber={editBarber}
             onClose={() => setIsEditOpen(false)}
+            onCreate={handleCreated}
+          />
+          <CreateBarberModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
             onCreate={handleCreated}
           />
         </>

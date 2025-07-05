@@ -22,8 +22,7 @@ export default function Navbar() {
     { name: "หน้าหลัก", href: "/" },
     { name: "บริการของทางร้าน", href: "/service" },
     { name: "ข้อมูลช่างตัดผม", href: "/barbers" },
-    { name: "จองคิวออนไลน์", href: "/booking" },
-    { name: "รีวิว & ให้คะแนน", href: "/reviews" },
+    { name: "จองคิว", href: "/booking" },
     { name: "ประวัติการจอง", href: "/history" },
     { name: "เข้าสู่ระบบ", href: "/login" },
   ];

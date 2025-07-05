@@ -80,6 +80,7 @@ func (s *BarberService) ListBarbersByBranch(ctx context.Context, branchID *uint)
             users.img_path,
             users.img_name,
             barbers.description,
+            barbers.role_user,
             barbers.created_at,
             barbers.updated_at
         `).

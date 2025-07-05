@@ -17,66 +17,39 @@ interface MenuGroup {
 
 const crumbsMap: Record<string, string> = {
   dashboard: "หน้าหลัก",
-  barber: "ข้อมูลช่าง",
-  service: "ข้อมูลบริการ",
-  customer: "ข้อมูลลูกค้า",
-  appointments: "การนัดหมาย",
-  working: "เวลาทำการ",
-  report: "รายงานผลประกอบการ",
-  billing: "ค่าใช้จ่ายร้าน",
-
+  appointments_history: "ประวัติการนัดหมาย",
+  income: "รายได้",
   calendar: "ปฏิทินการนัดหมาย",
   tax: "คำนวณภาษี",
-  feedback: "ความคิดเห็น / รีวิวลูกค้า",
-  inventory: "จัดการสต๊อกสินค้า",
-  branch: "ระบบจัดการสาขา",
-  layout: "จัดการหน้าเว็บไซต์",
+  feedback: "รีวิวจากลูกค้า",
   help: "ความช่วยเหลือ & ติดต่อผู้พัฒนา",
+  contact: "ติดต่อผู้พัฒนา",
+  profile: "ข้อมูลส่วนตัว",
+  setting:"ตั้งค่า"
 };
 
 const groupedMenu: MenuGroup[] = [
   {
-    key: "shop",
-    label: "จัดการร้าน",
-    items: [
-      { to: "barber", label: "ข้อมูลช่าง" },
-      { to: "service", label: "ข้อมูลบริการ" },
-      { to: "working", label: "เวลาทำการ" },
-      { to: "inventory", label: "จัดการสต๊อกสินค้า" ,status: "comingsoon" },
-    ],
-  },
-  {
     key: "customer",
     label: "ข้อมูลลูกค้า",
     items: [
-      { to: "customer", label: "ข้อมูลลูกค้า" },
-      { to: "appointments", label: "การนัดหมาย" },
-      { to: "calendar", label: "ปฏิทินการนัดหมาย",status: "comingsoon" },
-      { to: "feedback", label: "รีวิวลูกค้า" ,status: "comingsoon" }
+      { to: "feedback", label: "รีวิวจากลูกค้า",},
+      { to: "appointments_history", label: "ประวัตินัดหมาย" ,status: "comingsoon" },
     ],
   },
   {
     key: "finance",
     label: "การเงิน / บัญชี",
     items: [
-      { to: "report", label: "ผลประกอบการ" ,status: "comingsoon" },
-      { to: "billing", label: "ค่าใช้จ่ายร้าน",status: "comingsoon" },
-      { to: "tax", label: "คำนวณภาษี" ,status: "comingsoon" },
-    ],
-  },
-  {
-    key: "settings",
-    label: "ตั้งค่าระบบ",
-    items: [
-      { to: "layout", label: "จัดการหน้าเว็บไซต์" ,status: "comingsoon" },
+      { to: "income", label: "รายได้", },
+      { to: "tax", label: "คำนวณภาษี", status: "comingsoon" },
     ],
   },
   {
     key: "etc",
     label: "อื่น ๆ",
     items: [
-      { to: "branch", label: "ระบบจัดการสาขา" ,status: "comingsoon" },
-      { to: "help", label: "ความช่วยเหลือ" ,status: "comingsoon" },
+      { to: "setting", label: "ตั้งค่า" ,status: "comingsoon"},
       { to: "contact", label: "ติดต่อผู้พัฒนา" },
     ],
   },
@@ -106,10 +79,10 @@ const renderStatusBadge = (status?: string) => {
 
 
 
-export default function AdminLayout() {
+export default function BarberLayout() {
   const { pathname } = useLocation();
   const raw = pathname.split("/").filter(Boolean);
-  const segments = raw.filter((seg) => seg !== "admin");
+  const segments = raw.filter((seg) => seg !== "barber");
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -196,6 +169,14 @@ export default function AdminLayout() {
                 )}
               </li>
             ))}
+            <li>
+              <Link
+                to="/barber/profile"
+                className="block p-2 text-sm rounded-lg hover:bg-gray-700"
+              >
+              ข้อมูลส่วนตัว
+              </Link>
+            </li>
           </ul>
         </div>
       </aside>
@@ -208,7 +189,7 @@ export default function AdminLayout() {
               {segments.length === 0 || segments[0] !== "dashboard" ? (
                 <li className="inline-flex items-center">
                   <Link
-                    to="/admin/dashboard"
+                    to="/barber/dashboard"
                     className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500"
                   >
                     หน้าหลัก
@@ -221,7 +202,7 @@ export default function AdminLayout() {
               )}
               {segments.map((seg, idx) => {
                 if (idx === 0 && seg === "dashboard") return null;
-                const basePath = "/admin";
+                const basePath = "/barber";
                 const to = `${basePath}/${segments.slice(0, idx + 1).join("/")}`;
                 const isLast = idx === segments.length - 1;
                 const label = crumbsMap[seg] || seg;

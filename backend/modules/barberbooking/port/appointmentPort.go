@@ -8,7 +8,7 @@ import (
 
 type IAppointment interface {
 	CheckBarberAvailability(ctx context.Context, tenantID, barberID uint, start, end time.Time) (bool, error)
-	CreateAppointment(ctx context.Context, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error)
+	CreateAppointment(ctx context.Context, input *barberBookingModels.Appointment) (*barberBookingDto.AppointmentResponseDTO, error)
 	GetAvailableBarbers(ctx context.Context, tenantID, branchID uint, start, end time.Time) ([]barberBookingModels.Barber, error)
 	UpdateAppointment(ctx context.Context, id uint, tenantID uint, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error)
 	GetAppointmentByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error)

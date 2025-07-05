@@ -124,14 +124,16 @@ export default function BranchCalendar() {
   );
 }
 
-
-
-const schema = z.object({
+const normalDaySchema = z.object({
   start_time: z.string().min(1, "กรุณาระบุเวลาเปิด"),
   end_time: z.string().min(1, "กรุณาระบุเวลาปิด"),
 });
+const closedDaySchema = z.object({});
 
-type FormData = z.infer<typeof schema>;
+type FormData = {
+  start_time?: string;
+  end_time?: string;
+};
 
 interface AddWorkingDayModalProps {
   isOpen: boolean;
@@ -146,20 +148,20 @@ export function AddWorkingDayModal({
   onAdd,
   date,
 }: AddWorkingDayModalProps) {
+  const [isClosed, setIsClosed] = useState(false);
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { isSubmitting, errors },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(isClosed ? closedDaySchema : normalDaySchema),
     defaultValues: {
       start_time: "",
       end_time: "",
     },
   });
-
-  const [isClosed, setIsClosed] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -170,15 +172,21 @@ export function AddWorkingDayModal({
 
   const onSubmit = (data: FormData) => {
     if (!date) return;
+
+    const dateClone = new Date(date); // ป้องกัน setHours เปลี่ยนค่า date ต้นฉบับ
+
     const startDate = isClosed
-      ? new Date(date.setHours(0, 0, 0, 0))
+      ? new Date(dateClone.setHours(0, 0, 0, 0))
       : new Date(`${format(date, "yyyy-MM-dd")}T${data.start_time}:00`);
+
     const endDate = isClosed
-      ? new Date(date.setHours(23, 59, 59, 999))
+      ? new Date(dateClone.setHours(23, 59, 59, 999))
       : new Date(`${format(date, "yyyy-MM-dd")}T${data.end_time}:00`);
 
     const event: OpenDayEvent = {
-      title: isClosed ? "หยุดทำการ" : `เปิดทำการ ${data.start_time}–${data.end_time}`,
+      title: isClosed
+        ? "หยุดทำการ"
+        : `เปิดทำการ ${data.start_time}–${data.end_time}`,
       start: startDate,
       end: endDate,
       status: isClosed ? "closed" : "open",
@@ -222,11 +230,23 @@ export function AddWorkingDayModal({
         )}
 
         <div>
-          <Toggle checked={isClosed} onChange={setIsClosed} label=" วันหยุดทั้งวัน" />
+          <Toggle
+            checked={isClosed}
+            onChange={(checked) => {
+              setIsClosed(checked);
+              reset(); // รีเซ็ตค่า form ทุกครั้งที่สลับ toggle
+            }}
+            label=" วันหยุดทั้งวัน"
+          />
         </div>
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="btn btn-ghost" disabled={isSubmitting}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-ghost"
+            disabled={isSubmitting}
+          >
             ยกเลิก
           </button>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
@@ -237,4 +257,3 @@ export function AddWorkingDayModal({
     </Modal>
   );
 }
-

@@ -168,3 +168,17 @@ func (s *WorkingDayOverrideService) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (s *WorkingDayOverrideService) GetOverridesByDateRange(ctx context.Context, branchID uint, startDate, endDate time.Time) ([]barberBookingModels.WorkingDayOverride, error) {
+	var overrides []barberBookingModels.WorkingDayOverride
+	err := s.DB.WithContext(ctx).
+		Where("branch_id = ? AND work_date BETWEEN ? AND ? AND deleted_at IS NULL", branchID, startDate, endDate).
+		Order("work_date ASC").
+		Find(&overrides).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return overrides, nil
+}
+
+

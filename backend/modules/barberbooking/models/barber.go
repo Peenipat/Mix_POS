@@ -13,6 +13,7 @@ type Barber struct {
 	UserID   		uint 			`gorm:"not null;uniqueIndex" json:"user_id"`
 	TenantID 		uint 			`gorm:"not null;" json:"tenant_id" `
 	PhoneNumber 	string      	`gorm:"type:varchar(20);not null" json:"phone_number"`
+	RoleUser     	string      	`gorm:"type:varchar(100);" json:"role_user"`
 	Description     string      	`gorm:"type:varchar(100);not null" json:"description"`
 
 	CreatedAt 		time.Time      `json:"created_at"`

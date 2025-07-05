@@ -5,13 +5,13 @@ import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen"> 
       <Navbar />
 
-      <main className="">
+      <main className="flex-grow overflow-hidden">
         <Outlet />
       </main>
-
     </div>
   );
 }
+

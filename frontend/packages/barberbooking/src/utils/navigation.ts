@@ -16,7 +16,7 @@ export function navigateByRole(role: string | undefined, navigate: NavigateFunct
             navigate('/admin/dashboard');
             break;
         case 'STAFF':
-            navigate('/staff/dashboard');
+            navigate('/barber/dashboard');
             break;
         default:
             navigate('/dashboard');

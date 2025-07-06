@@ -168,6 +168,8 @@ definitions:
         type: integer
       phone_number:
         type: string
+      role_user:
+        type: string
       tenant_id:
         type: integer
       updated_at:
@@ -316,6 +318,15 @@ definitions:
         example: 5
         type: integer
     type: object
+  barberBookingPort.CreateBarberInput:
+    properties:
+      description:
+        type: string
+      phone_number:
+        type: string
+      user_id:
+        type: integer
+    type: object
   barberBookingPort.UpdateAppointmentReviewRequest:
     properties:
       comment:
@@ -329,13 +340,13 @@ definitions:
     properties:
       branch_id:
         type: integer
+      description:
+        type: string
       email:
         description: ถ้าต้องการอัปเดตอีเมลด้วย
         type: string
       phone_number:
         type: string
-      user_id:
-        type: integer
       username:
         description: ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย
         type: string
@@ -510,7 +521,50 @@ info:
   title: BarberBooking API
   version: "1.0"
 paths:
-  /barbers/:barber_id:
+  /barbers/{barber_id}:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ
+        BranchAdmin)
+      parameters:
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid barber_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบช่างตัดผม
+      tags:
+      - Barber
     get:
       consumes:
       - application/json
@@ -548,6 +602,49 @@ paths:
               type: string
             type: object
       summary: ดึงข้อมูลช่างตัดผมตาม ID
+      tags:
+      - Barber
+  /branches/{branch_id}/barbers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Barber ทั้งหมดของสาขาที่ระบุ หากไม่พบจะคืน 404 พร้อม
+        data ว่าง
+      parameters:
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Barber ใน key
+            `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid branch_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: no barbers found for this branch (data จะเป็น array ว่าง)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: failed to fetch barbers
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อช่างตัดผมตามสาขา
       tags:
       - Barber
   /none:
@@ -1179,203 +1276,6 @@ paths:
       summary: อัปเดตรีวิว
       tags:
       - Review
-  /tenants/:tenant_id/barbers:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการ Barber ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin
-        หรือ Tenant)
-      parameters:
-      - description: รหัส Tenant
-        in: path
-        name: tenant_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status, message และ array ของ Barber ใน key `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid tenant_id
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: List Barber not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to fetch List Barber
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงรายชื่อช่างตาม Tenant
-      tags:
-      - Barber
-    post:
-      consumes:
-      - application/json
-      description: เพิ่ม Barber ใหม่ลงในระบบ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ
-        BranchAdmin)
-      parameters:
-      - description: Payload สำหรับสร้าง Barber (UserID, BranchID, ชื่อ-นามสกุล ฯลฯ)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/barberBookingModels.Barber'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: คืนค่า status success และข้อความยืนยันการสร้าง
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to create barber
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: สร้างช่างตัดผมใหม่
-      tags:
-      - Barber
-  /tenants/:tenant_id/barbers/:barber_id:
-    delete:
-      consumes:
-      - application/json
-      description: ลบ Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ
-        BranchAdmin)
-      parameters:
-      - description: รหัส Barber
-        in: path
-        name: barber_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success และข้อความยืนยันการลบ
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Invalid barber_id
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to delete barber
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ลบช่างตัดผม
-      tags:
-      - Barber
-    put:
-      consumes:
-      - application/json
-      description: อัปเดตข้อมูล Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant
-        หรือ BranchAdmin)
-      parameters:
-      - description: รหัส Tenant
-        in: path
-        name: tenant_id
-        required: true
-        type: integer
-      - description: รหัส Barber
-        in: path
-        name: barber_id
-        required: true
-        type: integer
-      - description: Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username,
-          Email)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/barberBookingPort.UpdateBarberRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success และข้อมูล Barber ใน key `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid tenant_id/barber_id หรือ Invalid request body
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Barber not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to update Barber
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: แก้ไขข้อมูลช่างตัดผม
-      tags:
-      - Barber
   /tenants/:tenant_id/barbers/:barber_id/availability:
     get:
       description: ตรวจสอบว่า Barber ที่ระบุสามารถรับงานได้ในช่วงเวลาที่กำหนด (RFC3339)
@@ -1426,98 +1326,6 @@ paths:
       summary: ตรวจสอบความพร้อมของช่างตัดผม
       tags:
       - Appointment
-  /tenants/:tenant_id/barbers/branches/:branch_id/barbers:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการ Barber ทั้งหมดของสาขาที่ระบุ หากไม่พบจะคืน 404 พร้อม
-        data ว่าง
-      parameters:
-      - description: รหัส Branch
-        in: path
-        name: branch_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และ array ของ Barber ใน key
-            `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: invalid branch_id
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: no barbers found for this branch (data จะเป็น array ว่าง)
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: failed to fetch barbers
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงรายชื่อช่างตัดผมตามสาขา
-      tags:
-      - Barber
-  /tenants/:tenant_id/barbers/users/:user_id/barber:
-    get:
-      consumes:
-      - application/json
-      description: คืนข้อมูล Barber ที่เชื่อมโยงกับ User ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin,
-        Tenant หรือ BranchAdmin)
-      parameters:
-      - description: รหัส User
-        in: path
-        name: user_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และข้อมูล Barber ใน key `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid user_id
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Barber not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to fetch barber
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงข้อมูลช่างตัดผมโดย User ID
-      tags:
-      - Barber
   /tenants/:tenant_id/barberworkload/barbers/:barber_id:
     get:
       consumes:
@@ -2591,6 +2399,116 @@ paths:
       summary: สร้างนัดหมายใหม่ (Create Appointment)
       tags:
       - Appointment
+  /tenants/{tenant_id}/barbers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Barber ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin
+        หรือ Tenant)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message และ array ของ Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: List Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch List Barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อช่างตาม Tenant
+      tags:
+      - Barber
+  /tenants/{tenant_id}/barbers/{barber_id}/update-barber:
+    put:
+      consumes:
+      - application/json
+      description: อัปเดตข้อมูล Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant
+        หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username,
+          Email)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.UpdateBarberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id/barber_id หรือ Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update Barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขข้อมูลช่างตัดผม
+      tags:
+      - Barber
   /tenants/{tenant_id}/branches/{branch_id}/available-slots:
     get:
       description: ดึงช่วงเวลาที่สามารถนัดหมายได้ของสาขาในช่วงวันที่กำหนด
@@ -2648,6 +2566,114 @@ paths:
       summary: Get available time slots
       tags:
       - Calendar
+  /tenants/{tenant_id}/branches/{branch_id}/create-barber:
+    post:
+      consumes:
+      - application/json
+      description: เพิ่ม Barber ใหม่ลงในระบบ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ
+        BranchAdmin)
+      parameters:
+      - description: รหัส tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้าง Barber (UserID, BranchID, ชื่อ-นามสกุล ฯลฯ)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.CreateBarberInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success และข้อความยืนยันการสร้าง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างช่างตัดผมใหม่
+      tags:
+      - Barber
+  /tenants/{tenant_id}/branches/{branch_id}/users:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ user ที่ไม่ได้เป็น Barber ทั้งหมดของสาขานั้น
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message และ array ของ Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: List Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch List Barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth // ถ้าใช้ token: []
+      summary: ดึงข้อมูล User ไม่ได้เป็น barber ในสาขานั้น ๆ
+      tags:
+      - Barber
   /tenants/{tenant_id}/branches/{branch_id}/working-day-overrides/date:
     get:
       description: ใช้ดึงข้อมูล override ของวันทำการในช่วงวันที่กำหนดจากสาขาที่ระบุ
@@ -2799,6 +2825,55 @@ paths:
       summary: อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)
       tags:
       - WorkingHour
+  /users/{user_id}/barber:
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Barber ที่เชื่อมโยงกับ User ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin,
+        Tenant หรือ BranchAdmin)
+      parameters:
+      - description: รหัส User
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูลช่างตัดผมโดย User ID
+      tags:
+      - Barber
   /working-day-overrides:
     post:
       consumes:
@@ -2949,4 +3024,9 @@ paths:
       summary: แก้ไขวันเปิด-ปิดเฉพาะกิจ
       tags:
       - WorkingDayOverride
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -117,6 +117,8 @@ func (s *BarberService) UpdateBarber(
     barber.BranchID = updated.BranchID
     barber.UserID = updated.UserID
 
+    barber.Description = updated.Description
+
     // 4. อัปเดตวันที่แก้ไข
     barber.UpdatedAt = time.Now()
 

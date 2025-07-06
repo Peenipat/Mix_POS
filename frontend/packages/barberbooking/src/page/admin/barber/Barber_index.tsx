@@ -53,7 +53,7 @@ export function ManageBarber() {
     setErrorBarbers(null);
     try {
       const res = await axios.get<{ status: string; data: Barber[] }>(
-        `/barberbooking/tenants/${tenantId}/barbers/branches/${branchId}/barbers`
+        `/barberbooking/branches/${branchId}/barbers`
       );
       if (res.data.status !== "success") {
         throw new Error(res.data.status);
@@ -64,7 +64,7 @@ export function ManageBarber() {
     } finally {
       setLoadingBarbers(false);
     }
-  }, [tenantId, branchId]);
+  }, [branchId]);
 
   useEffect(() => {
     if (

@@ -31,11 +31,17 @@ type UserNotBarber struct {
 }
 
 type UpdateBarberRequest struct {
-    BranchID    uint   `json:"branch_id"`
-    UserID      uint   `json:"user_id"`
-    PhoneNumber string `json:"phone_number"`
-    Username    string `json:"username"` // ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย
-    Email       string `json:"email"`    // ถ้าต้องการอัปเดตอีเมลด้วย
+    BranchID        uint   `json:"branch_id"`
+    PhoneNumber     string `json:"phone_number"`
+    Description     string `gorm:"type:varchar(100);not null" json:"description"`
+    Username        string `json:"username"` // ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย
+    Email           string `json:"email"`    // ถ้าต้องการอัปเดตอีเมลด้วย
+}
+
+type CreateBarberInput struct {
+	UserID          uint        `json:"user_id"`
+	PhoneNumber     string      `json:"phone_number"`
+    Description     string      `gorm:"type:varchar(100);not null" json:"description"`
 }
 
 type IBarber interface{

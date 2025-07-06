@@ -6,3 +6,7 @@ package docs
 // @version     1.0
 // @description API สำหรับโมดูล barberbooking
 // @BasePath    /api/v1/barberbooking
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization

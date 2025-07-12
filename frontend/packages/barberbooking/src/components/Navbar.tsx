@@ -52,13 +52,13 @@ export default function Navbar() {
 
   return (
     <nav className=" bg-slate-50 shadow-md border-gray-700">
-      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-2">
         {/* Logo */}
         <button
           onClick={() => navigate("/")}
           className="flex items-center space-x-3 text-gray-900"
         >
-    
+
           <span className="self-center text-2xl font-semibold">Barber Shop</span>
         </button>
 
@@ -127,19 +127,19 @@ export default function Navbar() {
 
         {/* Main menu */}
         <div
-          className={`w-full md:flex md:w-auto md:order-1 ${
-            isNavOpen ? "" : "hidden"
-          }`}
+          className={`w-full md:flex md:w-auto md:order-1 ${isNavOpen ? "" : "hidden"
+            }`}
         >
           <ul className="flex flex-col mt-4 space-y-2 font-medium md:mt-0 md:space-y-0 md:flex-row md:space-x-6">
             {mainMenu.map((item) => (
               <li key={item.href}>
                 <button
+                  id={item.href === "/history" ? "nav-history" : undefined}
                   onClick={() => {
                     navigate(item.href);
                     setIsNavOpen(false);
                   }}
-                  className="block py-2 px-3 rounded-sm text-gray-900 hover:text-gray-900 hover:bg-gray-200"
+                  className="block py-1 px-3 rounded-sm text-gray-900 hover:text-gray-900 hover:bg-gray-200"
                 >
                   {item.name}
                 </button>

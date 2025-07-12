@@ -144,7 +144,7 @@ export default function ManageTime() {
                                         <PencilIcon className="w-4 h-4" />
                                     </button>
                                     <div
-                                        className={`p-3 border rounded shadow-sm flex flex-col items-center justify-center text-center w-[150px] ${boxClass}`}
+                                        className={`p-1 border rounded shadow-sm flex flex-col items-center justify-center text-center w-[120px] ${boxClass}`}
                                     >
                                         <div className="font-semibold">{weekdays[day.Weekday]}</div>
                                         <div className="text-sm">{timeDisplay}</div>
@@ -154,36 +154,6 @@ export default function ManageTime() {
                         })}
                 </div>
             </section>
-
-
-            {/* Override Days */}
-            <section className="mb-8">
-                <h2 className="text-xl font-semibold mb-2">เวลาทำการเฉพาะวัน</h2>
-                <div className="space-y-3">
-                    {overrideDays.map((item, index) => {
-                        const isClosed = item.IsClosed === true;
-
-                        return (
-                            <div
-                                key={index}
-                                className={`rounded border px-4 py-3 text-base leading-relaxed ${isClosed
-                                        ? "bg-red-100 border-red-500 text-green-900"
-                                        : "bg-green-100 border-green-500 text-red-900"
-                                    }`}
-                            >
-                                <span className="font-semibold">
-                                    {isClosed ? "ปิดกรณีพิเศษ" : "เปิดกรณีพิเศษ"}{" "}
-                                    {item.date}:
-                                </span>
-                                <span className="ml-2">
-                                    {item.start_time} - {item.end_time}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
-
 
             {/* Add Override Form */}
             <section>
@@ -215,7 +185,7 @@ export default function ManageTime() {
                             />
                         </div>
                     </div>
-                    <button className="btn btn-primary" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
+                    <button className="bg-blue-500 text-white p-2 rounded-md" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
                 </div>
             </section>
             <BranchCalendar />

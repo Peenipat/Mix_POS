@@ -1,4 +1,5 @@
 export const mockAppointmentHistory = [
+
     {
         id: "a001",
         barberName: "ช่างบอล",
@@ -125,8 +126,15 @@ export default function HistoryPage() {
     return (
         <div className="p-4 space-y-4">
             <h2 className="text-xl font-bold">ประวัติการนัดหมาย</h2>
+            <input
+                id="phone-box"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="กรอกเบอร์โทร"
+                className="input input-bordered"
+            />
 
-            {/* 🔍 Search & 📆 Filter & ✅ Upcoming */}
             <div className="flex flex-wrap gap-2 items-center">
                 <input
                     type="text"

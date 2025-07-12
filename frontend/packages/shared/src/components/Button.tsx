@@ -1,9 +1,7 @@
-// เปลี่ยนเป็น import แบบนี้ เพื่อไม่ต้องตั้ง allowSyntheticDefaultImports
 import * as React from "react";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary";
-  // แม้ React.ButtonHTMLAttributes จะมี className อยู่แล้ว แต่บอกชัด ๆ ก็ช่วยได้นะ
   className?: string;
 }
 

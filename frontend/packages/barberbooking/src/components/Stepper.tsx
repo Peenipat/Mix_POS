@@ -28,6 +28,7 @@ interface StepperProps extends HTMLAttributes<HTMLDivElement> {
     currentStep: number;
     onStepClick: (clicked: number) => void;
   }) => ReactNode;
+  header?: ReactNode;
 }
 
 export default function Stepper({
@@ -46,6 +47,7 @@ export default function Stepper({
   nextButtonText = "Continue",
   disableStepIndicators = false,
   renderStepIndicator,
+  header,
   ...rest
 }: StepperProps) {
   const [internalStep, setInternalStep] = useState<number>(initialStep);
@@ -92,16 +94,13 @@ export default function Stepper({
   return (
     <div className="w-full" {...rest}>
       <div
-        className={`max-w-full mx-auto rounded-2xl shadow-xl ${stepCircleContainerClassName}`}
-        style={{ border: "1px solid #222" }}
+        className={`max-w-full rounded-2xl shadow-xl ${stepCircleContainerClassName}`}
       >
-        <div className="px-8 py-4 text-center">
-          <h1 className="">จองแบบด่วน</h1>
-        </div>
-
+       {header && <div className="px-6 pt-1">{header}</div>}
         <div
-          className={`${stepContainerClassName} flex w-full items-center px-8 pb-8`}
+          className={`${stepContainerClassName} flex w-full items-center px-8 pb-1.5`}
         >
+
           {stepsArray.map((_, index) => {
             const stepNumber = index + 1;
             const isNotLastStep = index < totalSteps - 1;
@@ -270,6 +269,8 @@ interface StepIndicatorProps {
   disableStepIndicators?: boolean;
 }
 
+
+
 function StepIndicator({
   step,
   currentStep,
@@ -283,11 +284,26 @@ function StepIndicator({
         ? "inactive"
         : "complete";
 
+  const getClassByStatus = () => {
+    switch (status) {
+      case "active":
+        return "bg-green-300 text-white";
+      case "complete":
+        return "bg-green-500 text-white";
+      case "inactive":
+      default:
+        return "bg-zinc-900 text-white";
+    }
+  };
+
+
   const handleClick = () => {
     if (step !== currentStep && !disableStepIndicators) {
       onClickStep(step);
     }
   };
+
+
 
   return (
     <motion.div
@@ -296,23 +312,17 @@ function StepIndicator({
       animate={status}
       initial={false}
     >
-      <motion.div
-        variants={{
-          inactive: { scale: 1, backgroundColor: "#222", color: "#a3a3a3" },
-          active: { scale: 1, backgroundColor: "#00d8ff", color: "#00d8ff" },
-          complete: { scale: 1, backgroundColor: "#00d8ff", color: "#3b82f6" },
-        }}
-        transition={{ duration: 0.3 }}
-        className="flex h-8 w-8 items-center justify-center rounded-full font-semibold"
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-full font-semibold transition-all duration-300 ${getClassByStatus()}`}
       >
         {status === "complete" ? (
-          <CheckIcon className="h-4 w-4 text-black" />
+          <CheckIcon className="h-4 w-4 text-white " />
         ) : status === "active" ? (
-          <div className="h-3 w-3 rounded-full bg-[#060606]" />
+          <div className="h-3 w-3 rounded-full bg-green-600" />
         ) : (
           <span className="text-sm">{step + 1}</span>
         )}
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -322,19 +332,16 @@ interface StepConnectorProps {
 }
 
 function StepConnector({ isComplete }: StepConnectorProps) {
-  const lineVariants: Variants = {
-    complete: { width: "100%", backgroundColor: "#00d8ff" },
-  };
-
   return (
     <div className="relative mx-2 h-0.5 flex-1 overflow-hidden rounded bg-neutral-600">
-      <motion.div
-        className="absolute left-0 top-0 h-full"
-        variants={lineVariants}
-        initial={false}
-        animate={isComplete ? "complete" : "incomplete"}
-        transition={{ duration: 0.4 }}
-      />
+      {isComplete && (
+        <motion.div
+          className="absolute left-0 top-0 h-full bg-green-500"
+          initial={{ width: 0 }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 0.4 }}
+        />
+      )}
     </div>
   );
 }

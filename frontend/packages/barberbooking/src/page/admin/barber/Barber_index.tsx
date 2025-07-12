@@ -279,7 +279,7 @@ function CreateBarberModal({
 
     // ดึง users ที่มีสิทธิ์เป็น “barber” หรือ “staff” ได้ (ปรับตาม API จริง)
     axios
-      .get<{ status: string; data: User[] }>(`/barberbooking/tenants/${tenantId}/barbers/branches/${branchId}/user`)
+      .get<{ status: string; data: User[] }>(`/barberbooking/tenants/${tenantId}/branches/${branchId}/users`)
       .then((res) => {
         if (res.data.status !== "success") {
           throw new Error(res.data.status);
@@ -325,7 +325,7 @@ function CreateBarberModal({
     setLoadingCreate(true);
     try {
       const res = await axios.post<{ status: string }>(
-        `/barberbooking/tenants/${tenantId}/barbers/branches/${branchId}`,
+        `/barberbooking/tenants/${tenantId}/branches/${branchId}/create-barber`,
         {
           user_id: selectedUserId,
           phone_number: phoneNumber.trim(),

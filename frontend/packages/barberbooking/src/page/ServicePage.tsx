@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import axios from "../lib/axios";
-interface Service {
+export interface Service {
     id: number;
     name: string;
     description: string;

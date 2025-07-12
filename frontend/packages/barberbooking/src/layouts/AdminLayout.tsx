@@ -24,14 +24,14 @@ const crumbsMap: Record<string, string> = {
   working: "เวลาทำการ",
   report: "รายงานผลประกอบการ",
   billing: "ค่าใช้จ่ายร้าน",
-
+  contact:"ติดต่อผู้พัฒนา",
   calendar: "ปฏิทินการนัดหมาย",
   tax: "คำนวณภาษี",
-  feedback: "ความคิดเห็น / รีวิวลูกค้า",
+  feedback: "รีวิวลูกค้า",
   inventory: "จัดการสต๊อกสินค้า",
   branch: "ระบบจัดการสาขา",
   layout: "จัดการหน้าเว็บไซต์",
-  help: "ความช่วยเหลือ & ติดต่อผู้พัฒนา",
+  help: "ความช่วยเหลือ",
 };
 
 const groupedMenu: MenuGroup[] = [

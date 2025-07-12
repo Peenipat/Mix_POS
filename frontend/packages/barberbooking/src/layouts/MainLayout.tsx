@@ -8,7 +8,7 @@ export default function MainLayout() {
     <div className="flex flex-col h-screen"> 
       <Navbar />
 
-      <main className="flex-grow overflow-hidden">
+      <main className="flex-grow">
         <Outlet />
       </main>
     </div>

@@ -134,7 +134,7 @@ export default function Home() {
     setErrorBarbers(null);
     try {
       const res = await axios.get<{ status: string; data: Barber[] }>(
-        `/barberbooking/tenants/1/barbers/branches/1/barbers`
+        `/barberbooking/branches/1/barbers`
       );
       if (res.data.status !== "success") {
         throw new Error(res.data.status);

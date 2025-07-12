@@ -31,6 +31,8 @@ import CustomerReview from "./page/barbers/CustomerReview";
 import BarberIncome from "./page/barbers/BarberIncome";
 import HistoryPage from "./page/members/HistoryPage";
 import AppointmentsPage from "./page/members/AppointmentsPage";
+import TestLayout from "./page/testLayout";
+import ManagerWebIndex from "./page/admin/manage_web/web_index";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -62,7 +64,7 @@ export default function App() {
       {/* Public */}
 
       <Route path="/login" element={<Login />} />
-
+      <Route path="/test-layout" element={<TestLayout />} />
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="service" element={<ServicePage />} />
@@ -79,9 +81,6 @@ export default function App() {
           </RequireRole>
         }
       >
-
-
-
         <Route index element={<AdminDashboard />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="barber" element={<ManageBarber />} />
@@ -94,7 +93,7 @@ export default function App() {
 
         <Route path="inventory" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="tax" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
-        <Route path="layout" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
+        <Route path="layout" element={<ManagerWebIndex />} />
         <Route path="calendar" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="feedback" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="report" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />

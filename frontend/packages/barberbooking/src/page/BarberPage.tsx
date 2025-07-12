@@ -4,13 +4,14 @@ import axios from "../lib/axios";
 import type { Barber } from "../types/barber";
 
 import { Calendar, dateFnsLocalizer, Event, SlotInfo } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
+import { format, parse, startOfWeek, getDay, parseISO } from "date-fns";
 import { format as formatDate } from "date-fns";
 import { th } from "date-fns/locale/th";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getWorkingHourRangeAxios } from "../components/TimeSelector"
 import { MdFilterAlt } from "react-icons/md";
+import { Appointment } from "./members/AppointmentsPage";
 
 export default function BarberPage() {
     const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -125,19 +126,21 @@ export default function BarberPage() {
         </div>
     );
 }
-const TotalBarberSchedule = ({ barbers }: { barbers: Barber[] }) => {
+export const TotalBarberSchedule = ({
+    barbers,
+    onClick,
+    appointments = [],
+}: {
+    barbers: Barber[];
+    onClick?: (barberId: number, time: string) => void;
+    appointments?: Appointment[];
+}) => {
     const [slot, setSlot] = useState<string[]>([]);
-    const [startTime, setStartTime] = useState<string>("");
-    const [endTime, setEndTime] = useState<string>("");
     const today = format(new Date(), "yyyy-MM-dd");
     const [selectedDate, setSelectedDate] = useState(today);
-    interface WorkingHourResult {
-        start: string;
-        end: string;
-    }
+
     useEffect(() => {
         async function fetchSlot() {
-
             const result = await getWorkingHourRangeAxios(1, 1, new Date(selectedDate));
             if (result?.start && result?.end) {
                 const generated = generateTimeSlots(result.start, result.end);
@@ -146,33 +149,55 @@ const TotalBarberSchedule = ({ barbers }: { barbers: Barber[] }) => {
                 setSlot([]);
             }
         }
-
         fetchSlot();
     }, [selectedDate]);
 
     function generateTimeSlots(start: string, end: string): string[] {
         const slots: string[] = [];
-
         const [startHour, startMinute] = start.split(":").map(Number);
         const [endHour, endMinute] = end.split(":").map(Number);
-
         let current = new Date();
         current.setHours(startHour, startMinute, 0, 0);
-
         const endTime = new Date();
         endTime.setHours(endHour, endMinute, 0, 0);
-
         while (current <= endTime) {
             const hour = current.getHours().toString().padStart(2, "0");
             const minute = current.getMinutes().toString().padStart(2, "0");
             slots.push(`${hour}:${minute}`);
-
             current.setMinutes(current.getMinutes() + 30);
         }
-
         return slots;
     }
 
+    function addMinutes(time: string, mins: number): string {
+        const [h, m] = time.split(":").map(Number);
+        const date = new Date();
+        date.setHours(h, m + mins, 0, 0);
+        return date.toTimeString().substring(0, 5);
+    }
+
+    function timeToMinutes(time: string): number {
+        const [h, m] = time.split(":").map(Number);
+        return h * 60 + m;
+    }
+
+    function getBookingFraction(
+        barberId: number,
+        slot: string,
+        appointments: Appointment[]
+    ): "full" | "top" | "bottom" | null {
+        const slotStart = timeToMinutes(slot);
+        const slotEnd = timeToMinutes(addMinutes(slot, 30));
+        for (const app of appointments) {
+            if (app.barberId !== barberId || app.date !== selectedDate) continue;
+            const appStart = timeToMinutes(app.start);
+            const appEnd = timeToMinutes(app.end);
+            if (appStart <= slotStart && appEnd >= slotEnd) return "full";
+            if (appStart <= slotStart && appEnd > slotStart && appEnd <= slotEnd) return "top";
+            if (appStart >= slotStart && appStart < slotEnd && appEnd >= slotEnd) return "bottom";
+        }
+        return null;
+    }
     function filterQuarterSlots(slots: string[]) {
         return slots.filter((time) => {
             const minute = time.split(":")[1];
@@ -183,127 +208,169 @@ const TotalBarberSchedule = ({ barbers }: { barbers: Barber[] }) => {
         { label: "สัปดาห์นี้", value: 1 },
         { label: "เดือนนี้", value: 2 },
     ];
+    const [startTime, setStartTime] = useState<string>("");
+    const [endTime, setEndTime] = useState<string>("");
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [openFilter, setOpenFilter] = useState<boolean>(false)
 
     return (
-        <>
-            <div className="flex flex-col border rounded-md overflow-hidden">
+        <div className="flex flex-col border rounded-md overflow-auto shadow-md bg-white">
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <label className="text-lg font-semibold">เลือกวันที่คุณว่าง</label>
+                    <input
+                        id="date-picker"
+                        type="date"
+                        min={today}
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="input input-bordered p-2 rounded-md border border-gray-300"
+                    />
+                    <button
+                        id="filter-button"
+                        onClick={() => setOpenFilter(!openFilter)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center transition"
+                    >
+                        <MdFilterAlt size={20} className="mr-1" />
+                        ตัวกรอง
+                    </button>
+                </div>
 
-                <div className="p-2 border-b border-gray-200 flex items-center">
-                    <div className="flex flex-col gap-3 ">
-                        <div className="flex gap-2 items-center p-1 ">
-                            <label className="text-lg font-bold">เลือกวันที่คุณว่าง </label>
-                            <input
-                                type="date"
-                                min={today}
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="input input-bordered rounded p-1"
-                            />
-                            <button className="bg-gray-300 p-1 rounded-md" onClick={() => setOpenFilter(prev => !prev)}><MdFilterAlt size={24} color="white" /></button>
+                {/* Filter Options */}
+                <div
+                    id="all-option"
+                    className={`mt-4 space-y-3 transition-all duration-300 ${openFilter ? "block" : "hidden"}`}
+                >
+                    <div className="mt-4 space-y-3">
+                        <h4 className="text-md font-semibold">ตัวกรองช่วงเวลา</h4>
+                        <div className="flex gap-5 w-max" id="select-option">
+                            {options.map((option) => (
+                                <label key={option.value} className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedOption === option.value}
+                                        onChange={() =>
+                                            setSelectedOption(
+                                                selectedOption === option.value ? null : option.value
+                                            )
+                                        }
+                                        className="w-4 h-4 text-blue-600 border-gray-300"
+                                    />
+                                    <span>{option.label}</span>
+                                </label>
+                            ))}
                         </div>
 
+                        {/* Time Selectors */}
+                        <div className="flex gap-3 items-center flex-wrap">
+                            <div id="time-option" className="flex gap-3 items-center flex-wrap">
+                                <select
+                                    className="border p-2 rounded-md text-sm"
+                                    value={startTime}
+                                    onChange={(e) => setStartTime(e.target.value)}
+                                >
+                                    <option value="">เวลาเริ่มต้น</option>
+                                    {filterQuarterSlots(slot).map((time) => (
+                                        <option key={`start-${time}`} value={time}>
+                                            {time}
+                                        </option>
+                                    ))}
+                                </select>
+                                <span>-</span>
+                                <select
+                                    className="border p-2 rounded-md text-sm"
+                                    value={endTime}
+                                    onChange={(e) => setEndTime(e.target.value)}
+                                >
+                                    <option value="">เวลาสิ้นสุด</option>
+                                    {filterQuarterSlots(slot).map((time) => (
+                                        <option key={`end-${time}`} value={time}>
+                                            {time}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <div className="flex flex-col gap-3 ">
-                            {openFilter ? (
-                                <div className="flex flex-col gap-3">
-                                    <h4 className="text-lg font-bold">ตัวกรองช่วงเวลา</h4>
-                                    <div className="flex gap-4 px-8 items-center">
-                                        {options.map((option) => (
-                                            <label
-                                                key={option.value}
-                                                className="flex items-center space-x-2 cursor-pointer"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedOption === option.value}
-                                                    onChange={() =>
-                                                        setSelectedOption(
-                                                            selectedOption === option.value ? null : option.value
-                                                        )
-                                                    }
-                                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                />
-                                                <span className="text-gray-800">{option.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    <div className="flex gap-2 items-center px-8">
-                                        <select
-                                            className="border py-1 rounded"
-                                            value={startTime}
-                                            onChange={(e) => setStartTime(e.target.value)}
-                                        >
-                                            <option value="">เวลาเริ่มต้น</option>
-                                            {filterQuarterSlots(slot).map((time) => (
-                                                <option key={`start-${time}`} value={time}>
-                                                    {time}
-                                                </option>
-                                            ))}
-                                        </select>
-
-                                        <span>-</span>
-
-                                        <select
-                                            className="border py-1 rounded"
-                                            value={endTime}
-                                            onChange={(e) => setEndTime(e.target.value)}
-                                        >
-                                            <option value="">เวลาสิ้นสุด</option>
-                                            {filterQuarterSlots(slot).map((time) => (
-                                                <option key={`end-${time}`} value={time}>
-                                                    {time}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                            ) : (
-                                <div>
-                                    {/* ตัวกรองปิดอยู่ */}
-                                </div>
-                            )}
-
+                            <button
+                                id="search-button"
+                                className="bg-gray-700 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
+                            >
+                                ค้นหา
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div className="flex bg-gray-100 text-center font-semibold divide-x divide-gray-200 border-b border-gray-200">
+            </div>
+            <div id="data-box">
+                <div className="flex text-center font-semibold bg-gray-100 divide-x divide-gray-300 border-b border-gray-300">
                     <div className="py-2 w-[120px]">เวลา</div>
                     {barbers.map((barber) => (
-                        <div key={barber.id} className="py-2 flex-1">
+                        <div key={barber.id} className="py-2 flex-1" id="barber-name">
                             {barber.username}
                         </div>
                     ))}
                 </div>
 
-
                 <div className="w-full">
-                    {slot.length === 0 ? (
-                        <div className="text-center text-red-500 py-4">วันนี้ร้านปิด</div>
-                    ) : (
-                        slot.map((time, timeIndex) => (
-                            <div
-                                key={timeIndex}
-                                className={`flex text-center divide-x divide-gray-200 border-b border-gray-200 ${timeIndex === slot.length - 1 ? "border-b-0" : ""
-                                    }`}
-                            >
-                                <div className="py-2 w-[120px] bg-gray-50">{time}</div>
-                                {barbers.map((barber) => (
-                                    <div key={barber.id + "_" + timeIndex} className="py-2 flex-1">
-                                        ว่าง
+                    {slot.map((time, timeIndex) => (
+                        <div
+                            key={timeIndex}
+                            className={`flex `}
+                            id="barber-time"
+                        >
+                            <div className="w-[120px] py-2 bg-gray-100 font-semibold text-center" >{time}</div>
+                            {barbers.map((barber) => {
+                                const fraction = getBookingFraction(barber.id, time, appointments);
+                                return (
+                                    <div key={barber.id + "_" + timeIndex} className="relative h-14 flex-1 border-l">
+                                        {/* top half = ว่างถ้า bottom ถูกจอง */}
+                                        {(fraction === "bottom" || fraction === null) && (
+                                            <div
+                                                className={`absolute top-0 ${fraction === "bottom" ? "h-1/2" : "h-full"} w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200`}
+                                                style={{ cursor: "pointer" }}
+                                                onClick={() => onClick?.(barber.id, time)}
+                                            >
+                                                ว่าง
+                                            </div>
+                                        )}
+
+                                        {/* bottom half = ว่างถ้า top ถูกจอง */}
+                                        {fraction === "top" && (
+                                            <div
+                                                className="absolute bottom-0 h-1/2 w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer"
+                                                onClick={() => onClick?.(barber.id, addMinutes(time, 15))} 
+                                            >
+                                                ว่าง
+                                            </div>
+                                        )}
+
+                                        {/* booked overlays */}
+                                        {fraction === "top" && (
+                                            <div className="absolute top-0 h-1/2 w-full bg-red-400 flex justify-center items-end pb-[2px] text-white  font-semibold text-sm pointer-events-none">
+
+                                            </div>
+                                        )}
+                                        {fraction === "bottom" && (
+                                            <div className="absolute bottom-0 h-1/2 w-full bg-red-400 flex justify-center items-start pt-[2px] text-white  font-semibold text-sm pointer-events-none">
+                                            </div>
+                                        )}
+                                        {fraction === "full" && (
+                                            <div className="absolute top-0 h-full w-full bg-red-400 flex items-end justify-center text-white font-semibold pointer-events-none">
+                                                <p>จองแล้ว</p>
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        ))
-                    )}
+
+
+                                );
+                            })}
+                        </div>
+                    ))}
                 </div>
             </div>
-        </>
+        </div>
     );
-
-}
+};
 
 const locales = { th };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales, locale: th });
@@ -388,8 +455,6 @@ export function BarberScheduleModal({
         };
     });
 
-    console.log(events)
-
     const minTime = events.length > 0
         ? new Date(Math.min(...events.map((e) => e.start.getTime())))
         : new Date(1970, 1, 1, 9, 0);
@@ -414,7 +479,7 @@ export function BarberScheduleModal({
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-lg w-full max-w-5xl mx-4 shadow-lg overflow-hidden"
+                className="bg-white rounded-lg w-full max-w-5xl mx-4 shadow-lg overflow-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS customers (
   branch_id   INT NOT NULL, 
   name       TEXT NOT NULL,
   phone      TEXT,
+  password    TEXT,
   email      TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -293,6 +293,8 @@ definitions:
       branch_id:
         example: 1
         type: integer
+      customer:
+        $ref: '#/definitions/barberBookingPort.CustomerInput'
       customer_id:
         example: 4
         type: integer
@@ -326,6 +328,15 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  barberBookingPort.CustomerInput:
+    properties:
+      name:
+        example: John
+        type: string
+      phone:
+        example: "0123456789"
+        type: string
     type: object
   barberBookingPort.UpdateAppointmentReviewRequest:
     properties:

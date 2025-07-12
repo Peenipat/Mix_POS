@@ -75,6 +75,43 @@ func (s *appointmentService) checkBarberAvailabilityTx(
 	return count == 0, nil
 }
 
+func (s *appointmentService) getOrCreateGuestCustomerTx(
+	tx *gorm.DB,
+	tenantID uint,
+	branchID uint,
+	name string,
+	phone string,
+) (*barberBookingModels.Customer, error) {
+	if phone == "" || name == "" {
+		return nil, errors.New("guest customer requires phone and name")
+	}
+
+	var customer barberBookingModels.Customer
+	err := tx.
+		Where("tenant_id = ? AND phone = ? AND deleted_at IS NULL", tenantID, phone).
+		First(&customer).Error
+
+	if err == nil {
+		return &customer, nil // เจอแล้ว
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to query customer: %w", err)
+	}
+
+	// ไม่เจอ → สร้างใหม่
+	customer = barberBookingModels.Customer{
+		TenantID: tenantID,
+		BranchID: branchID,
+		Name:     name,
+		Phone:    phone,
+	}
+	if err := tx.Create(&customer).Error; err != nil {
+		return nil, fmt.Errorf("failed to create guest customer: %w", err)
+	}
+	return &customer, nil
+}
+
+
 func (s *appointmentService) CheckBarberAvailability(
 	ctx context.Context,
 	tenantID, barberID uint,
@@ -98,10 +135,11 @@ func (s *appointmentService) CreateAppointment(
 	if input == nil {
 		return nil, errors.New("input appointment data is required")
 	}
-	if input.TenantID == 0 || input.BranchID == 0 || input.ServiceID == 0 || input.CustomerID == 0 || input.StartTime.IsZero() {
+	if input.TenantID == 0 || input.BranchID == 0 || input.ServiceID == 0 || input.StartTime.IsZero() {
 		return nil, errors.New("missing required fields")
 	}
 
+	
 	var appt *barberBookingModels.Appointment
 
 	// 1. สร้าง appointment ภายใน transaction
@@ -150,7 +188,21 @@ func (s *appointmentService) CreateAppointment(
 			if !available {
 				return fmt.Errorf("barber is not available during this time")
 			}
+			
 		}
+
+		if input.CustomerID == 0 && input.Customer != nil {
+			customer, err := s.getOrCreateGuestCustomerTx(tx,
+				input.TenantID, input.BranchID, input.Customer.Name, input.Customer.Phone,
+			)
+			if err != nil {
+				return err
+			}
+			input.CustomerID = customer.ID
+		} else if input.CustomerID == 0 {
+			return fmt.Errorf("guest customer requires 'Customer' field with name and phone")
+		}
+		
 
 		// 4. ตั้งค่า Status/Timestamps แล้วสร้างแถว appointment
 		if input.Status == "" {

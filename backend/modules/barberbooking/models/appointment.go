@@ -31,7 +31,7 @@ type Appointment struct {
 	Barber     coreModels.User      `gorm:"foreignKey:BarberID;references:ID" json:"barber,omitempty"`
 
 	CustomerID uint              `gorm:"not null;index" json:"customer_id"`
-	Customer   Customer          `gorm:"foreignKey:CustomerID" json:"customer,omitempty"`
+	Customer   *Customer 		 `gorm:"-" json:"customer,omitempty"`
 
 	UserID     *uint             `gorm:"index" json:"user_id,omitempty"` // อ้าง user ที่สร้างคิว (ไม่มี FK)
 	TenantID   uint 			 `gorm:"not null;index" json:"tenant_id"`

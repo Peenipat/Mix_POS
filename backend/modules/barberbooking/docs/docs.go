@@ -4207,6 +4207,9 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1
                 },
+                "customer": {
+                    "$ref": "#/definitions/barberBookingPort.CustomerInput"
+                },
                 "customer_id": {
                     "type": "integer",
                     "example": 4
@@ -4253,6 +4256,19 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "barberBookingPort.CustomerInput": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "John"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "0123456789"
                 }
             }
         },

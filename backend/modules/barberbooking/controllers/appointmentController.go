@@ -119,13 +119,16 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 	}
 
 	// 2. Parse JSON body
+	
+	
 	var payload struct {
-		BranchID   uint   `json:"branch_id"`
-		ServiceID  uint   `json:"service_id"`
-		BarberID   uint   `json:"barber_id,omitempty"`
-		CustomerID uint   `json:"customer_id"`
-		StartTime  string `json:"start_time"`
-		Notes      string `json:"notes,omitempty"`
+		BranchID   uint            `json:"branch_id"`
+		ServiceID  uint            `json:"service_id"`
+		BarberID   uint            `json:"barber_id,omitempty"`
+		CustomerID uint            `json:"customer_id"`
+		StartTime  string          `json:"start_time"`
+		Notes      string          `json:"notes,omitempty"`
+		Customer   *barberBookingPort.CustomerInput  `json:"customer,omitempty"` 
 	}
 
 	if err := c.BodyParser(&payload); err != nil {
@@ -136,11 +139,13 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 	}
 
 	// 3. Validate required fields
-	if payload.BranchID == 0 || payload.ServiceID == 0 || payload.CustomerID == 0 || payload.StartTime == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Missing required fields",
-		})
+	if payload.CustomerID == 0 {
+		if payload.Customer == nil || payload.Customer.Name == "" || payload.Customer.Phone == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Guest appointment requires customer name and phone",
+			})
+		}
 	}
 
 	// 4. Parse start_time
@@ -153,6 +158,16 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 	}
 
 	// 5. Build appointment model to send to service layer
+	// appt := &barberBookingModels.Appointment{
+	// 	TenantID:   tenantID,
+	// 	BranchID:   payload.BranchID,
+	// 	ServiceID:  payload.ServiceID,
+	// 	BarberID:   payload.BarberID,
+	// 	CustomerID: payload.CustomerID,
+	// 	StartTime:  startTime,
+	// 	Notes:      payload.Notes,
+	// }
+
 	appt := &barberBookingModels.Appointment{
 		TenantID:   tenantID,
 		BranchID:   payload.BranchID,
@@ -162,9 +177,17 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 		StartTime:  startTime,
 		Notes:      payload.Notes,
 	}
+	
+	// ถ้า guest → แนบข้อมูล guest ไปให้ service ใช้สร้าง customer
+	if payload.CustomerID == 0 && payload.Customer != nil {
+		appt.Customer = &barberBookingModels.Customer{
+			Name:  payload.Customer.Name,
+			Phone: payload.Customer.Phone,
+		}
+	}
 
 	// 6. Call service
-	createdDTO, err := ctrl.Service.CreateAppointment(c.Context(), appt) // 🔁 Return *AppointmentResponseDTO
+	createdDTO, err := ctrl.Service.CreateAppointment(c.Context(), appt) 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",

@@ -33,6 +33,11 @@ type IAppointment interface {
 //   "start_time": "2025-05-30T10:00:00Z",
 //   "notes": "Please be on time"
 // }
+type CustomerInput struct {
+    Name  string `json:"name" example:"John"`
+    Phone string `json:"phone" example:"0123456789"`
+}
+
 type CreateAppointmentRequest struct {
     BranchID   uint   `json:"branch_id" example:"1"`
     ServiceID  uint   `json:"service_id" example:"2"`
@@ -40,6 +45,7 @@ type CreateAppointmentRequest struct {
     CustomerID uint   `json:"customer_id" example:"4"`
     StartTime  string `json:"start_time" example:"2025-05-30T10:00:00Z"`
     Notes      string `json:"notes,omitempty" example:"Preferred barber: John"`
+    Customer   *CustomerInput  `json:"customer,omitempty"`
 }
 
 type AppointmentResponse struct {

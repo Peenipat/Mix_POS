@@ -119,16 +119,15 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 	}
 
 	// 2. Parse JSON body
-	
-	
+
 	var payload struct {
-		BranchID   uint            `json:"branch_id"`
-		ServiceID  uint            `json:"service_id"`
-		BarberID   uint            `json:"barber_id,omitempty"`
-		CustomerID uint            `json:"customer_id"`
-		StartTime  string          `json:"start_time"`
-		Notes      string          `json:"notes,omitempty"`
-		Customer   *barberBookingPort.CustomerInput  `json:"customer,omitempty"` 
+		BranchID   uint                             `json:"branch_id"`
+		ServiceID  uint                             `json:"service_id"`
+		BarberID   uint                             `json:"barber_id,omitempty"`
+		CustomerID uint                             `json:"customer_id"`
+		StartTime  string                           `json:"start_time"`
+		Notes      string                           `json:"notes,omitempty"`
+		Customer   *barberBookingPort.CustomerInput `json:"customer,omitempty"`
 	}
 
 	if err := c.BodyParser(&payload); err != nil {
@@ -177,7 +176,7 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 		StartTime:  startTime,
 		Notes:      payload.Notes,
 	}
-	
+
 	// ถ้า guest → แนบข้อมูล guest ไปให้ service ใช้สร้าง customer
 	if payload.CustomerID == 0 && payload.Customer != nil {
 		appt.Customer = &barberBookingModels.Customer{
@@ -187,7 +186,7 @@ func (ctrl *AppointmentController) CreateAppointment(c *fiber.Ctx) error {
 	}
 
 	// 6. Call service
-	createdDTO, err := ctrl.Service.CreateAppointment(c.Context(), appt) 
+	createdDTO, err := ctrl.Service.CreateAppointment(c.Context(), appt)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -814,3 +813,66 @@ func (ctrl *AppointmentController) DeleteAppointment(c *fiber.Ctx) error {
 		"message": "appointment deleted",
 	})
 }
+
+// @Summary      ดึงการนัดหมายทั้งหมดของช่างในสาขา
+// @Description  คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        branch_id   path      uint     true   "รหัสสาขา (Branch ID)"
+// @Param        start       query     string   false  "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)"
+// @Param        end         query     string   false  "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)"
+// @Success      200         {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
+// @Failure      400         {object}  map[string]string
+// @Failure      404         {object}  map[string]string
+// @Failure      500         {object}  map[string]string
+// @Router       /branches/{branch_id}/appointments [get]
+func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
+	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
+	if err != nil || branchID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid branch_id",
+		})
+	}
+
+	var startTime *time.Time
+	var endTime *time.Time
+
+	layout := "2006-01-02"
+	if startStr := c.Query("start"); startStr != "" {
+		t, err := time.Parse(layout, startStr)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid start_time format (yyyy-MM-dd)",
+			})
+		}
+		startTime = &t
+	}
+	if endStr := c.Query("end"); endStr != "" {
+		t, err := time.Parse(layout, endStr)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid end_time format (yyyy-MM-dd)",
+			})
+		}
+		t = t.Add(23*time.Hour + 59*time.Minute + 59*time.Second + 999*time.Millisecond)
+		endTime = &t
+	}
+
+	appts, err := ctrl.Service.GetAppointmentsByBranch(c.Context(), branchID, startTime, endTime)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data":   appts,
+	})
+}
+

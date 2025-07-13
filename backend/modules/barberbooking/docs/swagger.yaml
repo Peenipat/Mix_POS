@@ -615,6 +615,54 @@ paths:
       summary: ดึงข้อมูลช่างตัดผมตาม ID
       tags:
       - Barber
+  /branches/{branch_id}/appointments:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้
+      parameters:
+      - description: รหัสสาขา (Branch ID)
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: start
+        type: string
+      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืน status success และรายการการนัดหมาย
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงการนัดหมายทั้งหมดของช่างในสาขา
+      tags:
+      - Appointment
   /branches/{branch_id}/barbers:
     get:
       consumes:

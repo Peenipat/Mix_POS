@@ -20,6 +20,7 @@ type IAppointment interface {
 	GetAppointmentsByBarber(ctx context.Context, barberID uint, start *time.Time, end *time.Time) ([]barberBookingModels.Appointment, error)
 	DeleteAppointment(ctx context.Context, appointmentID uint) error
 	GetUpcomingAppointmentsByCustomer(ctx context.Context, customerID uint) (*barberBookingModels.Appointment, error)
+    GetAppointmentsByBranch(ctx context.Context,branchID uint,start *time.Time,end *time.Time,) ([]AppointmentBrief, error) 
 }
 
 // CreateAppointmentRequest is the payload for creating a new appointment
@@ -79,4 +80,35 @@ type AppointmentResponse struct {
 
     Status string `json:"status"`
     Notes  string `json:"notes"`
+}
+
+
+type ServiceBrief struct {
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Duration    int     `json:"duration"`
+	Price       int     `json:"price"`
+}
+
+type BarberBrief struct {
+	Username string `json:"username"`
+}
+
+type CustomerBrief struct {
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
+}
+
+type AppointmentBrief struct {
+	ID         uint          `json:"id"`
+	BranchID   uint          `json:"branch_id"`
+	ServiceID  uint          `json:"service_id"`
+	Service    ServiceBrief  `json:"service"`
+	BarberID   uint          `json:"barber_id"`
+	Barber     BarberBrief   `json:"barber"`
+	CustomerID uint          `json:"customer_id"`
+	Customer   CustomerBrief `json:"customer"`
+	StartTime  time.Time     `json:"start_time"`
+	EndTime    time.Time     `json:"end_time"`
+	Status     string        `json:"status"`
 }

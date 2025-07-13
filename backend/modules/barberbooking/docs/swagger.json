@@ -133,6 +133,78 @@
                 }
             }
         },
+        "/branches/{branch_id}/appointments": {
+            "get": {
+                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายทั้งหมดของช่างในสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา (Branch ID)",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/branches/{branch_id}/barbers": {
             "get": {
                 "security": [

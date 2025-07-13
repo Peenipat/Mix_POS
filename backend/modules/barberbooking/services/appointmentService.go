@@ -111,7 +111,6 @@ func (s *appointmentService) getOrCreateGuestCustomerTx(
 	return &customer, nil
 }
 
-
 func (s *appointmentService) CheckBarberAvailability(
 	ctx context.Context,
 	tenantID, barberID uint,
@@ -139,7 +138,6 @@ func (s *appointmentService) CreateAppointment(
 		return nil, errors.New("missing required fields")
 	}
 
-	
 	var appt *barberBookingModels.Appointment
 
 	// 1. สร้าง appointment ภายใน transaction
@@ -188,7 +186,7 @@ func (s *appointmentService) CreateAppointment(
 			if !available {
 				return fmt.Errorf("barber is not available during this time")
 			}
-			
+
 		}
 
 		if input.CustomerID == 0 && input.Customer != nil {
@@ -202,7 +200,6 @@ func (s *appointmentService) CreateAppointment(
 		} else if input.CustomerID == 0 {
 			return fmt.Errorf("guest customer requires 'Customer' field with name and phone")
 		}
-		
 
 		// 4. ตั้งค่า Status/Timestamps แล้วสร้างแถว appointment
 		if input.Status == "" {
@@ -224,7 +221,6 @@ func (s *appointmentService) CreateAppointment(
 		return nil, err
 	}
 
-	
 	// 2. นอก transaction: เขียน status log
 	var userID *uint
 	var custID *uint
@@ -233,7 +229,7 @@ func (s *appointmentService) CreateAppointment(
 	} else {
 		custID = &appt.CustomerID
 	}
-	log.Printf(">>> writing initial creation log for appt=%d", appt.ID) 
+	log.Printf(">>> writing initial creation log for appt=%d", appt.ID)
 	if logErr := s.LogService.LogStatusChange(
 		ctx,
 		appt.ID,
@@ -262,7 +258,6 @@ func (s *appointmentService) CreateAppointment(
 		UpdatedAt:  appt.UpdatedAt,
 	}
 	return resp, nil
-	
 
 }
 
@@ -294,111 +289,110 @@ func (s *appointmentService) GetAvailableBarbers(ctx context.Context, tenantID, 
 }
 
 func (s *appointmentService) UpdateAppointment(
-    ctx context.Context,
-    id uint,
-    tenantID uint,
-    input *barberBookingModels.Appointment,
+	ctx context.Context,
+	id uint,
+	tenantID uint,
+	input *barberBookingModels.Appointment,
 ) (*barberBookingModels.Appointment, error) {
-    if input == nil {
-        return nil, errors.New("input appointment data is required")
-    }
+	if input == nil {
+		return nil, errors.New("input appointment data is required")
+	}
 
-    var updatedAppt *barberBookingModels.Appointment
+	var updatedAppt *barberBookingModels.Appointment
 
-    err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-        // 1. โหลด appointment ปัจจุบัน
-        var ap barberBookingModels.Appointment
-        if err := tx.
-            Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", id, tenantID).
-            First(&ap).Error; err != nil {
-            return fmt.Errorf("appointment not found")
-        }
-        oldStatus := ap.Status
+	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. โหลด appointment ปัจจุบัน
+		var ap barberBookingModels.Appointment
+		if err := tx.
+			Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", id, tenantID).
+			First(&ap).Error; err != nil {
+			return fmt.Errorf("appointment not found")
+		}
+		oldStatus := ap.Status
 
-        // 2. อัปเดต ServiceID และคำนวณ EndTime ใหม่ถ้า service เปลี่ยน
-        if input.ServiceID != 0 && input.ServiceID != ap.ServiceID {
-            // ตรวจ service + ดึง duration
-            var svc barberBookingModels.Service
-            if err := tx.
-                Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", input.ServiceID, tenantID).
-                First(&svc).Error; err != nil {
-                return fmt.Errorf("service not found or access denied")
-            }
-            ap.ServiceID = input.ServiceID
-            // recalc end time บน startTime ปัจจุบัน
-            ap.EndTime = ap.StartTime.Add(time.Duration(svc.Duration) * time.Minute)
-        }
+		// 2. อัปเดต ServiceID และคำนวณ EndTime ใหม่ถ้า service เปลี่ยน
+		if input.ServiceID != 0 && input.ServiceID != ap.ServiceID {
+			// ตรวจ service + ดึง duration
+			var svc barberBookingModels.Service
+			if err := tx.
+				Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", input.ServiceID, tenantID).
+				First(&svc).Error; err != nil {
+				return fmt.Errorf("service not found or access denied")
+			}
+			ap.ServiceID = input.ServiceID
+			// recalc end time บน startTime ปัจจุบัน
+			ap.EndTime = ap.StartTime.Add(time.Duration(svc.Duration) * time.Minute)
+		}
 
-        // 3. ถ้าเปลี่ยน startTime ให้ recalc EndTime ด้วยเช่นกัน
-        if !input.StartTime.IsZero() && !input.StartTime.Equal(ap.StartTime) {
-            ap.StartTime = input.StartTime
-            // ดึง duration ของ service เดิม
-            var svc barberBookingModels.Service
-            if err := tx.
-                Where("id = ?", ap.ServiceID).
-                First(&svc).Error; err != nil {
-                return fmt.Errorf("failed fetching service for recalc end time")
-            }
-            ap.EndTime = ap.StartTime.Add(time.Duration(svc.Duration) * time.Minute)
-        }
+		// 3. ถ้าเปลี่ยน startTime ให้ recalc EndTime ด้วยเช่นกัน
+		if !input.StartTime.IsZero() && !input.StartTime.Equal(ap.StartTime) {
+			ap.StartTime = input.StartTime
+			// ดึง duration ของ service เดิม
+			var svc barberBookingModels.Service
+			if err := tx.
+				Where("id = ?", ap.ServiceID).
+				First(&svc).Error; err != nil {
+				return fmt.Errorf("failed fetching service for recalc end time")
+			}
+			ap.EndTime = ap.StartTime.Add(time.Duration(svc.Duration) * time.Minute)
+		}
 
-        // 4. อัปเดต BarberID, CustomerID, Status, Notes ตาม input
-        if input.BarberID != 0 {
-            ap.BarberID = input.BarberID
-        }
-        if input.CustomerID != 0 && input.CustomerID != ap.CustomerID {
-            ap.CustomerID = input.CustomerID
-        }
-        if input.Status != "" && input.Status != ap.Status {
-            ap.Status = input.Status
-        }
-        if input.Notes != "" {
-            ap.Notes = input.Notes
-        }
-        ap.UpdatedAt = time.Now().UTC()
+		// 4. อัปเดต BarberID, CustomerID, Status, Notes ตาม input
+		if input.BarberID != 0 {
+			ap.BarberID = input.BarberID
+		}
+		if input.CustomerID != 0 && input.CustomerID != ap.CustomerID {
+			ap.CustomerID = input.CustomerID
+		}
+		if input.Status != "" && input.Status != ap.Status {
+			ap.Status = input.Status
+		}
+		if input.Notes != "" {
+			ap.Notes = input.Notes
+		}
+		ap.UpdatedAt = time.Now().UTC()
 
-        // 5. Save appointment
-        if err := tx.Save(&ap).Error; err != nil {
-            return fmt.Errorf("failed to update appointment: %w", err)
-        }
+		// 5. Save appointment
+		if err := tx.Save(&ap).Error; err != nil {
+			return fmt.Errorf("failed to update appointment: %w", err)
+		}
 
-        // 6. Log status change ถ้ามีการเปลี่ยนสถานะ
-        if oldStatus != ap.Status {
-            var userID *uint
-            var custID *uint
-            if input.UserID != nil {
-                userID = input.UserID
-            } else {
-                custID = &ap.CustomerID
-            }
-            if err := s.LogService.LogStatusChange(
-                ctx,
-                ap.ID,
-                string(oldStatus),
-                string(ap.Status),
-                userID,
-                custID,
-                "status updated via API",
-            ); err != nil {
-                return fmt.Errorf("failed to log status change: %w", err)
-            }
-        }
+		// 6. Log status change ถ้ามีการเปลี่ยนสถานะ
+		if oldStatus != ap.Status {
+			var userID *uint
+			var custID *uint
+			if input.UserID != nil {
+				userID = input.UserID
+			} else {
+				custID = &ap.CustomerID
+			}
+			if err := s.LogService.LogStatusChange(
+				ctx,
+				ap.ID,
+				string(oldStatus),
+				string(ap.Status),
+				userID,
+				custID,
+				"status updated via API",
+			); err != nil {
+				return fmt.Errorf("failed to log status change: %w", err)
+			}
+		}
 
-        // 7. ดึงข้อมูลใหม่พร้อม Preload relations
-        var out barberBookingModels.Appointment
-        if err := tx.
-            Preload("Service").
-            Preload("Customer").
-            First(&out, ap.ID).Error; err != nil {
-            return fmt.Errorf("failed to fetch updated appointment: %w", err)
-        }
-        updatedAppt = &out
-        return nil
-    })
+		// 7. ดึงข้อมูลใหม่พร้อม Preload relations
+		var out barberBookingModels.Appointment
+		if err := tx.
+			Preload("Service").
+			Preload("Customer").
+			First(&out, ap.ID).Error; err != nil {
+			return fmt.Errorf("failed to fetch updated appointment: %w", err)
+		}
+		updatedAppt = &out
+		return nil
+	})
 
-    return updatedAppt, err
+	return updatedAppt, err
 }
-
 
 func (s *appointmentService) GetAppointmentByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error) {
 	var appt barberBookingModels.Appointment
@@ -417,106 +411,105 @@ func (s *appointmentService) GetAppointmentByID(ctx context.Context, id uint) (*
 }
 
 func (s *appointmentService) ListAppointments(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingModels.Appointment, error) {
-    var appointments []barberBookingModels.Appointment
+	var appointments []barberBookingModels.Appointment
 
-    // เริ่มต้น tx พร้อม preload ความสัมพันธ์ทั้งหมด
-    tx := s.DB.WithContext(ctx).Debug().
-        Model(&barberBookingModels.Appointment{}).
-        Preload("Service").
-        Preload("Customer").
-        Preload("Barber").
+	// เริ่มต้น tx พร้อม preload ความสัมพันธ์ทั้งหมด
+	tx := s.DB.WithContext(ctx).Debug().
+		Model(&barberBookingModels.Appointment{}).
+		Preload("Service").
+		Preload("Customer").
+		Preload("Barber").
+		Where("tenant_id = ?", filter.TenantID)
 
-        Where("tenant_id = ?", filter.TenantID)
+	// กรองตามเงื่อนไขต่าง ๆ
+	if filter.BranchID != nil {
+		tx = tx.Where("branch_id = ?", *filter.BranchID)
+	}
+	if filter.BarberID != nil {
+		tx = tx.Where("barber_id = ?", *filter.BarberID)
+	}
+	if filter.CustomerID != nil {
+		tx = tx.Where("customer_id = ?", *filter.CustomerID)
+	}
+	if filter.Status != nil {
+		tx = tx.Where("status = ?", *filter.Status)
+	}
+	if filter.StartDate != nil {
+		tx = tx.Where("start_time >= ?", *filter.StartDate)
+	}
+	if filter.EndDate != nil {
+		tx = tx.Where("end_time <= ?", *filter.EndDate)
+	}
 
-    // กรองตามเงื่อนไขต่าง ๆ
-    if filter.BranchID != nil {
-        tx = tx.Where("branch_id = ?", *filter.BranchID)
-    }
-    if filter.BarberID != nil {
-        tx = tx.Where("barber_id = ?", *filter.BarberID)
-    }
-    if filter.CustomerID != nil {
-        tx = tx.Where("customer_id = ?", *filter.CustomerID)
-    }
-    if filter.Status != nil {
-        tx = tx.Where("status = ?", *filter.Status)
-    }
-    if filter.StartDate != nil {
-        tx = tx.Where("start_time >= ?", *filter.StartDate)
-    }
-    if filter.EndDate != nil {
-        tx = tx.Where("end_time <= ?", *filter.EndDate)
-    }
+	// กำหนดการจัดเรียง กรณีมี sort_by หรือ default เรียงตาม start_time
+	if filter.SortBy != nil && *filter.SortBy != "" {
+		tx = tx.Order(*filter.SortBy)
+	} else {
+		tx = tx.Order("start_time asc")
+	}
 
-    // กำหนดการจัดเรียง กรณีมี sort_by หรือ default เรียงตาม start_time
-    if filter.SortBy != nil && *filter.SortBy != "" {
-        tx = tx.Order(*filter.SortBy)
-    } else {
-        tx = tx.Order("start_time asc")
-    }
+	// กำหนด Limit/Offset เพื่อ Pagination (ถ้ามี)
+	if filter.Limit != nil {
+		tx = tx.Limit(*filter.Limit)
+	}
+	if filter.Offset != nil {
+		tx = tx.Offset(*filter.Offset)
+	}
 
-    // กำหนด Limit/Offset เพื่อ Pagination (ถ้ามี)
-    if filter.Limit != nil {
-        tx = tx.Limit(*filter.Limit)
-    }
-    if filter.Offset != nil {
-        tx = tx.Offset(*filter.Offset)
-    }
-
-    // สุดท้าย execute Find เพียงครั้งเดียว
-    if err := tx.Find(&appointments).Error; err != nil {
-        return nil, err
-    }
-    return appointments, nil
+	// สุดท้าย execute Find เพียงครั้งเดียว
+	if err := tx.Find(&appointments).Error; err != nil {
+		return nil, err
+	}
+	return appointments, nil
 }
 
 func (s *appointmentService) ListAppointmentsResponse(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingPort.AppointmentResponse, error) {
-    // 1. เรียก ListAppointments ดึงข้อมูล full
-    apps, err := s.ListAppointments(ctx, filter)
-    if err != nil {
-        return nil, err
-    }
+	// 1. เรียก ListAppointments ดึงข้อมูล full
+	apps, err := s.ListAppointments(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
 
-    // 2. สร้าง slice ของ DTO
-    var result []barberBookingPort.AppointmentResponse
-    for _, a := range apps {
-        // แปลงเวลาเป็น ISO string (format RFC3339)
-        startISO := a.StartTime.Format(time.RFC3339)
-        endISO := a.EndTime.Format(time.RFC3339)
+	// 2. สร้าง slice ของ DTO
+	var result []barberBookingPort.AppointmentResponse
+	for _, a := range apps {
+		// แปลงเวลาเป็น ISO string (format RFC3339)
+		startISO := a.StartTime.Format(time.RFC3339)
+		endISO := a.EndTime.Format(time.RFC3339)
 
-        // สร้าง object ตัวนึง
-        ar := barberBookingPort.AppointmentResponse{
-            ID:       a.ID,
-            BranchID: a.BranchID,
-            TenantID: a.TenantID,
-            StartTime: startISO,
-            EndTime:   endISO,
-            Status:   string(a.Status),
-            Notes:    a.Notes,
-        }
+		// สร้าง object ตัวนึง
+		ar := barberBookingPort.AppointmentResponse{
+			ID:        a.ID,
+			BranchID:  a.BranchID,
+			TenantID:  a.TenantID,
+			StartTime: startISO,
+			EndTime:   endISO,
+			Status:    string(a.Status),
+			Notes:     a.Notes,
+		}
 
-        // map ส่วน Service
-        ar.Service.ID = a.Service.ID
-        ar.Service.Name = a.Service.Name
-        ar.Service.Duration = a.Service.Duration
-        ar.Service.Price = a.Service.Price
+		// map ส่วน Service
+		ar.Service.ID = a.Service.ID
+		ar.Service.Name = a.Service.Name
+		ar.Service.Duration = a.Service.Duration
+		ar.Service.Price = a.Service.Price
 
-        // map ส่วน Barber (coreModels.User)
-        ar.Barber.ID = a.Barber.ID
-        ar.Barber.Username = a.Barber.Username
-        ar.Barber.Email = a.Barber.Email
+		// map ส่วน Barber (coreModels.User)
+		ar.Barber.ID = a.Barber.ID
+		ar.Barber.Username = a.Barber.Username
+		ar.Barber.Email = a.Barber.Email
 
-        // map ส่วน Customer
-        ar.Customer.ID = a.Customer.ID
-        ar.Customer.Name = a.Customer.Name
-        ar.Customer.Phone = a.Customer.Phone
-        ar.Customer.Email = a.Customer.Email
+		// map ส่วน Customer
+		ar.Customer.ID = a.Customer.ID
+		ar.Customer.Name = a.Customer.Name
+		ar.Customer.Phone = a.Customer.Phone
+		ar.Customer.Email = a.Customer.Email
 
-        // เติมลง slice
-        result = append(result, ar)
-    }
+		// เติมลง slice
+		result = append(result, ar)
+	}
 
-    return result, nil
+	return result, nil
 }
 
 func (s *appointmentService) CancelAppointment(
@@ -727,6 +720,106 @@ func (s *appointmentService) GetAppointmentsByBarber(
 		return nil, fmt.Errorf("failed to fetch appointments: %w", err)
 	}
 	return appts, nil
+}
+
+
+
+func (s *appointmentService) GetAppointmentsByBranch(
+	ctx context.Context,
+	branchID uint,
+	start *time.Time,
+	end *time.Time,
+) ([]barberBookingPort.AppointmentBrief, error) {
+	// 1. Validate และหาช่าง
+	var barberIDs []uint
+	if err := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Barber{}).
+		Where("branch_id = ? AND deleted_at IS NULL", branchID).
+		Pluck("id", &barberIDs).Error; err != nil {
+		return nil, fmt.Errorf("failed to get barbers: %w", err)
+	}
+	if len(barberIDs) == 0 {
+		return []barberBookingPort.AppointmentBrief{}, nil
+	}
+
+	// 2. ดึง appointments พร้อม preload service + barber (customer จะ preload ทีหลัง)
+	var appointments []barberBookingModels.Appointment
+	q := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Appointment{}).
+		Where("barber_id IN ?", barberIDs).
+		Select("id", "branch_id", "service_id", "barber_id", "customer_id", "start_time", "end_time", "status").
+		Preload("Service", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "description", "duration", "price")
+		}).
+		Preload("Barber", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "username")
+		}).
+		Order("start_time ASC")
+
+	if start != nil {
+		q = q.Where("start_time >= ?", *start)
+	}
+	if end != nil {
+		q = q.Where("end_time <= ?", *end)
+	}
+
+	if err := q.Find(&appointments).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch appointments: %w", err)
+	}
+
+	// 3. ดึง customer แยก
+	customerIDs := make([]uint, 0)
+	for _, a := range appointments {
+		if a.CustomerID > 0 {
+			customerIDs = append(customerIDs, a.CustomerID)
+		}
+	}
+	customerMap := map[uint]barberBookingModels.Customer{}
+	if len(customerIDs) > 0 {
+		var customers []barberBookingModels.Customer
+		if err := s.DB.WithContext(ctx).
+			Model(&barberBookingModels.Customer{}).
+			Where("id IN ?", customerIDs).
+			Select("id", "name", "phone").
+			Find(&customers).Error; err != nil {
+			return nil, fmt.Errorf("failed to fetch customers: %w", err)
+		}
+		for _, c := range customers {
+			customerMap[c.ID] = c
+		}
+	}
+
+	// 4. Map เข้า AppointmentBrief
+	var result []barberBookingPort.AppointmentBrief
+	for _, a := range appointments {
+		cust := customerMap[a.CustomerID]
+		result = append(result, barberBookingPort.AppointmentBrief{
+			ID:        a.ID,
+			BranchID:  a.BranchID,
+			ServiceID: a.ServiceID,
+			Service: barberBookingPort.ServiceBrief{
+				Name:        a.Service.Name,
+				Description: a.Service.Description,
+				Duration:    a.Service.Duration,
+				Price:       int(a.Service.Price), 
+			},
+			BarberID: a.BarberID,
+			Barber: barberBookingPort.BarberBrief{
+				Username: a.Barber.Username,
+			},
+			CustomerID: a.CustomerID,
+			Customer: barberBookingPort.CustomerBrief{
+				Name:  cust.Name,
+				Phone: cust.Phone,
+			},
+			StartTime: a.StartTime,
+			EndTime:   a.EndTime,
+			Status:    string(a.Status),
+		})
+		
+	}
+
+	return result, nil
 }
 
 func (s *appointmentService) DeleteAppointment(

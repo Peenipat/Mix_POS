@@ -8,7 +8,8 @@ import { Barber } from "../../types/barber";
 import { TotalBarberSchedule } from "../BarberPage";
 import "intro.js/introjs.css";
 import introJs from "intro.js";
-import { Divide } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
+import { bookAppointment } from "../../api/appointment";
 export interface Appointment {
     barberId: number;
     start: string; // "HH:mm"
@@ -31,17 +32,33 @@ export const mockAppointments: Appointment[] = [
     },
 ];
 
+type BookingPayload = {
+    customer_id: number; // guest mode = 0
+    customer: {
+        name: string;
+        phone: string;
+    };
+    service_id: number;
+    branch_id: number;
+    barber_id: number;
+    start_time: string; // ISO string (RFC3339)
+    notes?: string;
+};
+
+
 export default function AppointmentsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [barbers, setBarbers] = useState<Barber[]>([]);
     const [loadingBarbers, setLoadingBarbers] = useState<boolean>(false);
     const [errorBarbers, setErrorBarbers] = useState<string | null>(null);
-    const [selectedServiceId, setSelectedServiceId] = useState<Number | null>(null)
+    const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null)
 
     const [services, setServices] = useState<Service[]>([]);
     const [loadingServices, setLoadingServices] = useState<boolean>(false);
     const [errorServices, setErrorServices] = useState<string | null>(null);
+
+
 
     const loadServices = async () => {
         setLoadingServices(true);
@@ -153,11 +170,11 @@ export default function AppointmentsPage() {
         variant: "success" | "error";
     } | null>(null);
 
-    const handleBookingSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        handleClose();
-        setToastInfo({ message: "จองคิวสำเร็จเรียบร้อย!", variant: "success" });
-    };
+    // const handleBookingSubmit = (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     handleClose();
+    //     setToastInfo({ message: "จองคิวสำเร็จเรียบร้อย!", variant: "success" });
+    // };
 
     const bookingStepsMock = [
         {
@@ -293,6 +310,44 @@ export default function AppointmentsPage() {
         intro.start();
     };
 
+    type GuestFormInput = {
+        name: string;
+        phone: string;
+    };
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors }
+    } = useForm<GuestFormInput>();
+
+    const handleBookingSubmit = async (data: GuestFormInput) => {
+        try {
+            const localDateTime = `${selectedBooking?.date}T${selectedBooking?.time}:00`;
+            const startTime = new Date(localDateTime).toISOString();
+
+            const payload = {
+                customer_id: 0,
+                customer: {
+                    name: data.name,
+                    phone: data.phone
+                },
+                branch_id: 1, 
+                service_id: selectedServiceId!,
+                barber_id: selectedBooking?.barberId || 0,
+                start_time: startTime,
+                notes: ""
+            };
+
+            const result = await bookAppointment(1, payload);
+            console.log("✅ สำเร็จ:", result);
+
+            // ทำอย่างอื่น เช่น ปิด modal หรือ redirect
+        } catch (err) {
+            console.error("❌ จองไม่สำเร็จ:", err);
+        }
+    };
+
 
 
     return (
@@ -395,7 +450,7 @@ export default function AppointmentsPage() {
                         ระบบจะล็อกคิวนี้ไว้ {formatTime(countdown)} นาที
                     </div>
 
-                    <form className="" onSubmit={handleBookingSubmit}>
+                    <form onSubmit={handleSubmit(handleBookingSubmit)}>
                         <div
                             id="modal-fix"
                             className={selectedBooking ? "block" : "hidden"}
@@ -432,22 +487,43 @@ export default function AppointmentsPage() {
                         <div id="modal-form">
                             <div className="mb-3">
                                 <label className="block text-sm font-medium">ชื่อลูกค้า</label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full rounded-md"
-                                    placeholder="กรุณากรอกชื่อลูกค้า"
-                                    data-step="modal-name"
+                                <Controller
+                                    name="name"
+                                    control={control}
+                                    defaultValue=""
+                                    rules={{ required: "กรุณากรอกชื่อ" }}
+                                    render={({ field }) => (
+                                        <input
+                                            {...field}
+                                            className="input input-bordered w-full rounded-md"
+                                            placeholder="กรุณากรอกชื่อลูกค้า"
+                                        />
+                                    )}
                                 />
                             </div>
 
                             <div className="mb-3">
                                 <label className="block text-sm font-medium">เบอร์โทรศัพท์</label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full rounded-md"
-                                    placeholder="กรุณากรอกเบอร์โทร"
-                                    data-step="modal-phone"
+                                <Controller
+                                    name="phone"
+                                    control={control}
+                                    defaultValue=""
+                                    rules={{
+                                        required: "กรุณากรอกเบอร์โทร",
+                                        pattern: {
+                                            value: /^[0-9]{9,10}$/,
+                                            message: "เบอร์โทรไม่ถูกต้อง"
+                                        }
+                                    }}
+                                    render={({ field }) => (
+                                        <input
+                                            {...field}
+                                            className="input input-bordered w-full rounded-md"
+                                            placeholder="กรุณากรอกเบอร์โทร"
+                                        />
+                                    )}
                                 />
+
                             </div>
                         </div>
                         <h3 className="mb-1">เลือกบริการ</h3>
@@ -467,15 +543,6 @@ export default function AppointmentsPage() {
                                         className="bg-gray-100 rounded-xl shadow-lg flex flex-col p-1"
                                     >
                                         <div className="flex items-center p-1">
-                                            {/* รูปภาพวงกลมเล็ก */}
-                                            {/* <div className="flex-shrink-0">
-                                                <img
-                                                    src={`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${service.Img_path}/${service.Img_name}`}
-                                                    alt={service.name}
-                                                    className="w-8 h-8 rounded-full object-cover"
-                                                />
-                                            </div> */}
-
                                             {/* ข้อความ */}
                                             <div className="flex flex-col justify-center flex-grow overflow-hidden">
                                                 <div className="text-lg font-semibold truncate">{service.name}</div>
@@ -489,7 +556,6 @@ export default function AppointmentsPage() {
                                             </div>
                                         </div>
 
-                                        {/* ปุ่ม เลือก / ยกเลิก */}
                                         {!isSelected ? (
                                             <button
                                                 type="button"

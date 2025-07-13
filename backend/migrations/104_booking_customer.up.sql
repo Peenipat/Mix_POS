@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 -- Composite Index (tenant_id, email)
-CREATE INDEX IF NOT EXISTS idx_customers_tenant_email ON customers(tenant_id, email);
-CREATE INDEX idx_customers_lower_email ON customers(LOWER(email));
+-- CREATE INDEX IF NOT EXISTS idx_customers_tenant_email ON customers(tenant_id, email);
+-- CREATE INDEX idx_customers_lower_email ON customers(LOWER(email));

@@ -6,7 +6,7 @@ import (
 type WorkingHour struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	BranchID  uint           `gorm:"not null;uniqueIndex:idx_wh_branch_weekday"`
-	TenantID  uint           `gorm:"not null;uniqueIndex:idx_wh_branch_weekday"`
+	TenantID  uint 			 `gorm:"not null"`
     Weekday   int            `gorm:"not null;uniqueIndex:idx_wh_branch_weekday"`
 	StartTime time.Time      `gorm:"not null" json:"start_time"`
 	EndTime   time.Time      `gorm:"not null" json:"end_time"`

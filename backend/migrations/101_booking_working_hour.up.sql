@@ -20,6 +20,3 @@ CREATE TABLE IF NOT EXISTS working_hours (
     REFERENCES branches(id)
     ON DELETE CASCADE
 );
-
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_wh_branch_weekday
-  ON working_hours(branch_id, weekday);

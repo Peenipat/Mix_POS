@@ -1,0 +1,3091 @@
+basePath: /api/v1/barberbooking
+definitions:
+  barberBookingController.CancelRequest:
+    properties:
+      actor_customer_id:
+        type: integer
+      actor_user_id:
+        type: integer
+    type: object
+  barberBookingController.DeleteReviewRequest:
+    properties:
+      actor_customer_id:
+        type: integer
+    type: object
+  barberBookingController.RescheduleRequest:
+    properties:
+      actor_customer_id:
+        type: integer
+      actor_user_id:
+        type: integer
+      new_start_time:
+        type: string
+    type: object
+  barberBookingDto.CalendarSlot:
+    properties:
+      end:
+        example: "2025-07-01T09:30:00Z"
+        type: string
+      start:
+        example: "2025-07-01T09:00:00Z"
+        type: string
+      status:
+        description: '"open" or "closed"'
+        example: open
+        type: string
+    type: object
+  barberBookingDto.WorkingHourInput:
+    properties:
+      end_time:
+        description: เวลาปิด
+        type: string
+      is_closed:
+        type: boolean
+      start_time:
+        description: เวลาเปิด
+        type: string
+      weekday:
+        description: 0–6
+        type: integer
+    type: object
+  barberBookingModels.Appointment:
+    properties:
+      barber:
+        $ref: '#/definitions/coreModels.User'
+      barber_id:
+        type: integer
+      branch_id:
+        description: ไม่ preload branch
+        type: integer
+      created_at:
+        type: string
+      customer:
+        $ref: '#/definitions/barberBookingModels.Customer'
+      customer_id:
+        type: integer
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      end_time:
+        type: string
+      id:
+        type: integer
+      notes:
+        type: string
+      service:
+        $ref: '#/definitions/barberBookingModels.Service'
+      service_id:
+        type: integer
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/barberBookingModels.AppointmentStatus'
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        description: อ้าง user ที่สร้างคิว (ไม่มี FK)
+        type: integer
+    type: object
+  barberBookingModels.AppointmentReview:
+    properties:
+      appointment:
+        $ref: '#/definitions/barberBookingModels.Appointment'
+      appointment_id:
+        type: integer
+      comment:
+        type: string
+      created_at:
+        type: string
+      customer:
+        $ref: '#/definitions/barberBookingModels.Customer'
+      customer_id:
+        type: integer
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      rating:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  barberBookingModels.AppointmentStatus:
+    enum:
+    - PENDING
+    - CONFIRMED
+    - CANCELLED
+    - COMPLETED
+    - NO_SHOW
+    - RESCHEDULED
+    type: string
+    x-enum-comments:
+      StatusCancelled: ยกเลิก
+      StatusComplete: จบงาน
+      StatusConfirmed: รับ
+      StatusPending: รอดำเนินการ
+      StatusRescheduled: เปลี่ยนเวลา
+    x-enum-varnames:
+    - StatusPending
+    - StatusConfirmed
+    - StatusCancelled
+    - StatusComplete
+    - StatusNoShow
+    - StatusRescheduled
+  barberBookingModels.AppointmentStatusLog:
+    properties:
+      appointmentID:
+        description: ใช้ struct ได้ถ้าต้องการ preload
+        type: integer
+      changedAt:
+        type: string
+      changedByCustomerID:
+        description: Loose FK → ไม่ preload
+        type: integer
+      changedByUserID:
+        description: Loose FK → ไม่ preload
+        type: integer
+      id:
+        type: integer
+      newStatus:
+        type: string
+      notes:
+        type: string
+      oldStatus:
+        type: string
+    type: object
+  barberBookingModels.Barber:
+    properties:
+      branch_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      phone_number:
+        type: string
+      role_user:
+        type: string
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  barberBookingModels.BarberWorkload:
+    properties:
+      barber_id:
+        type: integer
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        type: integer
+      total_appointments:
+        type: integer
+      total_hours:
+        type: integer
+    type: object
+  barberBookingModels.Customer:
+    properties:
+      branch_id:
+        type: integer
+      createdAt:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        description: Composite Index
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phone:
+        description: optional
+        type: string
+      tenant_id:
+        description: Composite Index
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  barberBookingModels.Service:
+    properties:
+      Img_name:
+        type: string
+      Img_path:
+        type: string
+      branch_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  barberBookingModels.Unavailability:
+    properties:
+      barber_id:
+        description: → booking.barbers.id
+        type: integer
+      branch_id:
+        description: → core.branches.id
+        type: integer
+      created_at:
+        type: string
+      date:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      reason:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  barberBookingModels.WorkingDayOverride:
+    properties:
+      branch_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      end_time:
+        $ref: '#/definitions/barberbooking.TimeOnly'
+      id:
+        type: integer
+      isClosed:
+        type: boolean
+      start_time:
+        $ref: '#/definitions/barberbooking.TimeOnly'
+      updated_at:
+        type: string
+      work_date:
+        type: string
+    type: object
+  barberBookingPort.CreateAppointmentRequest:
+    properties:
+      barber_id:
+        example: 3
+        type: integer
+      branch_id:
+        example: 1
+        type: integer
+      customer:
+        $ref: '#/definitions/barberBookingPort.CustomerInput'
+      customer_id:
+        example: 4
+        type: integer
+      notes:
+        example: 'Preferred barber: John'
+        type: string
+      service_id:
+        example: 2
+        type: integer
+      start_time:
+        example: "2025-05-30T10:00:00Z"
+        type: string
+    type: object
+  barberBookingPort.CreateAppointmentReviewRequest:
+    properties:
+      comment:
+        example: Great service!
+        type: string
+      customer_id:
+        example: 4
+        type: integer
+      rating:
+        example: 5
+        type: integer
+    type: object
+  barberBookingPort.CreateBarberInput:
+    properties:
+      description:
+        type: string
+      phone_number:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  barberBookingPort.CustomerInput:
+    properties:
+      name:
+        example: John
+        type: string
+      phone:
+        example: "0123456789"
+        type: string
+    type: object
+  barberBookingPort.UpdateAppointmentReviewRequest:
+    properties:
+      comment:
+        example: Updated comment
+        type: string
+      rating:
+        example: 4
+        type: integer
+    type: object
+  barberBookingPort.UpdateBarberRequest:
+    properties:
+      branch_id:
+        type: integer
+      description:
+        type: string
+      email:
+        description: ถ้าต้องการอัปเดตอีเมลด้วย
+        type: string
+      phone_number:
+        type: string
+      username:
+        description: ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย
+        type: string
+    type: object
+  barberBookingPort.UpsertBarberWorkloadRequest:
+    properties:
+      appointments:
+        description: จำนวนการนัดหมาย
+        example: 10
+        type: integer
+      date:
+        description: วันที่ในรูปแบบ YYYY-MM-DD
+        example: "2025-05-30"
+        type: string
+      hours:
+        description: จำนวนชั่วโมงทำงาน
+        example: 8
+        type: integer
+    type: object
+  barberBookingPort.WorkingDayOverrideInput:
+    properties:
+      branch_id:
+        type: integer
+      end_time:
+        type: string
+      is_closed:
+        type: boolean
+      start_time:
+        type: string
+      work_date:
+        type: string
+    required:
+    - branch_id
+    - end_time
+    - start_time
+    - work_date
+    type: object
+  barberbooking.TimeOnly:
+    properties:
+      time.Time:
+        type: string
+    type: object
+  coreModels.Branch:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      name:
+        description: composite unique with TenantID
+        type: string
+      tenant:
+        $ref: '#/definitions/coreModels.Tenant'
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/coreModels.User'
+        type: array
+    type: object
+  coreModels.Module:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        description: เช่น barber_booking
+        type: string
+    type: object
+  coreModels.Role:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      module:
+        $ref: '#/definitions/coreModels.Module'
+      module_id:
+        type: integer
+      name:
+        type: string
+      tenant:
+        $ref: '#/definitions/coreModels.Tenant'
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  coreModels.Tenant:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      domain:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  coreModels.TenantUser:
+    properties:
+      tenant:
+        $ref: '#/definitions/coreModels.Tenant'
+      tenant_id:
+        type: integer
+      user:
+        $ref: '#/definitions/coreModels.User'
+      user_id:
+        type: integer
+    type: object
+  coreModels.User:
+    properties:
+      Img_name:
+        type: string
+      Img_path:
+        type: string
+      branch:
+        $ref: '#/definitions/coreModels.Branch'
+      branch_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        type: string
+      id:
+        type: integer
+      role:
+        $ref: '#/definitions/coreModels.Role'
+      role_id:
+        type: integer
+      tenant_users:
+        items:
+          $ref: '#/definitions/coreModels.TenantUser'
+        type: array
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: API สำหรับโมดูล barberbooking
+  title: BarberBooking API
+  version: "1.0"
+paths:
+  /barbers/{barber_id}:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ
+        BranchAdmin)
+      parameters:
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid barber_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบช่างตัดผม
+      tags:
+      - Barber
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Barber ตามรหัสที่ระบุ
+      parameters:
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูลช่างตัดผมใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid barber_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงข้อมูลช่างตัดผมตาม ID
+      tags:
+      - Barber
+  /branches/{branch_id}/appointments:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้
+      parameters:
+      - description: รหัสสาขา (Branch ID)
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: start
+        type: string
+      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืน status success และรายการการนัดหมาย
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงการนัดหมายทั้งหมดของช่างในสาขา
+      tags:
+      - Appointment
+  /branches/{branch_id}/barbers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Barber ทั้งหมดของสาขาที่ระบุ หากไม่พบจะคืน 404 พร้อม
+        data ว่าง
+      parameters:
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Barber ใน key
+            `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid branch_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: no barbers found for this branch (data จะเป็น array ว่าง)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: failed to fetch barbers
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อช่างตัดผมตามสาขา
+      tags:
+      - Barber
+  /none:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Appointment Review ตามรหัสที่ระบุ โดยระบุ ActorCustomerID
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      - description: รหัส Review
+        in: path
+        name: review_id
+        required: true
+        type: integer
+      - description: Payload สำหรับลบรีวิว (actor_customer_id)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingController.DeleteReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid parameters หรือ invalid JSON body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: not authorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Review not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบรีวิว
+      tags:
+      - Review
+    get:
+      consumes:
+      - application/json
+      description: คืนค่า average rating (float64) ของช่างตัดผมที่ระบุ ภายใน Tenant
+        สำหรับ consistency ของ URL
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และ average rating ใน key `data`
+          schema:
+            additionalProperties:
+              type: number
+            type: object
+        "400":
+          description: Invalid tenant_id หรือ barber_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงคะแนนเฉลี่ยของช่างตัดผม
+      tags:
+      - Review
+  /services/:service_id:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
+        หรือ TenantAdmin)
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid service ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบบริการ
+      tags:
+      - Service
+  /tenants/:tenant_id/appointments:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Appointment ของ Tenant ที่ระบุ โดยรองรับการกรองตาม branch_id,
+        barber_id, customer_id, status, ช่วงวัน (RFC3339), pagination (limit, offset)
+        และการจัดเรียง (sort_by)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: กรองตาม Branch ID
+        in: query
+        name: branch_id
+        type: integer
+      - description: กรองตาม Barber ID
+        in: query
+        name: barber_id
+        type: integer
+      - description: กรองตาม Customer ID
+        in: query
+        name: customer_id
+        type: integer
+      - description: กรองตามสถานะ Appointment
+        in: query
+        name: status
+        type: string
+      - description: กรองวันที่เริ่มต้น (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: กรองวันที่สิ้นสุด (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      - description: จำนวนรายการสูงสุด (pagination)
+        in: query
+        name: limit
+        type: integer
+      - description: เลื่อนข้ามรายการ (pagination)
+        in: query
+        name: offset
+        type: integer
+      - description: จัดเรียงผลลัพธ์ เช่น start_time desc
+        in: query
+        name: sort_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และ array ของ Appointment ใน key `data`
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/barberBookingModels.Appointment'
+              type: array
+            type: object
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายการนัดหมายของ Tenant
+      tags:
+      - Appointment
+  /tenants/:tenant_id/appointments/:appointment_id:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด (ต้องมีสิทธิ์
+        Tenant หรือ TenantAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid tenant_id หรือ appointment_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Appointment not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบการนัดหมาย
+      tags:
+      - Appointment
+    get:
+      consumes:
+      - application/json
+      description: คืนรายละเอียด Appointment ตามรหัสที่ระบุ ภายใต้ Tenant สำหรับความสอดคล้องของ
+        URL
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล Appointment
+          schema:
+            $ref: '#/definitions/barberBookingModels.Appointment'
+        "400":
+          description: Invalid tenant_id หรือ appointment_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Appointment not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch appointment
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูลนัดหมายตาม ID
+      tags:
+      - Appointment
+    put:
+      consumes:
+      - application/json
+      description: อัปเดต Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยรับข้อมูล
+        JSON ของ Appointment ใหม่
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      - description: ข้อมูล Appointment ที่ต้องการอัปเดต
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Appointment'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล Appointment ที่อัปเดต
+          schema:
+            $ref: '#/definitions/barberBookingModels.Appointment'
+        "400":
+          description: Invalid tenant_id, appointment_id หรือ JSON body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขข้อมูลนัดหมาย
+      tags:
+      - Appointment
+  /tenants/:tenant_id/appointments/:appointment_id/cancel:
+    post:
+      consumes:
+      - application/json
+      description: ยกเลิก Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยระบุ
+        Actor เป็น User หรือ Customer ได้ครั้งละหนึ่งคน
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      - description: 'ข้อมูล Actor: ระบุ ActorUserID หรือ ActorCustomerID อย่างใดอย่างหนึ่ง'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingController.CancelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการยกเลิก
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Missing or invalid parameters หรือ cannot be cancelled
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Appointment not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ยกเลิกนัดหมาย
+      tags:
+      - Appointment
+  /tenants/:tenant_id/appointments/:appointment_id/logs:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ AppointmentStatusLog ของนัดหมายที่ระบุ ภายใต้ Tenant
+        เพื่อความสอดคล้องของ URL
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และ array ของ logs ใน key `data`
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/barberBookingModels.AppointmentStatusLog'
+              type: array
+            type: object
+        "400":
+          description: Invalid tenant_id หรือ appointment_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch logs
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงประวัติสถานะของนัดหมาย
+      tags:
+      - AppointmentLog
+  /tenants/:tenant_id/appointments/:appointment_id/reschedule:
+    post:
+      consumes:
+      - application/json
+      description: Reschedule Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยระบุเวลาใหม่และ
+        Actor (User หรือ Customer)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      - description: ข้อมูลสำหรับเลื่อนนัดหมาย (new_start_time, actor_user_id หรือ
+          actor_customer_id)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingController.RescheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการเลื่อนนัดหมาย
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Missing or invalid parameters หรือ cannot reschedule
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Appointment not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: เปลี่ยนเวลานัดหมาย
+      tags:
+      - Appointment
+  /tenants/:tenant_id/appointments/:appointment_id/reviews:
+    post:
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Appointment
+        in: path
+        name: appointment_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้างรีวิว
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.CreateAppointmentReviewRequest'
+      responses:
+        "201":
+          description: คืนค่า status success และข้อมูล review ที่สร้าง
+          schema:
+            $ref: '#/definitions/barberBookingModels.AppointmentReview'
+        "400":
+          description: Invalid input หรือ cannot review appointment
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Appointment not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      tags:
+      - Review
+  /tenants/:tenant_id/appointments/:appointment_id/reviews/:review_id:
+    put:
+      consumes:
+      - application/json
+      description: แก้ไข Rating และ Comment ของ Appointment Review ตามรหัสที่ระบุ
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Review
+        in: path
+        name: review_id
+        required: true
+        type: integer
+      - description: Payload สำหรับอัปเดตรีวิว
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.UpdateAppointmentReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูลรีวิวที่อัปเดต
+          schema:
+            $ref: '#/definitions/barberBookingModels.AppointmentReview'
+        "400":
+          description: Invalid parameters หรือ invalid JSON body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Review not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: อัปเดตรีวิว
+      tags:
+      - Review
+  /tenants/:tenant_id/barbers/:barber_id/availability:
+    get:
+      description: ตรวจสอบว่า Barber ที่ระบุสามารถรับงานได้ในช่วงเวลาที่กำหนด (RFC3339)
+        หรือไม่
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: เวลาเริ่มต้น (RFC3339) เช่น 2025-05-29T09:00:00Z
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: เวลาสิ้นสุด (RFC3339) เช่น 2025-05-29T10:00:00Z
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status และ available (true/false)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: พารามิเตอร์ไม่ถูกต้อง หรือขาด start/end
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: เกิดข้อผิดพลาดระหว่างตรวจสอบความพร้อม
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ตรวจสอบความพร้อมของช่างตัดผม
+      tags:
+      - Appointment
+  /tenants/:tenant_id/barberworkload/barbers/:barber_id:
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล BarberWorkload สำหรับช่างตัดผมที่ระบุ ภายใน Tenant ที่กำหนด
+        โดยกรองตามวันที่ (YYYY-MM-DD) ถ้าไม่ส่ง date จะใช้วันที่ปัจจุบัน
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: วันที่กรอง (YYYY-MM-DD), default = today
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล workload ใน key `data`
+          schema:
+            $ref: '#/definitions/barberBookingModels.BarberWorkload'
+        "400":
+          description: Invalid Barber ID หรือรูปแบบวันที่ไม่ถูกต้อง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch workload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงปริมาณงานของช่างตัดผม
+      tags:
+      - Workload
+    post:
+      consumes:
+      - application/json
+      description: Upsert (insert หรือ update) BarberWorkload ตามรหัสช่างและวันที่
+      parameters:
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: Payload สำหรับ upsert ปริมาณงาน (date, appointments, hours)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.UpsertBarberWorkloadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการ upsert
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid barber_id หรือ invalid JSON body หรือ invalid date
+            format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed upsert workload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้าง/อัปเดตปริมาณงานของช่างตัดผม
+      tags:
+      - Workload
+  /tenants/:tenant_id/barberworkload/branches/:branch_id/summary:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการสรุป BarberWorkload grouped by Branch ตามวันที่ และตัวกรอง
+        Tenant/Branch (ถ้ามี)
+      parameters:
+      - description: วันที่กรอง (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      - description: กรองเฉพาะ Tenant (optional)
+        in: query
+        name: tenant_id
+        type: integer
+      - description: กรองเฉพาะ Branch (optional)
+        in: query
+        name: branch_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และ array ของสรุปปริมาณงานใน key `data`
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/barberBookingModels.BarberWorkload'
+              type: array
+            type: object
+        "400":
+          description: Missing date หรือ Invalid date/tenant_id/branch_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch workload summary
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สรุปปริมาณงานรายสาขา
+      tags:
+      - Workload
+  /tenants/:tenant_id/branch/:branch_id/customers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin,
+        Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Customer ใน key
+            `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant ID หรือ Failed to fetch customer
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อลูกค้า
+      tags:
+      - Customer
+  /tenants/:tenant_id/branch/:branch_id/services:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Service ทั้งหมดในระบบ
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Service ใน key
+            `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch services
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงรายการบริการทั้งหมด
+      tags:
+      - Service
+    post:
+      consumes:
+      - application/json
+      description: เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin,
+        Tenant หรือ TenantAdmin)
+      parameters:
+      - description: Payload สำหรับสร้าง Service (Name, Duration, Price)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Service'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success และข้อความยืนยันการสร้าง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body หรือ Invalid tenant ID หรือ Invalid service
+            input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างบริการใหม่
+      tags:
+      - Service
+  /tenants/:tenant_id/branch/:branch_id/services/:service_id:
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Service ตามรหัสที่ระบุ
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Service ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid service ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Service not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงข้อมูลบริการตาม ID
+      tags:
+      - Service
+    put:
+      consumes:
+      - application/json
+      description: อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant
+        หรือ TenantAdmin)
+      parameters:
+      - description: รหัส Service
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payload สำหรับอัปเดต Service (Name, Duration, Price)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Service'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน
+            key `data`
+          schema:
+            $ref: '#/definitions/barberBookingModels.Service'
+        "400":
+          description: Invalid service ID หรือ Invalid request body หรือ Invalid service
+            input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Service not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขข้อมูลบริการ
+      tags:
+      - Service
+  /tenants/:tenant_id/branches/:branch_id/available-barbers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Barber ที่ว่างในช่วงเวลาที่กำหนด (RFC3339) ภายใต้ Tenant
+        และ Branch ที่ระบุ
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: เวลาเริ่มต้น (RFC3339) เช่น 2025-05-29T09:00:00Z
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: เวลาสิ้นสุด (RFC3339) เช่น 2025-05-29T10:00:00Z
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และ array ของ Barber ที่ว่าง
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/barberBookingModels.Barber'
+              type: array
+            type: object
+        "400":
+          description: Missing or invalid parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อช่างตัดผมว่าง
+      tags:
+      - Appointment
+  /tenants/:tenant_id/customers:
+    post:
+      consumes:
+      - application/json
+      description: เพิ่ม Customer ใหม่ภายใต้ Tenant ที่ระบุ (กรอกชื่อและเบอร์โทร)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้าง Customer (Name, Phone)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Customer'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success และข้อความยืนยันการสร้าง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid tenant ID หรือ Invalid request body หรือ Invalid Customer
+            input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create customer
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างลูกค้าใหม่
+      tags:
+      - Customer
+  /tenants/:tenant_id/customers/:cus_id:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์
+        SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Customer
+        in: path
+        name: cus_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid tenant_id หรือ invalid cus_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete customer
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบลูกค้า
+      tags:
+      - Customer
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์
+        SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Customer
+        in: path
+        name: cus_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Customer ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id หรือ invalid cus_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch customer
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูลลูกค้าตาม ID
+      tags:
+      - Customer
+    put:
+      consumes:
+      - application/json
+      description: อัปเดตข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Customer
+        in: path
+        name: cus_id
+        required: true
+        type: integer
+      - description: Payload สำหรับอัปเดต Customer (Name, Phone, Email)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Customer'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล Customer ที่อัปเดตใน key `data`
+          schema:
+            $ref: '#/definitions/barberBookingModels.Customer'
+        "400":
+          description: Invalid tenant_id, invalid cus_id, Invalid request body หรือ
+            Invalid Customer input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Customer not found"`
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update customer
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขข้อมูลลูกค้า
+      tags:
+      - Customer
+  /tenants/:tenant_id/customers/find-by-email:
+    post:
+      consumes:
+      - application/json
+      description: ค้นหา Customer ภายใต้ Tenant ที่ระบุ โดยใช้ Email ใน body (ต้องมีสิทธิ์
+        SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: 'Payload ที่ประกอบด้วยฟิลด์ Email (json: email)'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Customer'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Customer ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id หรือ Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to find customer by email
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ค้นหาลูกค้าตามอีเมล
+      tags:
+      - Customer
+  /tenants/:tenant_id/reviews/:review_id:
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Appointment Review ตามรหัสที่ระบุ ภายใต้ Tenant สำหรับ
+        consistency ของ URL
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Review
+        in: path
+        name: review_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล review
+          schema:
+            $ref: '#/definitions/barberBookingModels.AppointmentReview'
+        "400":
+          description: Invalid tenant_id หรือ review_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Review not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch review
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรีวิวตาม ID
+      tags:
+      - Review
+  /tenants/:tenant_id/unavailability:
+    post:
+      consumes:
+      - application/json
+      description: เพิ่ม Unavailability ระบุวันที่และเลือกได้ว่าจะปิดช่างหรือสาขา
+        (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: Payload สำหรับสร้าง Unavailability (Date, BarberID หรือ BranchID)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingModels.Unavailability'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success, message และข้อมูล Unavailability ใน
+            key `data`
+          schema:
+            $ref: '#/definitions/barberBookingModels.Unavailability'
+        "400":
+          description: Invalid request body หรือ Date และ BarberID/BranchID จำเป็นต้องระบุ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Unavailability already exists for this date
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create unavailability
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างวันที่ไม่ว่าง
+      tags:
+      - Unavailability
+  /tenants/:tenant_id/unavailability/:id:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Unavailability ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin,
+        Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Unavailability
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการลบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid unavailability ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Unavailability not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete unavailability
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบวันไม่ว่าง
+      tags:
+      - Unavailability
+    put:
+      consumes:
+      - application/json
+      description: แก้ไขฟิลด์ของ Unavailability ตามที่ส่งมา (ต้องมีสิทธิ์ SaaSSuperAdmin,
+        Tenant, TenantAdmin หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Unavailability
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ฟิลด์ที่ต้องการอัปเดต (เช่น date, barber_id, branch_id)
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อความยืนยันการอัปเดต
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid unavailability ID, Invalid request body หรือ No update
+            fields provided
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Unavailability not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update unavailability
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: อัปเดตวันไม่ว่าง
+      tags:
+      - Unavailability
+  /tenants/:tenant_id/unavailability/branches/:branch_id:
+    get:
+      consumes:
+      - application/json
+      description: คืน Unavailability ทั้งหมดสำหรับสาขาที่ระบุ ในช่วงวันที่กำหนด (ต้องระบุ
+        query params `from` และ `to` ในรูปแบบ YYYY-MM-DD)
+      parameters:
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: วันที่เริ่มต้น (YYYY-MM-DD)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: วันสิ้นสุด (YYYY-MM-DD)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Unavailability
+            ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid branch ID หรือ Missing/invalid `from` or `to` date
+            format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No unavailabilities found in the given date range
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch unavailabilities
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงรายการวันไม่ว่างตามสาขา
+      tags:
+      - Unavailability
+  /tenants/:tenant_id/unavailabilitybarbers/:barber_id:
+    get:
+      consumes:
+      - application/json
+      description: คืน Unavailability ทั้งหมดสำหรับ Barber ที่ระบุ ในช่วงวันที่กำหนด
+        (ต้องระบุ query params `from` และ `to` ในรูปแบบ YYYY-MM-DD)
+      parameters:
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: วันที่เริ่มต้น (YYYY-MM-DD)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: วันสิ้นสุด (YYYY-MM-DD)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และ array ของ Unavailability
+            ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid barber ID หรือ Missing/invalid `from` or `to` date
+            format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No unavailabilities found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch unavailabilities
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายการวันไม่ว่างตามช่างตัดผม
+      tags:
+      - Unavailability
+  /tenants/:tenant_id/workinghour/branches/:branch_id:
+    post:
+      consumes:
+      - application/json
+      description: สร้าง WorkingHour ใหม่สำหรับสาขาที่ระบุ กำหนดวันในสัปดาห์ (0=อาทิตย์,...,6=เสาร์)
+        และเวลาเปิด-ปิด
+      parameters:
+      - description: รหัสสาขา
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้างวันทำการ (weekday, start_time, end_time)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingDto.WorkingHourInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status และข้อความยืนยันการสร้าง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid branch ID, weekday ไม่ถูกต้อง หรือ JSON ไม่ถูกต้อง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create working hour
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างวันทำการใหม่ (เฉพาะ 1 วัน)
+      tags:
+      - WorkingHour
+  /tenants/{tenant_id}/appointments:
+    post:
+      consumes:
+      - application/json
+      description: สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service,
+        customer, optional barber, start_time (RFC3339) และ notes
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้างนัดหมาย
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.CreateAppointmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง
+          schema:
+            $ref: '#/definitions/barberBookingModels.Appointment'
+        "400":
+          description: Missing required fields หรือ Invalid format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างนัดหมายใหม่ (Create Appointment)
+      tags:
+      - Appointment
+  /tenants/{tenant_id}/barbers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Barber ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin
+        หรือ Tenant)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message และ array ของ Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: List Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch List Barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อช่างตาม Tenant
+      tags:
+      - Barber
+  /tenants/{tenant_id}/barbers/{barber_id}/update-barber:
+    put:
+      consumes:
+      - application/json
+      description: อัปเดตข้อมูล Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant
+        หรือ BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Barber
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username,
+          Email)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.UpdateBarberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success และข้อมูล Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id/barber_id หรือ Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update Barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขข้อมูลช่างตัดผม
+      tags:
+      - Barber
+  /tenants/{tenant_id}/branches/{branch_id}/available-slots:
+    get:
+      description: ดึงช่วงเวลาที่สามารถนัดหมายได้ของสาขาในช่วงวันที่กำหนด
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'Start date (format: YYYY-MM-DD)'
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: 'End date (format: YYYY-MM-DD)'
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/barberBookingDto.CalendarSlot'
+            type: array
+        "400":
+          description: Invalid input parameters (e.g. missing or invalid tenant_id,
+            branch_id, start or end)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Data not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get available time slots
+      tags:
+      - Calendar
+  /tenants/{tenant_id}/branches/{branch_id}/create-barber:
+    post:
+      consumes:
+      - application/json
+      description: เพิ่ม Barber ใหม่ลงในระบบ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ
+        BranchAdmin)
+      parameters:
+      - description: รหัส tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: Payload สำหรับสร้าง Barber (UserID, BranchID, ชื่อ-นามสกุล ฯลฯ)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.CreateBarberInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: คืนค่า status success และข้อความยืนยันการสร้าง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างช่างตัดผมใหม่
+      tags:
+      - Barber
+  /tenants/{tenant_id}/branches/{branch_id}/users:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ user ที่ไม่ได้เป็น Barber ทั้งหมดของสาขานั้น
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message และ array ของ Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: List Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch List Barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth // ถ้าใช้ token: []
+      summary: ดึงข้อมูล User ไม่ได้เป็น barber ในสาขานั้น ๆ
+      tags:
+      - Barber
+  /tenants/{tenant_id}/branches/{branch_id}/working-day-overrides/date:
+    get:
+      description: ใช้ดึงข้อมูล override ของวันทำการในช่วงวันที่กำหนดจากสาขาที่ระบุ
+      parameters:
+      - description: Branch ID
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: Tenant ID
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'Start Date (format: YYYY-MM-DD)'
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: 'End Date (format: YYYY-MM-DD)'
+        in: query
+        name: end
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/barberBookingModels.WorkingDayOverride'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงวันเปิด-ปิดร้านเฉพาะช่วงวันที่กำหนด
+      tags:
+      - WorkingDayOverride
+  /tenants/{tenant_id}/workinghour/branches/{branch_id}:
+    get:
+      consumes:
+      - application/json
+      description: ดึงรายการ WorkingHour ทั้งหมดสำหรับสาขาที่ระบุ
+      parameters:
+      - description: รหัสสาขา
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: รหัสสาขา
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message และ array ของ WorkingHour
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid branch ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No working hours found for this branch
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch working hours
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงเวลาเปิด-ปิดของสาขา
+      tags:
+      - WorkingHour
+    put:
+      consumes:
+      - application/json
+      description: รับรายการ WorkingHourInput หลายรายการเพื่อนำมาอัปเดตเวลาเปิด-ปิดของสาขาที่ระบุ
+        (วันในสัปดาห์, เปิด/ปิด)
+      parameters:
+      - description: รหัสสาขา
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: รหัสผู้เช่า
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: 'Array ของ WorkingHourInput — ตัวอย่าง: [{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/barberBookingDto.WorkingHourInput'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status และข้อความยืนยันการอัปเดต
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid branch ID, ไม่มีข้อมูลใน body หรือ JSON ไม่ถูกต้อง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update working hours
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)
+      tags:
+      - WorkingHour
+  /users/{user_id}/barber:
+    get:
+      consumes:
+      - application/json
+      description: คืนข้อมูล Barber ที่เชื่อมโยงกับ User ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin,
+        Tenant หรือ BranchAdmin)
+      parameters:
+      - description: รหัส User
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status success, message และข้อมูล Barber ใน key `data`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Barber not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch barber
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูลช่างตัดผมโดย User ID
+      tags:
+      - Barber
+  /working-day-overrides:
+    post:
+      consumes:
+      - application/json
+      description: ใช้สำหรับเพิ่มวันเปิดหรือปิดเฉพาะกิจของสาขา เช่น วันหยุดประจำปีหรือวันเปิดพิเศษ
+      parameters:
+      - description: ข้อมูลวันที่และเวลาที่ต้องการ override
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.WorkingDayOverrideInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: สร้างสำเร็จ
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: กรณี input ไม่ถูกต้อง
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: กรณีสร้างไม่สำเร็จหรือเกิด error ภายใน
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างวันเปิด-ปิดเฉพาะกิจ
+      tags:
+      - WorkingDayOverride
+  /working-day-overrides/{id}:
+    delete:
+      description: ใช้ลบ override เฉพาะวันจาก branch ที่ระบุ
+      parameters:
+      - description: WorkingDayOverride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบวันเปิด-ปิดร้านเฉพาะวัน
+      tags:
+      - WorkingDayOverride
+    get:
+      consumes:
+      - application/json
+      description: ใช้ดึงข้อมูลวันเปิด-ปิดเฉพาะกิจตาม ID
+      parameters:
+      - description: WorkingDayOverride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/barberBookingModels.WorkingDayOverride'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงข้อมูล override ตาม ID
+      tags:
+      - WorkingDayOverride
+    put:
+      consumes:
+      - application/json
+      description: ใช้สำหรับแก้ไขวัน override ของสาขา เช่น เปลี่ยนเวลาเปิด-ปิด หรือเปลี่ยนวัน
+      parameters:
+      - description: รหัส override ที่ต้องการแก้ไข
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ข้อมูลที่ต้องการอัปเดต
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/barberBookingPort.WorkingDayOverrideInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: อัปเดตสำเร็จ
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: ข้อมูลไม่ถูกต้อง
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: ไม่พบข้อมูล
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: เกิดข้อผิดพลาดภายใน
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขวันเปิด-ปิดเฉพาะกิจ
+      tags:
+      - WorkingDayOverride
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

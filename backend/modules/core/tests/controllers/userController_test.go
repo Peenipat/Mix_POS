@@ -1,232 +1,314 @@
-package coreControllersTest
+package Core_Controllers_test
+
 import (
-    "bytes"
-    "encoding/json"
-    "net/http"
-    "net/http/httptest"
-    "testing"
+	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+    "strconv"
 
-    "github.com/gofiber/fiber/v2"
-    "github.com/stretchr/testify/assert"
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
     "github.com/stretchr/testify/require"
-    "golang.org/x/crypto/bcrypt"
-    "gorm.io/gorm"
+	"github.com/stretchr/testify/mock"
 
-	 "myapp/modules/core/controllers"
-    authDto "myapp/modules/core/dto/auth"
-    coreModels "myapp/modules/core/models"
-    coreTests "myapp/modules/core/tests"
-    "myapp/database"
+	coreControllers "myapp/modules/core/controllers"
+	corePort "myapp/modules/core/port"
+	coreServices "myapp/modules/core/services"
 )
 
-func setupApp(t *testing.T) (*fiber.App, *gorm.DB) {
-    // 1) เปิด in-memory DB แล้ว migrate Role + User
-    db := coreTests.SetupTestDB()
-    require.NoError(t, db.AutoMigrate(&coreModels.Role{}, &coreModels.User{}))
-
-    // 2) seed default Role.USER
-    role := coreModels.Role{Name: coreModels.RoleNameUser}
-    require.NoError(t, db.Create(&role).Error)
-
-    // 3) override global DB ของ application ให้เป็นตัวนี้
-    database.DB = db
-
-    // 4) สร้าง Fiber app และผูก route
-    app := fiber.New()
-    app.Post("/register", Core_controllers.CreateUserFromRegister)
-
-    return app, db
+// Mock implementation of IUserService
+type MockUserService struct {
+	mock.Mock
+    MeFunc func(ctx context.Context, userID uint) (*corePort.MeDTO, error)
 }
 
-func setupAppGetuser() *fiber.App {
-	app := fiber.New()
-	app.Get("/admin/users", Core_controllers.GetAllUsers)
-	return app
-  }
+// Me implements corePort.IUser.
+func (m *MockUserService) Me(ctx context.Context, userID uint) (*corePort.MeDTO, error) {
+    return m.MeFunc(ctx, userID)
+}
 
-  func setupAppFilterRole() *fiber.App {
+func (m *MockUserService) CreateUserFromRegister(input corePort.RegisterInput) error {
+	args := m.Called(input)
+	return args.Error(0)
+}
+
+func (m *MockUserService) CreateUserFromAdmin(input corePort.CreateUserInput) error {
+	args := m.Called(input)
+	return args.Error(0)
+}
+
+func (m *MockUserService) ChangeRoleFromAdmin(input corePort.ChangeRoleInput) error {
+	args := m.Called(input)
+	return args.Error(0)
+}
+
+func (m *MockUserService) GetAllUsers(limit int, offset int) ([]corePort.UserInfoResponse, error) {
+	args := m.Called(limit, offset)
+	// Get(0) คือ slice, Error(1) คือ error
+	return args.Get(0).([]corePort.UserInfoResponse), args.Error(1)
+}
+
+func (m *MockUserService) FilterUsersByRole(role string) ([]corePort.UserInfoResponse, error) {
+	args := m.Called(role)
+	return args.Get(0).([]corePort.UserInfoResponse), args.Error(1)
+}
+
+func (m *MockUserService) ChangePassword(ctx context.Context, userID uint, oldPassword, newPassword string) error {
+	args := m.Called(ctx, userID, oldPassword, newPassword)
+	return args.Error(0)
+}
+
+func setupUserApp(svc corePort.IUser) *fiber.App {
     app := fiber.New()
-    app.Get("/admin/users-by-role", func(c *fiber.Ctx) error {
-        // จำลอง JWT middleware
-        c.Locals("userRole", c.Query("as")) 
-        return Core_controllers.FilterUsersByRole(c)
+    ctrl := coreControllers.NewUserController(svc)
+
+    // inject user_id และ role ลงใน Locals
+    app.Use(func(c *fiber.Ctx) error {
+        if h := c.Get("X-User-ID"); h != "" {
+            if uid, err := strconv.ParseUint(h, 10, 32); err == nil {
+                c.Locals("user_id", uint(uid))
+            }
+        }
+        c.Locals("role", c.Get("X-Role"))
+        return c.Next()
     })
+
+    app.Put("/users/:id/password", ctrl.ChangePassword)
+    app.Get("/auth/me", ctrl.Me)
     return app
 }
 
 
-func mustHash(t *testing.T, raw string) []byte {
-    h, err := bcrypt.GenerateFromPassword([]byte(raw), bcrypt.DefaultCost)
-    require.NoError(t, err)
-    return h
-}
+func TestChangePasswordController(t *testing.T) {
+	validRole := "USER"
 
-func TestCreateUserFromRegister_InvalidPayload(t *testing.T) {
-    app, _ := setupApp(t)
+	t.Run("InvalidID_Format", func(t *testing.T) {
+		svc := new(MockUserService)
+		app := setupUserApp(svc)
 
-    req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBufferString("not-json"))
-    req.Header.Set("Content-Type", "application/json")
-    resp, err := app.Test(req, -1)
-    require.NoError(t, err)
-
-    assert.Equal(t, 400, resp.StatusCode)
-    var body map[string]string
-    json.NewDecoder(resp.Body).Decode(&body)
-    assert.Equal(t, "Invalid input", body["error"])
-}
-
-func TestCreateUserFromRegister_EmailAlreadyUsed(t *testing.T) {
-    app, db := setupApp(t)
-
-    // สร้าง user ซ้ำใน *same* DB ที่ app ใช้
-    existing := coreModels.User{
-        Username: "foo",
-        Email:    "foo@example.com",
-        Password: string(mustHash(t, "password")),
-        RoleID:   1, // Role.USER.ID
-    }
-    require.NoError(t, db.Create(&existing).Error)
-
-    payload := authDto.RegisterInput{
-        Username: "bar",
-        Email:    existing.Email,
-        Password: "newpass",
-    }
-    buf, _ := json.Marshal(payload)
-    req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(buf))
-    req.Header.Set("Content-Type", "application/json")
-
-    resp, err := app.Test(req, -1)
-    require.NoError(t, err)
-    assert.Equal(t, 400, resp.StatusCode)
-
-    var body map[string]string
-    json.NewDecoder(resp.Body).Decode(&body)
-    assert.Equal(t, "email already in use", body["error"])
-}
-
-func TestCreateUserFromRegister_Success(t *testing.T) {
-    app, db := setupApp(t)
-
-    payload := authDto.RegisterInput{
-        Username: "newuser",
-        Email:    "new@example.com",
-        Password: "strongpass",
-    }
-    buf, _ := json.Marshal(payload)
-    req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(buf))
-    req.Header.Set("Content-Type", "application/json")
-
-    resp, err := app.Test(req, -1)
-    require.NoError(t, err)
-    assert.Equal(t, 200, resp.StatusCode)
-
-    var body map[string]string
-    json.NewDecoder(resp.Body).Decode(&body)
-    assert.Equal(t, "User registered successfully", body["message"])
-
-    // ตรวจใน *same* DB ว่ามี user เกิดใหม่
-    var u coreModels.User
-    err = db.First(&u, "email = ?", payload.Email).Error
-    require.NoError(t, err)
-    assert.Equal(t, payload.Username, u.Username)
-    assert.NotEqual(t, payload.Password, u.Password) // ต้องถูก hash
-}
-
-func TestGetAllUsers_DefaultPaging(t *testing.T) {
-	// stub ให้คืน slice เดียวกันที่เราต้องการ
-	Core_controllers.InitGetAllUsers(func(limit, offset int) ([]authDto.UserInfoResponse, error) {
-	  assert.Equal(t, 10, limit)     // default
-	  assert.Equal(t, 0, offset)    // (1-1)*10
-	  return []authDto.UserInfoResponse{{ID:1,Username:"u"}}, nil
+		req := httptest.NewRequest(http.MethodPut, "/users/abc/password", nil)
+		req.Header.Set("X-Role", validRole)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
-  
-	app := setupAppGetuser()
-	req := httptest.NewRequest("GET", "/admin/users", nil)
-	resp, _ := app.Test(req, -1)
-  
-	assert.Equal(t, 200, resp.StatusCode)
-	var arr []authDto.UserInfoResponse
-	json.NewDecoder(resp.Body).Decode(&arr)
-	assert.Len(t, arr, 1)
-  }
-  
-  func TestGetAllUsers_CustomPaging(t *testing.T) {
-	Core_controllers.InitGetAllUsers(func(limit, offset int) ([]authDto.UserInfoResponse, error) {
-	  assert.Equal(t, 5, limit)
-	  assert.Equal(t, 10, offset)    // (3-1)*5
-	  return []authDto.UserInfoResponse{}, nil
+
+	t.Run("InvalidID_Zero", func(t *testing.T) {
+		svc := new(MockUserService)
+		app := setupUserApp(svc)
+
+		req := httptest.NewRequest(http.MethodPut, "/users/0/password", nil)
+		req.Header.Set("X-Role", validRole)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
-  
-	app := setupAppGetuser()
-	req := httptest.NewRequest("GET", "/admin/users?page=3&limit=5", nil)
-	resp, _ := app.Test(req, -1)
-  
-	assert.Equal(t, 200, resp.StatusCode)
-  }
-  
-  func TestGetAllUsers_ServiceError(t *testing.T) {
-	Core_controllers.InitGetAllUsers(func(limit, offset int) ([]authDto.UserInfoResponse, error) {
-	  return nil, errors.New("boom")
+
+	t.Run("UserNotFound", func(t *testing.T) {
+		svc := new(MockUserService)
+		svc.
+			On("ChangePassword", mock.Anything, uint(42), "old", "new").
+			Return(coreServices.ErrUserNotFound).
+			Once()
+
+		app := setupUserApp(svc)
+		body := map[string]string{"old_password": "old", "new_password": "new"}
+		buf, _ := json.Marshal(body)
+
+		req := httptest.NewRequest(http.MethodPut, "/users/42/password", bytes.NewReader(buf))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Role", validRole)
+
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		svc.AssertExpectations(t)
 	})
-  
-	app := setupAppGetuser()
-	resp, _ := app.Test(httptest.NewRequest("GET", "/admin/users", nil), -1)
-	assert.Equal(t, 500, resp.StatusCode)
-	var body map[string]string
-	json.NewDecoder(resp.Body).Decode(&body)
-	assert.Equal(t, "failed to fetch users", body["error"])
-  }
 
-  func TestFilterUsersByRole_NotAdmin(t *testing.T) {
-    app := setupAppFilterRole()
-    // ไม่ใช่ SUPER_ADMIN
-    req := httptest.NewRequest("GET", "/admin/users-by-role?as=STAFF&role=USER", nil)
-    resp, _ := app.Test(req)
-    assert.Equal(t, 403, resp.StatusCode)
+	t.Run("InvalidOldPassword", func(t *testing.T) {
+		svc := new(MockUserService)
+		svc.
+			On("ChangePassword", mock.Anything, uint(7), "wrong", "new").
+			Return(coreServices.ErrInvalidOldPassword).
+			Once()
+
+		app := setupUserApp(svc)
+		body := map[string]string{"old_password": "wrong", "new_password": "new"}
+		buf, _ := json.Marshal(body)
+
+		req := httptest.NewRequest(http.MethodPut, "/users/7/password", bytes.NewReader(buf))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Role", validRole)
+
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		svc.AssertExpectations(t)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		svc := new(MockUserService)
+		svc.
+			On("ChangePassword", mock.Anything, uint(5), "old", "new").
+			Return(errors.New("db down")).
+			Once()
+
+		app := setupUserApp(svc)
+		body := map[string]string{"old_password": "old", "new_password": "new"}
+		buf, _ := json.Marshal(body)
+
+		req := httptest.NewRequest(http.MethodPut, "/users/5/password", bytes.NewReader(buf))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Role", validRole)
+
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		svc.AssertExpectations(t)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		svc := new(MockUserService)
+		svc.
+			On("ChangePassword", mock.Anything, uint(3), "old", "new").
+			Return(nil).
+			Once()
+
+		app := setupUserApp(svc)
+		body := map[string]string{"old_password": "old", "new_password": "new"}
+		buf, _ := json.Marshal(body)
+
+		req := httptest.NewRequest(http.MethodPut, "/users/3/password", bytes.NewReader(buf))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Role", validRole)
+
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var respBody struct {
+			Status  string `json:"status"`
+			Message string `json:"message"`
+		}
+		json.NewDecoder(resp.Body).Decode(&respBody)
+		assert.Equal(t, "success", respBody.Status)
+		assert.Equal(t, "Password changed successfully", respBody.Message)
+
+		svc.AssertExpectations(t)
+	})
 }
 
-func TestFilterUsersByRole_MissingParam(t *testing.T) {
-    app := setupAppFilterRole()
-    req := httptest.NewRequest("GET", "/admin/users-by-role?as=SUPER_ADMIN", nil)
-    resp, _ := app.Test(req)
-    assert.Equal(t, 400, resp.StatusCode)
+func TestAuthController_Me(t *testing.T) {
+    tests := []struct {
+        name           string
+        headerValue    string
+        mockBehavior   func(ctx context.Context, userID uint) (*corePort.MeDTO, error)
+        expectedStatus int
+        expectedBody   fiber.Map
+    }{
+        {
+            name:           "NoUserID",
+            headerValue:    "",
+            mockBehavior:   nil, // service should not be called
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody: fiber.Map{
+                "status":  "error",
+                "message": "User not authenticated",
+            },
+        },
+        {
+            name:        "InvalidUserIDType",
+            headerValue: "abc", // parse fail → no Locals, same as no user
+            mockBehavior: nil,
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody: fiber.Map{
+                "status":  "error",
+                "message": "User not authenticated",
+            },
+        },
+        {
+            name:        "ServiceError",
+            headerValue: "42",
+            mockBehavior: func(ctx context.Context, userID uint) (*corePort.MeDTO, error) {
+                return nil, errors.New("db failure")
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody: fiber.Map{
+                "status":  "error",
+                "message": "Failed to fetch user info",
+                "error":   "db failure",
+            },
+        },
+        {
+            name:        "UserNotFound",
+            headerValue: "100",
+            mockBehavior: func(ctx context.Context, userID uint) (*corePort.MeDTO, error) {
+                return nil, nil
+            },
+            expectedStatus: http.StatusNotFound,
+            expectedBody: fiber.Map{
+                "status":  "error",
+                "message": "User not found",
+            },
+        },
+        {
+            name:        "Success",
+            headerValue: "7",
+            mockBehavior: func(ctx context.Context, userID uint) (*corePort.MeDTO, error) {
+                return &corePort.MeDTO{
+                    ID:        7,
+                    Username:  "jane",
+                    Email:     "jane@x.com",
+                    BranchID:  nil,
+                    TenantIDs: []uint{1, 2},
+                }, nil
+            },
+            expectedStatus: http.StatusOK,
+            expectedBody: fiber.Map{
+                "status":  "success",
+                "message": "User profile retrieved",
+                "data": map[string]interface{}{
+                    "id":         float64(7), // json.Unmarshal turns numbers into float64
+                    "username":   "jane",
+                    "email":      "jane@x.com",
+                    "branch_id":  nil,
+                    "tenant_ids": []interface{}{float64(1), float64(2)},
+                },
+            },
+        },
+    }
 
-    var body map[string]string
-    json.NewDecoder(resp.Body).Decode(&body)
-    assert.Equal(t, "missing role parameter", body["error"])
-}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // เตรียม mock service
+            var svc corePort.IUser
+            if tt.mockBehavior != nil {
+                svc = &MockUserService{MeFunc: tt.mockBehavior}
+            } else {
+                svc = &MockUserService{} // won't be called
+            }
 
-func TestFilterUsersByRole_ServiceError(t *testing.T) {
-    app := setupAppFilterRole()
-    // stub service ให้ error
-    Core_controllers.InitFilterUsersByRole(func(role string) ([]authDto.UserInfoResponse, error) {
-        return nil, errors.New("foo error")
-    })
-    req := httptest.NewRequest("GET", "/admin/users-by-role?as=SUPER_ADMIN&role=USER", nil)
-    resp, _ := app.Test(req)
-    assert.Equal(t, 400, resp.StatusCode)
+            app := setupUserApp(svc)
+            req := httptest.NewRequest("GET", "/auth/me", nil)
+            if tt.headerValue != "" {
+                req.Header.Set("X-User-ID", tt.headerValue)
+            }
 
-    var body map[string]string
-    json.NewDecoder(resp.Body).Decode(&body)
-    assert.Equal(t, "foo error", body["error"])
-}
+            resp, err := app.Test(req, -1)
+            require.NoError(t, err)
+            defer resp.Body.Close()
 
-func TestFilterUsersByRole_Success(t *testing.T) {
-    app := setupAppFilterRole()
-    // stub service ให้ return data
-    Core_controllers.InitFilterUsersByRole(func(role string) ([]authDto.UserInfoResponse, error) {
-        return []authDto.UserInfoResponse{
-            {ID:1, Username:"alice", Email:"a@x", Role:"USER"},
-        }, nil
-    })
-    req := httptest.NewRequest("GET", "/admin/users-by-role?as=SUPER_ADMIN&role=USER", nil)
-    resp, _ := app.Test(req)
-    assert.Equal(t, 200, resp.StatusCode)
+            // เช็ค status code
+            assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
-    var list []authDto.UserInfoResponse
-    json.NewDecoder(resp.Body).Decode(&list)
-    assert.Len(t, list, 1)
-    assert.Equal(t, "alice", list[0].Username)
+            // อ่าน body
+            buf := new(bytes.Buffer)
+            _, err = buf.ReadFrom(resp.Body)
+            require.NoError(t, err)
+
+            var body fiber.Map
+            require.NoError(t, json.Unmarshal(buf.Bytes(), &body))
+
+            // เปรียบเทียบ map
+            assert.Equal(t, tt.expectedBody, body)
+        })
+    }
 }

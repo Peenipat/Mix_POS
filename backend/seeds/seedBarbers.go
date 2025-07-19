@@ -13,14 +13,14 @@ import (
 func SeedBarbers(db *gorm.DB) error {
     // 1) หา Default Branch
     var branch coreModels.Branch
-    if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+    if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
         return errors.New("default branch not found: " + err.Error())
     }
 
     // 2) หา Users ที่เราต้องการให้เป็นช่าง (ตัวอย่าง: assistant_mgr + staff_user)
     emails := []string{
-        "assistant@default.example.com",
-        "staff@default.example.com",
+        "assistant@gmail.com",
+        "staff@gmail.com",
     }
     var users []coreModels.User
     if err := db.Where("email IN ?", emails).Find(&users).Error; err != nil {
@@ -35,6 +35,9 @@ func SeedBarbers(db *gorm.DB) error {
         record := bookingModels.Barber{
             BranchID: branch.ID,
             UserID:   u.ID,
+            TenantID: branch.TenantID,
+            Description: "ช่าง",
+            RoleUser: "ผู้จัดการ",
         }
         if err := db.FirstOrCreate(&record, record).Error; err != nil {
             return err

@@ -2,19 +2,26 @@ package coreModels
 
 import (
 	"time"
+		"gorm.io/gorm"
 )
-
 type User struct {
-	ID          uint       `json:"id" example:"1"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
-	Username    string
-	Email       string `gorm:"uniqueIndex"`
-	Password    string
-	RoleID      uint
-	Role        Role         `gorm:"foreignKey:RoleID"`
-	BranchID    *uint        `gorm:"index" json:"branch_id,omitempty"`
-	Branch      *Branch      `gorm:"foreignKey:BranchID" json:"branch,omitempty"`
-	TenantUsers []TenantUser `gorm:"foreignKey:UserID" json:"tenant_users,omitempty"` // join table entries
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Username    string         `gorm:"type:text;not null" json:"username"`
+	Email       string         `gorm:"uniqueIndex" json:"email"`
+	Password    string         `gorm:"not null" json:"-"` // ซ่อนไม่ให้แสดงออกไป
+
+	RoleID      uint           `gorm:"not null" json:"role_id"`
+	Role        Role           `gorm:"foreignKey:RoleID" json:"role"`
+
+	BranchID    *uint          `gorm:"index" json:"branch_id,omitempty"`
+	Branch      *Branch        `gorm:"foreignKey:BranchID" json:"branch,omitempty"`
+
+	TenantUsers []TenantUser   `gorm:"foreignKey:UserID" json:"tenant_users,omitempty"`
+
+	Img_path  	string 			`gorm:"column:img_path" json:"Img_path,omitempty"`
+    Img_name 	string 			`gorm:"column:img_name" json:"Img_name,omitempty"`
+
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }

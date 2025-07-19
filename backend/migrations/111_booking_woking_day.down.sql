@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS working_day_overrides CASCADE;

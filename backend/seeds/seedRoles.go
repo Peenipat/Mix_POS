@@ -3,6 +3,7 @@ package seeds
 
 import (
     "time"
+    "fmt"
 
     "gorm.io/gorm"
     coreModels "myapp/modules/core/models"
@@ -10,41 +11,74 @@ import (
 
 // SeedRoles ต้องรันหลัง SeedModules
 func SeedRoles(db *gorm.DB) error {
-    // 1) หา module CORE ก่อน
-    var coreMod coreModels.Modules
-    if err := db.Where("key = ?", "CORE").First(&coreMod).Error; err != nil {
-        return err
-    }
+	// หา tenant ที่ต้องการ
+	var defaultTenant coreModels.Tenant
+	if err := db.Where("domain = ?", "default.example.com").First(&defaultTenant).Error; err != nil {
+		return fmt.Errorf("cannot find default tenant: %w", err)
+	}
 
-    // 2) รายชื่อ role ที่จะ seed
-    now := time.Now()
-    roles := []coreModels.Role{
-        {ModuleID: coreMod.ID, Name: coreModels.RoleNameSaaSSuperAdmin,   Description: "ควบคุมระบบ SaaS ทั้งหมด",        CreatedAt: now, UpdatedAt: now},
-        {ModuleID: coreMod.ID, Name: coreModels.RoleNameTenantAdmin,    Description: "หัวหน้าผู้เช่า ดูข้อมูลทุกสาขาของตน", CreatedAt: now, UpdatedAt: now},
-        {ModuleID: coreMod.ID, Name: coreModels.RoleNameBranchAdmin,    Description: "หัวหน้าสาขา แต่ละร้าน",             CreatedAt: now, UpdatedAt: now},
-        {ModuleID: coreMod.ID, Name: coreModels.RoleNameAssistantManager,Description: "รองหัวหน้าสาขา",                 CreatedAt: now, UpdatedAt: now},
-        {ModuleID: coreMod.ID, Name: coreModels.RoleNameStaff,          Description: "พนักงานสาขา",                  CreatedAt: now, UpdatedAt: now},
-        {ModuleID: coreMod.ID, Name: coreModels.RoleNameUser,           Description: "ผู้ใช้ทั่วไป (ยังไม่เช่า)",        CreatedAt: now, UpdatedAt: now},
-    }
+	// หา module barber_booking
+	var bookingModule coreModels.Module
+	if err := db.Where("name = ?", "barber_booking").First(&bookingModule).Error; err != nil {
+		return fmt.Errorf("cannot find barber_booking module: %w", err)
+	}
 
-    // 3) Loop สร้างหรืออัปเดต role ตาม ModuleID + Name
-    for _, r := range roles {
-        // ใช้ FirstOrCreate แบบ composite key (module_id + name)
-        record := coreModels.Role{
-            ModuleID: r.ModuleID,
-            Name:     r.Name,
-        }
-        attrs := coreModels.Role{
-            Description: r.Description,
-            UpdatedAt:   now,
-        }
-        if err := db.
-            Where("module_id = ? AND name = ?", r.ModuleID, r.Name).
-            Assign(attrs).
-            FirstOrCreate(&record, record).
-            Error; err != nil {
-            return err
-        }
-    }
-    return nil
+	roles := []coreModels.Role{
+		{
+			TenantID:    nil,
+			ModuleID:    nil,
+			Name:        string(coreModels.RoleNameSaaSSuperAdmin),
+			Description: "ผู้ดูแลระบบ SaaS ทั้งหมด",
+		},
+		{
+			TenantID:    &defaultTenant.ID,
+			ModuleID:    &bookingModule.ID,
+			Name:        string(coreModels.RoleNameBranchAdmin),
+			Description: "หัวหน้าสาขา มีสิทธิ์จัดการข้อมูลในระบบจองคิวตัดผม",
+		},
+		{
+			TenantID:    &defaultTenant.ID,
+			ModuleID:    &bookingModule.ID,
+			Name:        string(coreModels.RoleNameAssistantManager),
+			Description: "รองหัวหน้า จัดการคิวและดูรายงาน",
+		},
+		{
+			TenantID:    &defaultTenant.ID,
+			ModuleID:    &bookingModule.ID,
+			Name:        string(coreModels.RoleNameStaff),
+			Description: "พนักงานประจำร้าน ดูคิว และแจ้งสถานะ",
+		},
+		{
+			TenantID:    &defaultTenant.ID,
+			ModuleID:    nil, // ใช้งานได้กับทุก module ของ tenant นี้
+			Name:        string(coreModels.RoleNameTenantAdmin),
+			Description: "ผู้ดูแลร้านค้า สามารถจัดการผู้ใช้และสาขา",
+		},
+		{
+			TenantID:    &defaultTenant.ID,
+			ModuleID:    nil,
+			Name:        string(coreModels.RoleNameUser),
+			Description: "ผู้ใช้งานทั่วไป",
+		},
+	}
+
+	now := time.Now()
+	for _, r := range roles {
+		record := coreModels.Role{
+			Name:     r.Name,
+			TenantID: r.TenantID,
+			ModuleID: r.ModuleID,
+		}
+		attrs := coreModels.Role{
+			Description: r.Description,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		if err := db.Where(record).Assign(attrs).FirstOrCreate(&record).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
+

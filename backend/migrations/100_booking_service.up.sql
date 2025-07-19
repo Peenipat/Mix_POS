@@ -1,15 +1,20 @@
--- สร้างตารางเก็บข้อมูล Service แต่ละรายการ
-CREATE TABLE IF NOT EXISTS services (
-  id          SERIAL         PRIMARY KEY,              -- รหัสอัตโนมัติ
-  name        VARCHAR(100)   NOT NULL,                 -- ชื่อบริการ
-  duration    INT            NOT NULL,                 -- ระยะเวลาโดยประมาณ
-  price       NUMERIC        NOT NULL,                 -- ราคาบริการ
-  created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),   -- เวลาสร้างแถว
-  updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),   -- เวลาแก้ไขล่าสุด
-  deleted_at  TIMESTAMPTZ    NULL                      -- soft‐delete timestamp
+DROP TABLE IF EXISTS services;
+
+CREATE TABLE services (
+  id         SERIAL PRIMARY KEY,
+  tenant_id  INT NOT NULL,
+  branch_id  INT NOT NULL,
+  name       VARCHAR(100) NOT NULL,
+  description VARCHAR(100)   NOT NULL,
+  duration   INT NOT NULL,
+  price      NUMERIC NOT NULL,
+  img_path    TEXT           NULL,
+  img_name    TEXT           NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
 );
 
--- optional: index ช่วยค้นหาเฉพาะรายการที่ยังไม่ลบ
-CREATE INDEX IF NOT EXISTS idx_services_not_deleted
-  ON services (deleted_at)
+CREATE INDEX IF NOT EXISTS idx_services_tenant_not_deleted
+  ON services (tenant_id, deleted_at)
   WHERE deleted_at IS NULL;

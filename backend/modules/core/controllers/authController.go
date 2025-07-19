@@ -5,25 +5,39 @@ import (
 	"encoding/json"
 	"time"
 
-	Core_authDto "myapp/modules/core/dto/auth"	
-	"myapp/modules/core/services"
-    "myapp/modules/core/models"
+	Core_authDto "myapp/modules/core/dto/auth"
+	coreModels "myapp/modules/core/models"
+	coreServices "myapp/modules/core/services"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 var (
-    authSvc *services.AuthService // ตัว logic login 
-    logSvc  services.SystemLogService //ตัวสำหรับ save log login
+    authSvc *coreServices.AuthService // ตัว logic login 
+    logSvc  coreServices.SystemLogService //ตัวสำหรับ save log login
 )
 // init Dependency Injection
-func InitAuthHandler(a *services.AuthService, l services.SystemLogService) {
+func InitAuthHandler(a *coreServices.AuthService, l coreServices.SystemLogService) {
     authSvc = a
     logSvc = l
 }
 
+
+// LoginHandler godoc
+// @Summary      User login
+// @Description  Authenticates a user with email & password, issues a JWT cookie, and logs the attempt.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      Core_authDto.LoginRequest  true  "Login credentials (email & password)"
+// @Success      200   {object}  map[string]interface{}     "Returns the authenticated user object"
+// @Failure      400   {object}  map[string]string          "Invalid input"
+// @Failure      401   {object}  map[string]string          "Unauthorized – wrong credentials"
+// @Router       /login [post]
+// @Security     ApiKeyAuth
 func LoginHandler(c *fiber.Ctx) error {
     // 1) Bind request
-    var req Core_authDto.LoginRequest // check type from input
+    var req Core_authDto.LoginRequest 
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
     }
@@ -66,8 +80,9 @@ func LoginHandler(c *fiber.Ctx) error {
         Value:    resp.Token, // <-- ใช้ resp.Token (ที่ service login สร้างไว้แล้ว)
         Expires:  time.Now().Add(72 * time.Hour),
         HTTPOnly: true, // อ่าน cookies จาก client
-        Secure:   true,    // ต้องใช้ https ตอน production
-        SameSite: "None",   
+        Secure:   false,    // ต้องใช้ https ตอน production
+        SameSite: "None",  
+        Path:     "/", 
     })
 
     // 4) Return response

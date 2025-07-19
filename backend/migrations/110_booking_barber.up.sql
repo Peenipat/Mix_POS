@@ -1,0 +1,2 @@
+ALTER TABLE barbers
+ADD COLUMN phone_number VARCHAR(10) NOT NULL DEFAULT '';

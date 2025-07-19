@@ -17,10 +17,13 @@ func SeedBranches(db *gorm.DB) error {
 
     branches := []coreModels.Branch{
         {
-            Name:     "Default Branch",
+            Name:     "Branch 1",
             TenantID: tenant.ID,
         },
-        // เติมสาขาอื่น ๆ ได้ที่นี่
+        {
+            Name:     "Branch 2",
+            TenantID: tenant.ID,
+        },
     }
 
     now := time.Now()
@@ -30,13 +33,14 @@ func SeedBranches(db *gorm.DB) error {
             Name:     b.Name,
         }
         attrs := coreModels.Branch{
+            CreatedAt: now,
             UpdatedAt: now,
         }
-        if err := db.Where(record).
-            Assign(attrs).
-            FirstOrCreate(&record).Error; err != nil {
+        
+        if err := db.Unscoped().Where(record).Assign(attrs).FirstOrCreate(&record).Error; err != nil {
             return err
         }
+        
     }
     return nil
 }

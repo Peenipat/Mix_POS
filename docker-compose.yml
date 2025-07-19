@@ -5,9 +5,10 @@ services:
     image: postgres:latest
     container_name: postgres
     environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
+      # เพิ่ม 2 ตัวนี้ ตาม .env ที่คุณใช้ในโค้ด
+      POSTGRES_USER: nipatchapakdee
       POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:

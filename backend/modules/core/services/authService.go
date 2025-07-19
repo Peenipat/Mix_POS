@@ -1,5 +1,5 @@
 // services/auth_service.go
-package services
+package coreServices
 
 import (
     "context"
@@ -10,6 +10,7 @@ import (
     "github.com/golang-jwt/jwt/v4"
     "golang.org/x/crypto/bcrypt"
     "gorm.io/gorm"
+    corePort "myapp/modules/core/port"
 
     Core_authDto "myapp/modules/core/dto/auth"
     "myapp/modules/core/models" 
@@ -28,7 +29,7 @@ func NewAuthService(db *gorm.DB, logSvc SystemLogService) *AuthService {
 // Login ตรวจสอบข้อมูลล็อกอินและสร้าง JWT
 // คืนค่า DTO ที่ประกอบด้วย token และข้อมูล user หรือ error
 // services/authService.go
-func (s *AuthService) Login(ctx context.Context, input Core_authDto.LoginRequest) (*Core_authDto.LoginResponse, error) {
+func (s *AuthService) Login(ctx context.Context, input Core_authDto.LoginRequest) (*corePort.LoginResponse, error) {
     // 1. ดึง user และ preload Role
     var user coreModels.User
     err := s.db.WithContext(ctx).
@@ -62,9 +63,9 @@ func (s *AuthService) Login(ctx context.Context, input Core_authDto.LoginRequest
     }
 
     // 4. คืนค่า LoginResponse
-    return &Core_authDto.LoginResponse{
+    return &corePort.LoginResponse{
         Token: signed,
-        User: Core_authDto.UserInfoResponse{
+        User: corePort.UserInfoResponse{
             ID:       user.ID,
             Username: user.Username,
             Email:    user.Email,

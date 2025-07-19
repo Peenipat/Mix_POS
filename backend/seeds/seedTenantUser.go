@@ -19,7 +19,7 @@ func SeedTenantUsers(db *gorm.DB) error {
 
     // 2) ดึงผู้ใช้ทุก Role ที่ควรแมปกับ tenant นี้ (ยกตัวอย่างเอาทุกคนที่มี branch_id == nil)
     var users []coreModels.User
-    if err := db.Where("branch_id IS NULL").Find(&users).Error; err != nil {
+    if err := db.Where("branch_id = 1").Find(&users).Error; err != nil {
         return err
     }
 

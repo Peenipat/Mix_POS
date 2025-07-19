@@ -36,7 +36,7 @@ func SeedUsers(db *gorm.DB) error {
 
     // โหลด Default Branch (ใช้สำหรับทุกบทบาทที่ผูกสาขา)
     var branch coreModels.Branch
-    if err := db.Where("name = ?", "Default Branch").First(&branch).Error; err != nil {
+    if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
         return err
     }
 
@@ -47,20 +47,22 @@ func SeedUsers(db *gorm.DB) error {
         Password string
         RoleID   uint
         BranchID *uint
+        Img_path string
+        Img_name string
     }
     data := []seed{
         // SaaS SuperAdmin (ไม่ผูกสาขา)
-        {"saas_admin", "saas_admin@yourdomain.com", "supersecret", roleSA.ID, nil},
+        {"saas_admin", "saas_admin@gmail.com", "12345678", roleSA.ID, nil,"barbers","barber1.jpg"},
         // Tenant Admin (ดูแลหลายสาขา)
-        {"tenant_admin", "tenant_admin@default.example.com", "tenantsecret", roleTA.ID, nil},
+        {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, &branch.ID,"barbers","barber3.jpg"},
         // Branch Admin (เฉพาะสาขา)
-        {"branch_admin", "branch_admin@default.example.com", "branchsecret", roleBA.ID, &branch.ID},
+        {"branch_admin", "branch_admin@gmail.com", "12345678", roleBA.ID, &branch.ID,"barbers","barber2.jpg"},
         // Assistant Manager
-        {"assistant_mgr", "assistant@default.example.com", "assistsecret", roleAM.ID, &branch.ID},
+        {"assistant_mgr", "assistant@gmail.com", "12345678", roleAM.ID, &branch.ID,"barbers","barber4.jpg"},
         // Staff
-        {"staff_user", "staff@default.example.com", "staffsecret", roleST.ID, &branch.ID},
+        {"staff_user", "staff@gmail.com", "12345678", roleST.ID, &branch.ID,"barbers","barber2.jpg"},
         // End-customer / general user
-        {"generic_user", "user@default.example.com", "usersecret", roleUS.ID, nil},
+        {"generic_user", "user@gmail.com", "12345678", roleUS.ID, &branch.ID,"barbers","barber1.jpg"},
     }
 
     now := time.Now()
@@ -77,6 +79,8 @@ func SeedUsers(db *gorm.DB) error {
             Password:  string(hashed),
             RoleID:    u.RoleID,
             BranchID:  u.BranchID,
+            Img_path: u.Img_path,
+            Img_name: u.Img_name,
             UpdatedAt: now,
         }
         if err := db.Where(record).

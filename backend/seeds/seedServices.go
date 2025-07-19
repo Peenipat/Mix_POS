@@ -7,22 +7,27 @@ import (
     bookingModels "myapp/modules/barberbooking/models"
 )
 
-// SeedServices สร้างรายการบริการ (services) ตั้งต้น
 func SeedServices(db *gorm.DB) error {
     items := []bookingModels.Service{
-        {Name: "Haircut",    Duration: 30, Price: 200},
-        {Name: "Shampoo",    Duration: 15, Price: 100},
-        {Name: "Beard Trim", Duration: 20, Price: 150},
-        // เพิ่มรายการบริการอื่นได้ที่นี่…
+        {Name: "Haircut",   Description:"ตัดผม", Duration: 30, Price: 200, Img_path:"service",Img_name:"service1.jpg",TenantID:	1,BranchID:	1},
+        {Name: "Shampoo",   Description:"ตัดผม", Duration: 15, Price: 100, Img_path:"service",Img_name:"service2.jpg",TenantID:	1,BranchID:	1},
+        {Name: "Beard Trim",Description:"ตัดผม", Duration: 20, Price: 150, Img_path:"service",Img_name:"service3.jpg",TenantID:	1,BranchID:	1},
+        {Name: "Beard Trim2",Description:"ตัดผม", Duration: 20, Price: 150, Img_path:"service",Img_name:"service4.jpg",TenantID: 1,BranchID:	2},
     }
 
     now := time.Now()
     for _, svc := range items {
         record := bookingModels.Service{Name: svc.Name}
         attrs  := bookingModels.Service{
-            Duration:  svc.Duration,  // นาที
+            Description:svc.Description,
+            Duration:  svc.Duration,  
             Price:     svc.Price,
+            Img_path: svc.Img_path,
+            Img_name: svc.Img_name,
+            TenantID: svc.TenantID,
+            BranchID: svc.BranchID,
             UpdatedAt: now,
+
         }
         if err := db.Where(record).
             Assign(attrs).

@@ -1,0 +1,4628 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API สำหรับโมดูล barberbooking",
+        "title": "BarberBooking API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1/barberbooking",
+    "paths": {
+        "/barbers/{barber_id}": {
+            "get": {
+                "description": "คืนข้อมูล Barber ตามรหัสที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "ดึงข้อมูลช่างตัดผมตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูลช่างตัดผมใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid barber_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Barber not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "ลบช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid barber_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/branches/{branch_id}/appointments": {
+            "get": {
+                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายทั้งหมดของช่างในสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา (Branch ID)",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/branches/{branch_id}/barbers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Barber ทั้งหมดของสาขาที่ระบุ หากไม่พบจะคืน 404 พร้อม data ว่าง",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "ดึงรายชื่อช่างตัดผมตามสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Barber ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "invalid branch_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "no barbers found for this branch (data จะเป็น array ว่าง)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "failed to fetch barbers",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/none": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนค่า average rating (float64) ของช่างตัดผมที่ระบุ ภายใน Tenant สำหรับ consistency ของ URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review"
+                ],
+                "summary": "ดึงคะแนนเฉลี่ยของช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และ average rating ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ barber_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Appointment Review ตามรหัสที่ระบุ โดยระบุ ActorCustomerID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review"
+                ],
+                "summary": "ลบรีวิว",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Review",
+                        "name": "review_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับลบรีวิว (actor_customer_id)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingController.DeleteReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters หรือ invalid JSON body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "not authorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Review not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/services/:service_id": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ลบบริการ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Appointment ของ Tenant ที่ระบุ โดยรองรับการกรองตาม branch_id, barber_id, customer_id, status, ช่วงวัน (RFC3339), pagination (limit, offset) และการจัดเรียง (sort_by)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงรายการนัดหมายของ Tenant",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "กรองตาม Branch ID",
+                        "name": "branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "กรองตาม Barber ID",
+                        "name": "barber_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "กรองตาม Customer ID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "กรองตามสถานะ Appointment",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "กรองวันที่เริ่มต้น (RFC3339)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "กรองวันที่สิ้นสุด (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "จำนวนรายการสูงสุด (pagination)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "เลื่อนข้ามรายการ (pagination)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "จัดเรียงผลลัพธ์ เช่น start_time desc",
+                        "name": "sort_by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และ array ของ Appointment ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/barberBookingModels.Appointment"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments/:appointment_id": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายละเอียด Appointment ตามรหัสที่ระบุ ภายใต้ Tenant สำหรับความสอดคล้องของ URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงข้อมูลนัดหมายตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูล Appointment",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ appointment_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch appointment",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "อัปเดต Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยรับข้อมูล JSON ของ Appointment ใหม่",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "แก้ไขข้อมูลนัดหมาย",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูล Appointment ที่ต้องการอัปเดต",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Appointment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูล Appointment ที่อัปเดต",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id, appointment_id หรือ JSON body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด (ต้องมีสิทธิ์ Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ลบการนัดหมาย",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ appointment_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments/:appointment_id/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ยกเลิก Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยระบุ Actor เป็น User หรือ Customer ได้ครั้งละหนึ่งคน",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ยกเลิกนัดหมาย",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูล Actor: ระบุ ActorUserID หรือ ActorCustomerID อย่างใดอย่างหนึ่ง",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingController.CancelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการยกเลิก",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid parameters หรือ cannot be cancelled",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments/:appointment_id/logs": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ AppointmentStatusLog ของนัดหมายที่ระบุ ภายใต้ Tenant เพื่อความสอดคล้องของ URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AppointmentLog"
+                ],
+                "summary": "ดึงประวัติสถานะของนัดหมาย",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และ array ของ logs ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/barberBookingModels.AppointmentStatusLog"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ appointment_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments/:appointment_id/reschedule": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Reschedule Appointment ตามรหัสที่ระบุ ภายใต้ Tenant ที่กำหนด โดยระบุเวลาใหม่และ Actor (User หรือ Customer)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "เปลี่ยนเวลานัดหมาย",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูลสำหรับเลื่อนนัดหมาย (new_start_time, actor_user_id หรือ actor_customer_id)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingController.RescheduleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการเลื่อนนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid parameters หรือ cannot reschedule",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments/:appointment_id/reviews": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "tags": [
+                    "Review"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Appointment",
+                        "name": "appointment_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้างรีวิว",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.CreateAppointmentReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success และข้อมูล review ที่สร้าง",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.AppointmentReview"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input หรือ cannot review appointment",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/appointments/:appointment_id/reviews/:review_id": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "แก้ไข Rating และ Comment ของ Appointment Review ตามรหัสที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review"
+                ],
+                "summary": "อัปเดตรีวิว",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Review",
+                        "name": "review_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับอัปเดตรีวิว",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.UpdateAppointmentReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูลรีวิวที่อัปเดต",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.AppointmentReview"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters หรือ invalid JSON body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Review not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/barbers/:barber_id/availability": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ตรวจสอบว่า Barber ที่ระบุสามารถรับงานได้ในช่วงเวลาที่กำหนด (RFC3339) หรือไม่",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ตรวจสอบความพร้อมของช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาเริ่มต้น (RFC3339) เช่น 2025-05-29T09:00:00Z",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาสิ้นสุด (RFC3339) เช่น 2025-05-29T10:00:00Z",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status และ available (true/false)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "พารามิเตอร์ไม่ถูกต้อง หรือขาด start/end",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "เกิดข้อผิดพลาดระหว่างตรวจสอบความพร้อม",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/barberworkload/barbers/:barber_id": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนข้อมูล BarberWorkload สำหรับช่างตัดผมที่ระบุ ภายใน Tenant ที่กำหนด โดยกรองตามวันที่ (YYYY-MM-DD) ถ้าไม่ส่ง date จะใช้วันที่ปัจจุบัน",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workload"
+                ],
+                "summary": "ดึงปริมาณงานของช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันที่กรอง (YYYY-MM-DD), default = today",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูล workload ใน key `data`",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.BarberWorkload"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Barber ID หรือรูปแบบวันที่ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch workload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Upsert (insert หรือ update) BarberWorkload ตามรหัสช่างและวันที่",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workload"
+                ],
+                "summary": "สร้าง/อัปเดตปริมาณงานของช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับ upsert ปริมาณงาน (date, appointments, hours)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.UpsertBarberWorkloadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการ upsert",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid barber_id หรือ invalid JSON body หรือ invalid date format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed upsert workload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/barberworkload/branches/:branch_id/summary": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการสรุป BarberWorkload grouped by Branch ตามวันที่ และตัวกรอง Tenant/Branch (ถ้ามี)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workload"
+                ],
+                "summary": "สรุปปริมาณงานรายสาขา",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "วันที่กรอง (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "กรองเฉพาะ Tenant (optional)",
+                        "name": "tenant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "กรองเฉพาะ Branch (optional)",
+                        "name": "branch_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และ array ของสรุปปริมาณงานใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/barberBookingModels.BarberWorkload"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing date หรือ Invalid date/tenant_id/branch_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch workload summary",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/branch/:branch_id/customers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ดึงรายชื่อลูกค้า",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Customer ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant ID หรือ Failed to fetch customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/branch/:branch_id/services": {
+            "get": {
+                "description": "คืนรายการ Service ทั้งหมดในระบบ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ดึงรายการบริการทั้งหมด",
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Service ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch services",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "สร้างบริการใหม่",
+                "parameters": [
+                    {
+                        "description": "Payload สำหรับสร้าง Service (Name, Duration, Price)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Service"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success และข้อความยืนยันการสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body หรือ Invalid tenant ID หรือ Invalid service input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/branch/:branch_id/services/:service_id": {
+            "get": {
+                "description": "คืนข้อมูล Service ตามรหัสที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "ดึงข้อมูลบริการตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Service ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "แก้ไขข้อมูลบริการ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Service",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับอัปเดต Service (Name, Duration, Price)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Service"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน key `data`",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Service"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid service ID หรือ Invalid request body หรือ Invalid service input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/branches/:branch_id/available-barbers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Barber ที่ว่างในช่วงเวลาที่กำหนด (RFC3339) ภายใต้ Tenant และ Branch ที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงรายชื่อช่างตัดผมว่าง",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาเริ่มต้น (RFC3339) เช่น 2025-05-29T09:00:00Z",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาสิ้นสุด (RFC3339) เช่น 2025-05-29T10:00:00Z",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และ array ของ Barber ที่ว่าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/barberBookingModels.Barber"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/customers": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "เพิ่ม Customer ใหม่ภายใต้ Tenant ที่ระบุ (กรอกชื่อและเบอร์โทร)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "สร้างลูกค้าใหม่",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้าง Customer (Name, Phone)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Customer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success และข้อความยืนยันการสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant ID หรือ Invalid request body หรือ Invalid Customer input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/customers/:cus_id": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ดึงข้อมูลลูกค้าตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Customer",
+                        "name": "cus_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Customer ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ invalid cus_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "อัปเดตข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "แก้ไขข้อมูลลูกค้า",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Customer",
+                        "name": "cus_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับอัปเดต Customer (Name, Phone, Email)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Customer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูล Customer ที่อัปเดตใน key `data`",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Customer"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id, invalid cus_id, Invalid request body หรือ Invalid Customer input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found\"`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ลบลูกค้า",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Customer",
+                        "name": "cus_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ invalid cus_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/customers/find-by-email": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ค้นหา Customer ภายใต้ Tenant ที่ระบุ โดยใช้ Email ใน body (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ค้นหาลูกค้าตามอีเมล",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload ที่ประกอบด้วยฟิลด์ Email (json: email)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Customer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Customer ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to find customer by email",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/reviews/:review_id": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนข้อมูล Appointment Review ตามรหัสที่ระบุ ภายใต้ Tenant สำหรับ consistency ของ URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Review"
+                ],
+                "summary": "ดึงรีวิวตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Review",
+                        "name": "review_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูล review",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.AppointmentReview"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ review_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Review not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch review",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/unavailability": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "เพิ่ม Unavailability ระบุวันที่และเลือกได้ว่าจะปิดช่างหรือสาขา (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unavailability"
+                ],
+                "summary": "สร้างวันที่ไม่ว่าง",
+                "parameters": [
+                    {
+                        "description": "Payload สำหรับสร้าง Unavailability (Date, BarberID หรือ BranchID)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Unavailability"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success, message และข้อมูล Unavailability ใน key `data`",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Unavailability"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body หรือ Date และ BarberID/BranchID จำเป็นต้องระบุ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Unavailability already exists for this date",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create unavailability",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/unavailability/:id": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "แก้ไขฟิลด์ของ Unavailability ตามที่ส่งมา (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unavailability"
+                ],
+                "summary": "อัปเดตวันไม่ว่าง",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Unavailability",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ฟิลด์ที่ต้องการอัปเดต (เช่น date, barber_id, branch_id)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการอัปเดต",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid unavailability ID, Invalid request body หรือ No update fields provided",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unavailability not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update unavailability",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ลบ Unavailability ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unavailability"
+                ],
+                "summary": "ลบวันไม่ว่าง",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Unavailability",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อความยืนยันการลบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid unavailability ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unavailability not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete unavailability",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/unavailability/branches/:branch_id": {
+            "get": {
+                "description": "คืน Unavailability ทั้งหมดสำหรับสาขาที่ระบุ ในช่วงวันที่กำหนด (ต้องระบุ query params `from` และ `to` ในรูปแบบ YYYY-MM-DD)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unavailability"
+                ],
+                "summary": "ดึงรายการวันไม่ว่างตามสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันที่เริ่มต้น (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันสิ้นสุด (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Unavailability ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid branch ID หรือ Missing/invalid `from` or `to` date format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No unavailabilities found in the given date range",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch unavailabilities",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/unavailabilitybarbers/:barber_id": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืน Unavailability ทั้งหมดสำหรับ Barber ที่ระบุ ในช่วงวันที่กำหนด (ต้องระบุ query params `from` และ `to` ในรูปแบบ YYYY-MM-DD)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unavailability"
+                ],
+                "summary": "ดึงรายการวันไม่ว่างตามช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันที่เริ่มต้น (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันสิ้นสุด (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และ array ของ Unavailability ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid barber ID หรือ Missing/invalid `from` or `to` date format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No unavailabilities found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch unavailabilities",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/:tenant_id/workinghour/branches/:branch_id": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "สร้าง WorkingHour ใหม่สำหรับสาขาที่ระบุ กำหนดวันในสัปดาห์ (0=อาทิตย์,...,6=เสาร์) และเวลาเปิด-ปิด",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingHour"
+                ],
+                "summary": "สร้างวันทำการใหม่ (เฉพาะ 1 วัน)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้างวันทำการ (weekday, start_time, end_time)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingDto.WorkingHourInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status และข้อความยืนยันการสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid branch ID, weekday ไม่ถูกต้อง หรือ JSON ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create working hour",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/appointments": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "สร้าง Appointment ภายใต้ Tenant ที่ระบุ พร้อมกรอก branch, service, customer, optional barber, start_time (RFC3339) และ notes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "สร้างนัดหมายใหม่ (Create Appointment)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้างนัดหมาย",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.CreateAppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success พร้อมข้อมูล Appointment ที่สร้าง",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing required fields หรือ Invalid format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/barbers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Barber ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin หรือ Tenant)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "ดึงรายชื่อช่างตาม Tenant",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status, message และ array ของ Barber ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "List Barber not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch List Barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/barbers/{barber_id}/update-barber": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "อัปเดตข้อมูล Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "แก้ไขข้อมูลช่างตัดผม",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Barber",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username, Email)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.UpdateBarberRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success และข้อมูล Barber ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id/barber_id หรือ Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Barber not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update Barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/available-slots": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ดึงช่วงเวลาที่สามารถนัดหมายได้ของสาขาในช่วงวันที่กำหนด",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calendar"
+                ],
+                "summary": "Get available time slots",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Tenant ID",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Branch ID",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (format: YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (format: YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/barberBookingDto.CalendarSlot"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input parameters (e.g. missing or invalid tenant_id, branch_id, start or end)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/create-barber": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "เพิ่ม Barber ใหม่ลงในระบบ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "สร้างช่างตัดผมใหม่",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payload สำหรับสร้าง Barber (UserID, BranchID, ชื่อ-นามสกุล ฯลฯ)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.CreateBarberInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success และข้อความยืนยันการสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/users": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth // ถ้าใช้ token": []
+                    }
+                ],
+                "description": "คืนรายการ user ที่ไม่ได้เป็น Barber ทั้งหมดของสาขานั้น",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "ดึงข้อมูล User ไม่ได้เป็น barber ในสาขานั้น ๆ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status, message และ array ของ Barber ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "List Barber not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch List Barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/working-day-overrides/date": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้ดึงข้อมูล override ของวันทำการในช่วงวันที่กำหนดจากสาขาที่ระบุ",
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "ดึงวันเปิด-ปิดร้านเฉพาะช่วงวันที่กำหนด",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Branch ID",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Tenant ID",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start Date (format: YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End Date (format: YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/barberBookingModels.WorkingDayOverride"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/workinghour/branches/{branch_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ดึงรายการ WorkingHour ทั้งหมดสำหรับสาขาที่ระบุ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingHour"
+                ],
+                "summary": "ดึงเวลาเปิด-ปิดของสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status, message และ array ของ WorkingHour",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid branch ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No working hours found for this branch",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch working hours",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "รับรายการ WorkingHourInput หลายรายการเพื่อนำมาอัปเดตเวลาเปิด-ปิดของสาขาที่ระบุ (วันในสัปดาห์, เปิด/ปิด)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingHour"
+                ],
+                "summary": "อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสผู้เช่า",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Array ของ WorkingHourInput — ตัวอย่าง: [{\\",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/barberBookingDto.WorkingHourInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status และข้อความยืนยันการอัปเดต",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid branch ID, ไม่มีข้อมูลใน body หรือ JSON ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update working hours",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{user_id}/barber": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนข้อมูล Barber ที่เชื่อมโยงกับ User ที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Barber"
+                ],
+                "summary": "ดึงข้อมูลช่างตัดผมโดย User ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส User",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Barber ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Barber not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/working-day-overrides": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้สำหรับเพิ่มวันเปิดหรือปิดเฉพาะกิจของสาขา เช่น วันหยุดประจำปีหรือวันเปิดพิเศษ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "สร้างวันเปิด-ปิดเฉพาะกิจ",
+                "parameters": [
+                    {
+                        "description": "ข้อมูลวันที่และเวลาที่ต้องการ override",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.WorkingDayOverrideInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "สร้างสำเร็จ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "กรณี input ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "กรณีสร้างไม่สำเร็จหรือเกิด error ภายใน",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/working-day-overrides/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้ดึงข้อมูลวันเปิด-ปิดเฉพาะกิจตาม ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "ดึงข้อมูล override ตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "WorkingDayOverride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingModels.WorkingDayOverride"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้สำหรับแก้ไขวัน override ของสาขา เช่น เปลี่ยนเวลาเปิด-ปิด หรือเปลี่ยนวัน",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "แก้ไขวันเปิด-ปิดเฉพาะกิจ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส override ที่ต้องการแก้ไข",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูลที่ต้องการอัปเดต",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/barberBookingPort.WorkingDayOverrideInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "อัปเดตสำเร็จ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "ข้อมูลไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "ไม่พบข้อมูล",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "เกิดข้อผิดพลาดภายใน",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ใช้ลบ override เฉพาะวันจาก branch ที่ระบุ",
+                "tags": [
+                    "WorkingDayOverride"
+                ],
+                "summary": "ลบวันเปิด-ปิดร้านเฉพาะวัน",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "WorkingDayOverride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "barberBookingController.CancelRequest": {
+            "type": "object",
+            "properties": {
+                "actor_customer_id": {
+                    "type": "integer"
+                },
+                "actor_user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingController.DeleteReviewRequest": {
+            "type": "object",
+            "properties": {
+                "actor_customer_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingController.RescheduleRequest": {
+            "type": "object",
+            "properties": {
+                "actor_customer_id": {
+                    "type": "integer"
+                },
+                "actor_user_id": {
+                    "type": "integer"
+                },
+                "new_start_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingDto.CalendarSlot": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string",
+                    "example": "2025-07-01T09:30:00Z"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "2025-07-01T09:00:00Z"
+                },
+                "status": {
+                    "description": "\"open\" or \"closed\"",
+                    "type": "string",
+                    "example": "open"
+                }
+            }
+        },
+        "barberBookingDto.WorkingHourInput": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "description": "เวลาปิด",
+                    "type": "string"
+                },
+                "is_closed": {
+                    "type": "boolean"
+                },
+                "start_time": {
+                    "description": "เวลาเปิด",
+                    "type": "string"
+                },
+                "weekday": {
+                    "description": "0–6",
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingModels.Appointment": {
+            "type": "object",
+            "properties": {
+                "barber": {
+                    "$ref": "#/definitions/coreModels.User"
+                },
+                "barber_id": {
+                    "type": "integer"
+                },
+                "branch_id": {
+                    "description": "ไม่ preload branch",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/barberBookingModels.Customer"
+                },
+                "customer_id": {
+                    "type": "integer"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "service": {
+                    "$ref": "#/definitions/barberBookingModels.Service"
+                },
+                "service_id": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/barberBookingModels.AppointmentStatus"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "อ้าง user ที่สร้างคิว (ไม่มี FK)",
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingModels.AppointmentReview": {
+            "type": "object",
+            "properties": {
+                "appointment": {
+                    "$ref": "#/definitions/barberBookingModels.Appointment"
+                },
+                "appointment_id": {
+                    "type": "integer"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer": {
+                    "$ref": "#/definitions/barberBookingModels.Customer"
+                },
+                "customer_id": {
+                    "type": "integer"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "rating": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingModels.AppointmentStatus": {
+            "type": "string",
+            "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "CANCELLED",
+                "COMPLETED",
+                "NO_SHOW",
+                "RESCHEDULED"
+            ],
+            "x-enum-comments": {
+                "StatusCancelled": "ยกเลิก",
+                "StatusComplete": "จบงาน",
+                "StatusConfirmed": "รับ",
+                "StatusPending": "รอดำเนินการ",
+                "StatusRescheduled": "เปลี่ยนเวลา"
+            },
+            "x-enum-varnames": [
+                "StatusPending",
+                "StatusConfirmed",
+                "StatusCancelled",
+                "StatusComplete",
+                "StatusNoShow",
+                "StatusRescheduled"
+            ]
+        },
+        "barberBookingModels.AppointmentStatusLog": {
+            "type": "object",
+            "properties": {
+                "appointmentID": {
+                    "description": "ใช้ struct ได้ถ้าต้องการ preload",
+                    "type": "integer"
+                },
+                "changedAt": {
+                    "type": "string"
+                },
+                "changedByCustomerID": {
+                    "description": "Loose FK → ไม่ preload",
+                    "type": "integer"
+                },
+                "changedByUserID": {
+                    "description": "Loose FK → ไม่ preload",
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "newStatus": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "oldStatus": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingModels.Barber": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "role_user": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingModels.BarberWorkload": {
+            "type": "object",
+            "properties": {
+                "barber_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "total_appointments": {
+                    "type": "integer"
+                },
+                "total_hours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingModels.Customer": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "email": {
+                    "description": "Composite Index",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "optional",
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "description": "Composite Index",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingModels.Service": {
+            "type": "object",
+            "properties": {
+                "Img_name": {
+                    "type": "string"
+                },
+                "Img_path": {
+                    "type": "string"
+                },
+                "branch_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingModels.Unavailability": {
+            "type": "object",
+            "properties": {
+                "barber_id": {
+                    "description": "→ booking.barbers.id",
+                    "type": "integer"
+                },
+                "branch_id": {
+                    "description": "→ core.branches.id",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingModels.WorkingDayOverride": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "end_time": {
+                    "$ref": "#/definitions/barberbooking.TimeOnly"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isClosed": {
+                    "type": "boolean"
+                },
+                "start_time": {
+                    "$ref": "#/definitions/barberbooking.TimeOnly"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "work_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingPort.CreateAppointmentRequest": {
+            "type": "object",
+            "properties": {
+                "barber_id": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "branch_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "customer": {
+                    "$ref": "#/definitions/barberBookingPort.CustomerInput"
+                },
+                "customer_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "Preferred barber: John"
+                },
+                "service_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2025-05-30T10:00:00Z"
+                }
+            }
+        },
+        "barberBookingPort.CreateAppointmentReviewRequest": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "Great service!"
+                },
+                "customer_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "rating": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "barberBookingPort.CreateBarberInput": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "barberBookingPort.CustomerInput": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "John"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "0123456789"
+                }
+            }
+        },
+        "barberBookingPort.UpdateAppointmentReviewRequest": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "Updated comment"
+                },
+                "rating": {
+                    "type": "integer",
+                    "example": 4
+                }
+            }
+        },
+        "barberBookingPort.UpdateBarberRequest": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "email": {
+                    "description": "ถ้าต้องการอัปเดตอีเมลด้วย",
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "username": {
+                    "description": "ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย",
+                    "type": "string"
+                }
+            }
+        },
+        "barberBookingPort.UpsertBarberWorkloadRequest": {
+            "type": "object",
+            "properties": {
+                "appointments": {
+                    "description": "จำนวนการนัดหมาย",
+                    "type": "integer",
+                    "example": 10
+                },
+                "date": {
+                    "description": "วันที่ในรูปแบบ YYYY-MM-DD",
+                    "type": "string",
+                    "example": "2025-05-30"
+                },
+                "hours": {
+                    "description": "จำนวนชั่วโมงทำงาน",
+                    "type": "integer",
+                    "example": 8
+                }
+            }
+        },
+        "barberBookingPort.WorkingDayOverrideInput": {
+            "type": "object",
+            "required": [
+                "branch_id",
+                "end_time",
+                "start_time",
+                "work_date"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "integer"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "is_closed": {
+                    "type": "boolean"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "work_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "barberbooking.TimeOnly": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.Branch": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "composite unique with TenantID",
+                    "type": "string"
+                },
+                "tenant": {
+                    "$ref": "#/definitions/coreModels.Tenant"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/coreModels.User"
+                    }
+                }
+            }
+        },
+        "coreModels.Module": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "เช่น barber_booking",
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.Role": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "module": {
+                    "$ref": "#/definitions/coreModels.Module"
+                },
+                "module_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "tenant": {
+                    "$ref": "#/definitions/coreModels.Tenant"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.Tenant": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "coreModels.TenantUser": {
+            "type": "object",
+            "properties": {
+                "tenant": {
+                    "$ref": "#/definitions/coreModels.Tenant"
+                },
+                "tenant_id": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/coreModels.User"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "coreModels.User": {
+            "type": "object",
+            "properties": {
+                "Img_name": {
+                    "type": "string"
+                },
+                "Img_path": {
+                    "type": "string"
+                },
+                "branch": {
+                    "$ref": "#/definitions/coreModels.Branch"
+                },
+                "branch_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "$ref": "#/definitions/coreModels.Role"
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "tenant_users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/coreModels.TenantUser"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "gorm.DeletedAt": {
+            "type": "object",
+            "properties": {
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "description": "Valid is true if Time is not NULL",
+                    "type": "boolean"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

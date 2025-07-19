@@ -1,35 +1,31 @@
-// seeds/seedModules.go
 package seeds
 
 import (
-    "time"
+	"time"
 
-    "gorm.io/gorm"
-    coreModels "myapp/modules/core/models"
+	"gorm.io/gorm"
+	coreModels "myapp/modules/core/models"
 )
 
-// SeedModules ต้องรันก่อน SeedRoles
 func SeedModules(db *gorm.DB) error {
-    now := time.Now()
-    modules := []coreModels.Modules{
-        {Key: "CORE",        Description: "Core system",        CreatedAt: now, UpdatedAt: now},
-        {Key: "BOOKING",     Description: "Appointment booking",CreatedAt: now, UpdatedAt: now},
-        // เพิ่มโมดูลอื่น ๆ ตามต้องการ
-    }
+	modules := []coreModels.Module{
+		{Name: "barber_booking", Description: "ระบบจองคิวตัดผม"},
+		{Name: "pos", Description: "ระบบขายหน้าร้าน"},
+		{Name: "inventory", Description: "ระบบจัดการสต๊อก"},
+	}
 
-    for _, m := range modules {
-        record := coreModels.Modules{Key: m.Key}
-        attrs  := coreModels.Modules{
-            Description: m.Description,
-            UpdatedAt:   now,
-        }
-        if err := db.
-            Where("key = ?", m.Key).
-            Assign(attrs).
-            FirstOrCreate(&record, record).
-            Error; err != nil {
-            return err
-        }
-    }
-    return nil
+	now := time.Now()
+
+	for _, m := range modules {
+		record := coreModels.Module{Name: m.Name}
+		attrs := coreModels.Module{
+			Description: m.Description,
+			CreatedAt:   now,
+		}
+		if err := db.Where(record).Assign(attrs).FirstOrCreate(&record).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

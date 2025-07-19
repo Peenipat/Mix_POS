@@ -144,6 +144,7 @@ func RequireAuth() fiber.Handler {
 		}
 		c.Locals("role", roleStr)
 		log.Println("✅ JWT Role:", roleStr)
+		log.Println("🔍 [RequireAuth HIT]:", c.Method(), c.Path())
 
 		// ✅ ดึง tenant_id (optional)
 		if tid, ok := claims["tenant_id"].(float64); ok {

@@ -9,42 +9,12 @@ import { TotalBarberSchedule } from "../BarberPage";
 import "intro.js/introjs.css";
 import introJs from "intro.js";
 import { useForm, Controller } from "react-hook-form";
-import { bookAppointment } from "../../api/appointment";
-export interface Appointment {
-    barberId: number;
-    start: string; // "HH:mm"
-    end: string;   // "HH:mm"
-    date: string;  // "yyyy-MM-dd"
-}
+import { AppointmentBrief, bookAppointment, getAppointmentsByBranch } from "../../api/appointment";
+import { AppointmentLock, AppointmentLockResponse, createAppointmentLock, getAppointmentLocks, releaseAppointmentLock } from "../../api/appointmentLock";
+import { format } from "date-fns";
 
-export const mockAppointments: Appointment[] = [
-    {
-        barberId: 1,
-        start: "09:15",
-        end: "10:30",
-        date: "2025-07-12",
-    },
-    {
-        barberId: 2,
-        start: "09:30",
-        end: "10:45",
-        date: "2025-07-12",
-    },
-];
 
-type BookingPayload = {
-    customer_id: number; // guest mode = 0
-    customer: {
-        name: string;
-        phone: string;
-    };
-    service_id: number;
-    branch_id: number;
-    barber_id: number;
-    start_time: string; // ISO string (RFC3339)
-    notes?: string;
-};
-
+export const mockAppointments: AppointmentBrief[] = [];
 
 export default function AppointmentsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +28,7 @@ export default function AppointmentsPage() {
     const [loadingServices, setLoadingServices] = useState<boolean>(false);
     const [errorServices, setErrorServices] = useState<string | null>(null);
 
-
+    const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
     const loadServices = async () => {
         setLoadingServices(true);
@@ -105,35 +75,91 @@ export default function AppointmentsPage() {
         loadServices();
     }, []);
 
-
-
     const [selectedBooking, setSelectedBooking] = useState<{
         date: string;
         time: string;
         barberId: number;
         barberName: string;
+        lockId: number
     } | null>(null);
-
+    const [loading, setLoading] = useState(false)
     const [countdown, setCountdown] = useState(0);
+    const [locks, setLocks] = useState<AppointmentLock[]>([]);
+    const dateParam = selectedDate
+        ? format(new Date(selectedDate), "yyyy-MM-dd")
+        : "";
 
-    const handleOpenModal = (barberId: number, time: string) => {
+
+    const fetchLocks = async () => {
+        const allLocks = await Promise.all(
+            barbers.map((barber) =>
+                getAppointmentLocks(1, 1, barber.id, dateParam)
+            )
+        );
+
+        const merged = allLocks.flat();
+        setLocks(merged);
+    };
+
+    useEffect(() => {
+        if (barbers.length > 0) {
+            fetchLocks();
+        }
+    }, [dateParam, barbers]);
+
+
+    const handleOpenModal = async (date: string, barberId: number, time: string) => {
+
         const barber = barbers.find((b) => b.id === barberId);
         if (!barber) return;
 
-        setSelectedBooking({
-            date: new Date().toISOString().slice(0, 10),
-            time,
-            barberId,
-            barberName: barber.username,
-        });
-        setCountdown(420);
-        setIsModalOpen(true);
+        try {
+            setLoading(true);
+            console.log("Date : ", date, "time : ", time)
+            const start = new Date(`${date}T${time}:00`);
+            const end = new Date(start.getTime() + 30 * 60 * 1000);
+            console.log("start : ", start, "end : ", end)
+
+            const lock: AppointmentLockResponse = await createAppointmentLock(1, 1, {
+                barber_id: barberId,
+                customer_id: 1,
+                start_time: start.toISOString(),
+                end_time: end.toISOString(),
+                tenant_id: 1,
+                branch_id: 1,
+            });
+
+            setSelectedBooking({
+                date,
+                time,
+                barberId,
+                barberName: barber.username,
+                lockId: lock.id,
+            });
+
+
+
+            setCountdown(420);
+            setIsModalOpen(true);
+        } catch (err: any) {
+            console.error(err);
+            alert("ไม่สามารถจอง slot นี้ได้ เพราะมีคนกำลังจองอยู่แล้ว");
+            await fetchLocks();
+
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleClose = () => {
+
+
+
+    const handleClose = async () => {
         setIsModalOpen(false);
         setSelectedBooking(null);
         setCountdown(0);
+        await releaseAppointmentLock(1, 1, Number(selectedBooking?.lockId))
+        await fetchLocks();
     };
 
     useEffect(() => {
@@ -332,7 +358,7 @@ export default function AppointmentsPage() {
                     name: data.name,
                     phone: data.phone
                 },
-                branch_id: 1, 
+                branch_id: 1,
                 service_id: selectedServiceId!,
                 barber_id: selectedBooking?.barberId || 0,
                 start_time: startTime,
@@ -342,13 +368,19 @@ export default function AppointmentsPage() {
             const result = await bookAppointment(1, payload);
             console.log("✅ สำเร็จ:", result);
 
-            // ทำอย่างอื่น เช่น ปิด modal หรือ redirect
         } catch (err) {
             console.error("❌ จองไม่สำเร็จ:", err);
         }
     };
 
-
+    const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
+    useEffect(() => {
+        async function fetchAppointment() {
+            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate);
+            setAppointmentList(appointments ?? []);
+        }
+        fetchAppointment();
+    }, [selectedDate]);
 
     return (
         <div className="h-full">
@@ -356,12 +388,12 @@ export default function AppointmentsPage() {
                 <h1 className="text-2xl font-bold text-center my-3">จองคิวรายบุคคล | จองคิวแบบกลุ่ม
                     <span className="ml-2 text-xs bg-red-200 p-[3.5px] rounded-md text-red-600">ยังไม่พร้อมใช้งาน</span>
                 </h1>
-                <div className="grid grid-cols-3">
-                    <div className="col-span-2 ">
-                        <TotalBarberSchedule barbers={barbers} onClick={handleOpenModal} appointments={mockAppointments} />
+                <div className="grid grid-cols-1 md:grid-cols-3">
+                    <div className="md:col-span-2 md:p-0 px-8 pt-0">
+                        <TotalBarberSchedule barbers={barbers} onClick={handleOpenModal} appointments={appointmentList} locks={locks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
                     </div>
-                    <div className="max-w-xl">
-                        <div className="border rounded-md border-gray-900 p-2 space-y-4">
+                    <div className="max-w-xl hidden md:block">
+                        <div className="border rounded-md p-2 space-y-4 bg-gray-50">
                             <div className="flex gap-3 mt-3 ml-3">
                                 <button
                                     className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center transition"
@@ -648,7 +680,6 @@ const BookingModalExample = ({ isOpen, hide, onClose, step, hideForm, hideConfir
         </div>
     );
 };
-
 interface BookingFormProps {
     isOpen: boolean;
     hide: boolean;
@@ -665,13 +696,37 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
         cusPhone: "012 345 6789"
     });
 
+    const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+    const services = [
+        {
+            id: 1,
+            name: "ตัดผมชาย",
+            description: "บริการตัดผมสไตล์ทั่วไป",
+            price: 150,
+            duration: 30
+        },
+        {
+            id: 2,
+            name: "โกนหนวด",
+            description: "บริการโกนหนวดสะอาดเรียบเนียน",
+            price: 80,
+            duration: 15
+        },
+        {
+            id: 3,
+            name: "สระผม",
+            description: "บริการสระผมด้วยผลิตภัณฑ์พรีเมียม",
+            price: 100,
+            duration: 20
+        }
+    ];
+
     const handleBookingSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         alert("Mock: บันทึกข้อมูลการจองเรียบร้อยแล้ว");
     };
 
     useEffect(() => {
-
         const timer = setInterval(() => {
             setCountdown((prev) => {
                 if (prev <= 1) {
@@ -693,8 +748,10 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
 
     return (
         <div className={`${hide ? "hidden" : ""}`}>
-            <div className="text-right text-red-600 font-semibold mb-3 " >
-                <p id="modal-time" className="inline">ระบบจะล็อกคิวนี้ไว้ {formatTime(countdown)} นาที</p>
+            <div className="text-right text-red-600 font-semibold mb-3">
+                <p id="modal-time" className="inline">
+                    ระบบจะล็อกคิวนี้ไว้ {formatTime(countdown)} นาที
+                </p>
             </div>
 
             <form className="space-y-5" onSubmit={handleBookingSubmit}>
@@ -718,7 +775,7 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
                         />
                     </div>
                     <div className="mb-3">
-                        <label className="block text-sm font-medium ">ช่าง</label>
+                        <label className="block text-sm font-medium">ช่าง</label>
                         <input
                             type="text"
                             className="input input-bordered w-full bg-gray-200 rounded-md"
@@ -737,6 +794,7 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
                             placeholder="กรุณากรอกชื่อลูกค้า"
                             data-step="modal-name"
                             value={selectedBooking.cusName}
+                            readOnly
                         />
                     </div>
 
@@ -748,10 +806,52 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
                             placeholder="กรุณากรอกเบอร์โทร"
                             data-step="modal-phone"
                             value={selectedBooking.cusPhone}
+                            readOnly
                         />
                     </div>
                 </div>
+                <div className="grid grid-cols-3 w-full gap-3 ">
+                    {services.map((service) => {
+                        const isSelected = service.id === selectedServiceId;
+                        if (selectedServiceId && !isSelected) return null;
+                        return (
+                            <div
+                                key={service.id}
+                                className="bg-gray-100 rounded-xl shadow-lg flex flex-col p-1"
+                            >
+                                <div className="flex items-center p-1">
+                                    <div className="flex flex-col justify-center flex-grow overflow-hidden">
+                                        <div className="text-lg font-semibold truncate">{service.name}</div>
+                                        <div className="text-gray-400 text-sm truncate">{service.description}</div>
+                                    </div>
 
+                                    <div className="bg-gray-400 text-white text-right rounded-md px-1 py-1 flex flex-col items-end justify-center min-w-[60px]">
+                                        <span className="text-md font-bold">฿{service.price}</span>
+                                        <span className="text-sm">{service.duration} นาที</span>
+                                    </div>
+                                </div>
+
+                                {!isSelected ? (
+                                    <button
+                                        type="button"
+                                        className="w-full bg-green-400 hover:bg-green-700 text-white rounded"
+                                        onClick={() => setSelectedServiceId(service.id)}
+                                    >
+                                        เลือก
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="w-full bg-gray-300 text-gray-700 rounded"
+                                        onClick={() => setSelectedServiceId(null)}
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
                 <div className="pt-4">
                     <button
                         type="submit"
@@ -761,11 +861,13 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
                         ดำเนินการต่อ
                     </button>
                 </div>
+
             </form>
         </div>
-    )
+    );
+};
 
-}
+
 interface ConfirmModalProps {
     hide: boolean
 }
@@ -842,112 +944,7 @@ const ConfirmExample = ({ hide }: ConfirmModalProps) => {
                 </button> */}
 
 
-{/* <Modal isOpen={isModalOpen} onClose={handleClose} title={isRegisterForm ? "ลงทะเบียน" : "เข้าสู่ระบบ"} blurBackground>
-                    {isRegisterForm ? (
-                        <form className="space-y-5">
-                            <div>
-                                <label className="flex items-end text-sm font-medium text-gray-700 mb-1">
-                                    ชื่อลูกค้า
-                                    <CustomTooltip
-                                        id="tooltip-cusname"
-                                        content="แนะนำเป็นภาษาไทย"
-                                        trigger="hover"
-                                        placement="top"
-                                        bgColor="bg-gray-200"
-                                        textColor="text-gray-900"
-                                        textSize="text-sm"
-                                        className="ml-1"
-                                    >
-                                        <span><FiInfo /></span>
-                                    </CustomTooltip>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="กรุณากรอกชื่อ"
-                                    className="input input-bordered w-full"
-                                />
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทร</label>
-                                <input
-                                    type="text"
-                                    placeholder="กรุณากรอกเบอร์โทรศัพท์"
-                                    className="input input-bordered w-full"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="flex items-end text-sm font-medium text-gray-700 mb-1 ">
-                                    รหัสผ่าน
-                                    <CustomTooltip
-                                        id="tooltip-password"
-                                        content="รหัสผ่านสำหรับเข้าใช้งานครั้งถัดไป"
-                                        trigger="hover"
-                                        placement="top"
-                                        bgColor="bg-gray-200"
-                                        textColor="text-gray-900"
-                                        textSize="text-sm"
-                                        className="ml-1"
-                                    >
-                                        <span><FiInfo /></span>
-                                    </CustomTooltip>
-                                </label>
-                                <input
-                                    type="password"
-                                    placeholder="ตั้งรหัสผ่าน"
-                                    className="input input-bordered w-full"
-                                />
-                            </div>
-
-                            <div className="flex gap-4 pt-4">
-                                <button type="submit" className="w-1/2 bg-green-600 hover:bg-green-700 text-white py-2 rounded">
-                                    ลงทะเบียน
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsRegisterForm(false)} // สลับไป login
-                                    className="w-1/2 bg-gray-400 hover:bg-gray-500 text-white py-2 rounded"
-                                >
-                                    มีบัญชีอยู่แล้ว?
-                                </button>
-                            </div>
-                        </form>
-                    ) : (
-                        <form className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทร</label>
-                                <input
-                                    type="text"
-                                    placeholder="กรุณากรอกเบอร์โทรศัพท์"
-                                    className="input input-bordered w-full"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
-                                <input
-                                    type="password"
-                                    placeholder="กรุณากรอกรหัสผ่าน"
-                                    className="input input-bordered w-full"
-                                />
-                            </div>
-
-                            <div className="flex gap-4 pt-4">
-                                <button type="submit" className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">
-                                    เข้าสู่ระบบ
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsRegisterForm(true)} // สลับกลับไป register
-                                    className="w-1/2 bg-gray-400 hover:bg-gray-500 text-white py-2 rounded"
-                                >
-                                    สมัครสมาชิก
-                                </button>
-                            </div>
-                        </form>
-                    )}
-                </Modal> */}
 
 
 function PaymentOptions() {

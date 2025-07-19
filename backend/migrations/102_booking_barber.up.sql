@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS barbers (
   img_name    TEXT           NULL,
   created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่สร้างแถว
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่แก้ไขล่าสุด
-  deleted_at  TIMESTAMPTZ    NULL                     -- soft‐delete timestamp
+  deleted_at  TIMESTAMPTZ    NULL                 
 );
 
 -- ดัชนีช่วยค้นหา

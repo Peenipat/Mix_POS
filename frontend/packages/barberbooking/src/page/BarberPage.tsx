@@ -11,7 +11,8 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getWorkingHourRangeAxios } from "../components/TimeSelector"
 import { MdFilterAlt } from "react-icons/md";
-import { Appointment } from "./members/AppointmentsPage";
+import { AppointmentBrief, getAppointmentsByBranch } from "../api/appointment";
+import { AppointmentLock } from "../api/appointmentLock";
 
 export default function BarberPage() {
     const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -118,7 +119,7 @@ export default function BarberPage() {
 
                     </div>) : (
                         <div>
-                            <TotalBarberSchedule barbers={barbers} />
+                            {/* <TotalBarberSchedule barbers={barbers} /> */}
                         </div>
                     )}
 
@@ -129,15 +130,23 @@ export default function BarberPage() {
 export const TotalBarberSchedule = ({
     barbers,
     onClick,
-    appointments = [],
+    appointments = [], // for mock
+    locks = [],
+    selectedDate,
+    setSelectedDate
+
 }: {
     barbers: Barber[];
-    onClick?: (barberId: number, time: string) => void;
-    appointments?: Appointment[];
+    onClick?: (date: string, barberId: number, time: string) => void;
+    appointments?: AppointmentBrief[]; // for mock
+    locks?: AppointmentLock[];
+    selectedDate: string;
+    setSelectedDate: (date: string) => void;
 }) => {
     const [slot, setSlot] = useState<string[]>([]);
     const today = format(new Date(), "yyyy-MM-dd");
-    const [selectedDate, setSelectedDate] = useState(today);
+    // const [selectedDate, setSelectedDate] = useState<string>(today);
+
 
     useEffect(() => {
         async function fetchSlot() {
@@ -151,6 +160,7 @@ export const TotalBarberSchedule = ({
         }
         fetchSlot();
     }, [selectedDate]);
+
 
     function generateTimeSlots(start: string, end: string): string[] {
         const slots: string[] = [];
@@ -184,20 +194,52 @@ export const TotalBarberSchedule = ({
     function getBookingFraction(
         barberId: number,
         slot: string,
-        appointments: Appointment[]
+        appointments?: AppointmentBrief[]
     ): "full" | "top" | "bottom" | null {
+        if (!appointments) return null;
+
         const slotStart = timeToMinutes(slot);
         const slotEnd = timeToMinutes(addMinutes(slot, 30));
+
         for (const app of appointments) {
-            if (app.barberId !== barberId || app.date !== selectedDate) continue;
+            if (app.barber_id !== barberId || app.date !== selectedDate) continue;
             const appStart = timeToMinutes(app.start);
             const appEnd = timeToMinutes(app.end);
+
             if (appStart <= slotStart && appEnd >= slotEnd) return "full";
             if (appStart <= slotStart && appEnd > slotStart && appEnd <= slotEnd) return "top";
             if (appStart >= slotStart && appStart < slotEnd && appEnd >= slotEnd) return "bottom";
         }
         return null;
     }
+
+    function isSlotLocked(barberId: number, slotStartTime: string): boolean {
+        const slotStart = timeToMinutes(slotStartTime);
+        const slotEnd = timeToMinutes(addMinutes(slotStartTime, 30));
+
+        // 1. เช็คจาก appointments
+        for (const appt of appointments) {
+            if (appt.barber_id !== barberId) continue;
+            const apptStart = timeToMinutes(appt.start);
+            const apptEnd = timeToMinutes(appt.end);
+            if (slotStart < apptEnd && slotEnd > apptStart) return true;
+        }
+
+        // ✅ 2. เช็คจาก locks ที่ยัง active
+        for (const lock of locks || []) {
+            if (lock.barber_id !== barberId || !lock.is_active) continue;
+            const lockStart = timeToMinutes(lock.start_time.slice(11, 16)); // "09:30"
+            const lockEnd = timeToMinutes(lock.end_time.slice(11, 16));     // "10:00"
+            if (slotStart < lockEnd && slotEnd > lockStart) return true;
+        }
+
+        return false;
+    }
+
+
+
+
+
     function filterQuarterSlots(slots: string[]) {
         return slots.filter((time) => {
             const minute = time.split(":")[1];
@@ -212,6 +254,7 @@ export const TotalBarberSchedule = ({
     const [endTime, setEndTime] = useState<string>("");
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [openFilter, setOpenFilter] = useState<boolean>(false)
+
 
     return (
         <div className="flex flex-col border rounded-md overflow-auto shadow-md bg-white">
@@ -312,7 +355,11 @@ export const TotalBarberSchedule = ({
                 </div>
 
                 <div className="w-full">
-                    {slot.map((time, timeIndex) => (
+                    {slot.length === 0 ? (
+                        <div className="text-center text-red-500 font-semibold py-6">
+                            วันที่ {selectedDate.split("-").reverse().join("/")} ร้านปิด
+                        </div>
+                    ) : (slot.map((time, timeIndex) => (
                         <div
                             key={timeIndex}
                             className={`flex `}
@@ -321,51 +368,57 @@ export const TotalBarberSchedule = ({
                             <div className="w-[120px] py-2 bg-gray-100 font-semibold text-center" >{time}</div>
                             {barbers.map((barber) => {
                                 const fraction = getBookingFraction(barber.id, time, appointments);
+                                const isLocked = isSlotLocked(barber.id, time);
                                 return (
                                     <div key={barber.id + "_" + timeIndex} className="relative h-14 flex-1 border-l">
-                                        {/* top half = ว่างถ้า bottom ถูกจอง */}
-                                        {(fraction === "bottom" || fraction === null) && (
+
+                                        {/* จองแล้ว (red) */}
+                                        {fraction === "full" && (
+                                            <div className="absolute top-0 h-full w-full bg-red-400 flex items-end justify-center text-white font-semibold pointer-events-none z-20">
+                                                <p>จองแล้ว</p>
+                                            </div>
+                                        )}
+
+                                        {/* ว่าง (green) */}
+                                        {(fraction === "bottom" || fraction === null) && !isSlotLocked(barber.id, time) && (
                                             <div
-                                                className={`absolute top-0 ${fraction === "bottom" ? "h-1/2" : "h-full"} w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200`}
-                                                style={{ cursor: "pointer" }}
-                                                onClick={() => onClick?.(barber.id, time)}
+                                                className={`absolute top-0 ${fraction === "bottom" ? "h-1/2" : "h-full"} w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer z-10`}
+                                                onClick={() => onClick?.(selectedDate, barber.id, time)}
+                                            >
+                                                ว่าง
+                                            </div>
+                                        )}
+                                        {fraction === "top" && !isSlotLocked(barber.id, time) && (
+                                            <div
+                                                className="absolute bottom-0 h-1/2 w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer z-10"
+                                                onClick={() => onClick?.(selectedDate, barber.id, addMinutes(time, 15))}
                                             >
                                                 ว่าง
                                             </div>
                                         )}
 
-                                        {/* bottom half = ว่างถ้า top ถูกจอง */}
+                                        {/* จองครึ่ง (red overlay) */}
                                         {fraction === "top" && (
-                                            <div
-                                                className="absolute bottom-0 h-1/2 w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer"
-                                                onClick={() => onClick?.(barber.id, addMinutes(time, 15))} 
-                                            >
-                                                ว่าง
-                                            </div>
-                                        )}
-
-                                        {/* booked overlays */}
-                                        {fraction === "top" && (
-                                            <div className="absolute top-0 h-1/2 w-full bg-red-400 flex justify-center items-end pb-[2px] text-white  font-semibold text-sm pointer-events-none">
-
-                                            </div>
+                                            <div className="absolute top-0 h-1/2 w-full bg-red-400 flex justify-center items-end pb-[2px] text-white font-semibold text-sm pointer-events-none z-20" />
                                         )}
                                         {fraction === "bottom" && (
-                                            <div className="absolute bottom-0 h-1/2 w-full bg-red-400 flex justify-center items-start pt-[2px] text-white  font-semibold text-sm pointer-events-none">
-                                            </div>
+                                            <div className="absolute bottom-0 h-1/2 w-full bg-red-400 flex justify-center items-start pt-[2px] text-white font-semibold text-sm pointer-events-none z-20" />
                                         )}
-                                        {fraction === "full" && (
-                                            <div className="absolute top-0 h-full w-full bg-red-400 flex items-end justify-center text-white font-semibold pointer-events-none">
-                                                <p>จองแล้ว</p>
+
+                                        {isSlotLocked(barber.id, time) && (
+                                            <div className="absolute inset-0 bg-yellow-300/80 flex items-end justify-center text-black font-semibold pointer-events-none z-0">
+                                                มีคนกำลังจองอยู่...
                                             </div>
                                         )}
                                     </div>
 
 
+
+
                                 );
                             })}
                         </div>
-                    ))}
+                    )))}
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '../schemas/authSchema';
@@ -7,17 +7,29 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hook';
 import { loginUser, loadCurrentUser, logout } from '../store/authSlice';
 import { navigateByRole } from '../utils/navigation';
+import Modal from '@object/shared/components/Modal';
+import { FiInfo } from 'react-icons/fi';
 
 export default function Login() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const statusLogin  = useAppSelector((state) => state.auth.statusLogin);
-  const errorLogin   = useAppSelector((state) => state.auth.errorLogin);
-  const loginUserData= useAppSelector((state) => state.auth.loginUser);
-  const statusMe     = useAppSelector((state) => state.auth.statusMe);
-  const me           = useAppSelector((state) => state.auth.me);
-  const errorMe      = useAppSelector((state) => state.auth.errorMe);
+  const statusLogin = useAppSelector((state) => state.auth.statusLogin);
+  const errorLogin = useAppSelector((state) => state.auth.errorLogin);
+  const loginUserData = useAppSelector((state) => state.auth.loginUser);
+  const statusMe = useAppSelector((state) => state.auth.statusMe);
+  const me = useAppSelector((state) => state.auth.me);
+  const errorMe = useAppSelector((state) => state.auth.errorMe);
+
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRegisterForm, setIsRegisterForm] = useState(false)
+
+  const handleClose = () => {
+    setIsModalOpen(false)
+  }
+  const handleOpen = () => {
+    setIsModalOpen(true)
+  }
 
   const {
     register,
@@ -82,14 +94,14 @@ export default function Login() {
               <button
                 className="btn btn-success w-full rounded-lg"
                 type="submit"
-                disabled={statusLogin === 'loading' || statusMe === 'loading'} 
+                disabled={statusLogin === 'loading' || statusMe === 'loading'}
               >
                 {(statusLogin === 'loading' || statusMe === 'loading') ? 'Loading…' : 'Login'}
               </button>
               <button
                 className="btn btn-warning w-full rounded-lg"
                 type="button"
-                onClick={() => navigate('/register')}
+                onClick={() => handleOpen()}
               >
                 Register
               </button>
@@ -106,6 +118,117 @@ export default function Login() {
           <img src="" alt="dde" />
         </div>
       </div>
+
+      <Modal isOpen={isModalOpen} onClose={handleClose} title={isRegisterForm ? "ลงทะเบียน" : "เข้าสู่ระบบ"} blurBackground>
+        <div className='p-12 pt-0'>
+          {isRegisterForm ? (
+            <form className="space-y-5">
+              <div>
+                <label className="flex items-end text-sm font-medium text-gray-700 mb-1">
+                  ชื่อลูกค้า
+                  {/* <CustomTooltip
+                  id="tooltip-cusname"
+                  content="แนะนำเป็นภาษาไทย"
+                  trigger="hover"
+                  placement="top"
+                  bgColor="bg-gray-200"
+                  textColor="text-gray-900"
+                  textSize="text-sm"
+                  className="ml-1"
+                >
+                  <span><FiInfo /></span>
+                </CustomTooltip> */}
+                </label>
+                <input
+                  type="text"
+                  placeholder="กรุณากรอกชื่อ"
+                  className="input input-bordered w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทร</label>
+                <input
+                  type="text"
+                  placeholder="กรุณากรอกเบอร์โทรศัพท์"
+                  className="input input-bordered w-full"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-end text-sm font-medium text-gray-700 mb-1 ">
+                  รหัสผ่าน
+                  {/* <CustomTooltip
+                  id="tooltip-password"
+                  content="รหัสผ่านสำหรับเข้าใช้งานครั้งถัดไป"
+                  trigger="hover"
+                  placement="top"
+                  bgColor="bg-gray-200"
+                  textColor="text-gray-900"
+                  textSize="text-sm"
+                  className="ml-1"
+                >
+                  <span><FiInfo /></span>
+                </CustomTooltip> */}
+                </label>
+                <input
+                  type="password"
+                  placeholder="ตั้งรหัสผ่าน"
+                  className="input input-bordered w-full"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button type="submit" className="w-1/2 bg-green-600 hover:bg-green-700 text-white py-2 rounded">
+                  ลงทะเบียน
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterForm(false)} // สลับไป login
+                  className="w-1/2 bg-gray-400 hover:bg-gray-500 text-white py-2 rounded"
+                >
+                  มีบัญชีอยู่แล้ว?
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทร</label>
+                <input
+                  type="text"
+                  placeholder="กรุณากรอกเบอร์โทรศัพท์"
+                  className="input input-bordered w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                <input
+                  type="password"
+                  placeholder="กรุณากรอกรหัสผ่าน"
+                  className="input input-bordered w-full"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button type="submit" className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">
+                  เข้าสู่ระบบ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterForm(true)} // สลับกลับไป register
+                  className="w-1/2 bg-gray-400 hover:bg-gray-500 text-white py-2 rounded"
+                >
+                  สมัครสมาชิก
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }
+
+

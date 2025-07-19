@@ -4,13 +4,11 @@ CREATE TABLE IF NOT EXISTS customers (
   branch_id   INT NOT NULL, 
   name       TEXT NOT NULL,
   phone      TEXT,
-  password    TEXT,
   email      TEXT,
+  password    TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deleted_at TIMESTAMPTZ,
-
-  CONSTRAINT uq_customer_email UNIQUE (tenant_id, email)
+  deleted_at TIMESTAMPTZ
 );
 
 -- Composite Index (tenant_id, email)

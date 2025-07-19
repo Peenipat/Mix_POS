@@ -33,6 +33,8 @@ import HistoryPage from "./page/members/HistoryPage";
 import AppointmentsPage from "./page/members/AppointmentsPage";
 import TestLayout from "./page/testLayout";
 import ManagerWebIndex from "./page/admin/manage_web/web_index";
+import UIConfiglayout from "@object/shared/layouts/UIConfiglayout";
+import ToastManagement from "@object/shared/page/ToastManagement";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -71,6 +73,14 @@ export default function App() {
         <Route path="barbers" element={<BarberPage />} />
         <Route path="booking" element={<AppointmentsPage />} />
         <Route path="history" element={<HistoryPage />} />
+      </Route>
+
+      <Route
+        path="/web-management"
+        element={<UIConfiglayout />}>
+        <Route index element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
+        <Route path="dashboard" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
+        <Route path="toast" element={<ToastManagement />} />
       </Route>
 
       <Route
@@ -129,5 +139,11 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+
+
+
+
+
+
   );
 }

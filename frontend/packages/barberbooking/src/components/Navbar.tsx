@@ -20,7 +20,7 @@ export default function Navbar() {
 
   const mainMenu: MenuItem[] = [
     { name: "หน้าหลัก", href: "/" },
-    { name: "บริการของทางร้าน", href: "/service" },
+    { name: "บริการ", href: "/service" },
     { name: "ข้อมูลช่างตัดผม", href: "/barbers" },
     { name: "จองคิว", href: "/booking" },
     { name: "ประวัติการจอง", href: "/history" },
@@ -52,65 +52,27 @@ export default function Navbar() {
 
   return (
     <nav className=" bg-slate-50 shadow-md border-gray-700">
-      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-2">
+      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-1">
         {/* Logo */}
         <button
           onClick={() => navigate("/")}
           className="flex items-center space-x-3 text-gray-900"
         >
 
-          <span className="self-center text-2xl font-semibold">Barber Shop</span>
+          <span className="self-center text-xl font-semibold">Barber Shop</span>
         </button>
 
         {/* User + Mobile toggle */}
         <div className="flex items-center md:order-2">
           {/* Avatar */}
-          <button
-            onClick={() => setIsUserDropdownOpen((o) => !o)}
-            className="flex text-sm bg-gray-700 rounded-full focus:ring-2 focus:ring-gray-600"
-          >
-            <span className="sr-only">Open user menu</span>
-            <img
-              className="w-8 h-8 rounded-full"
-              src="/docs/images/people/profile-picture-3.jpg"
-              alt="user photo"
-            />
-          </button>
 
           {/* User dropdown */}
-          {isUserDropdownOpen && (
-            <div
-              ref={dropdownRef}
-              className="z-50 absolute top-16 right-4 w-48 bg-gray-700 divide-y divide-gray-600 rounded-lg shadow-lg"
-            >
-              <div className="px-4 py-3">
-                <span className="block text-sm text-gray-900">Bonnie Green</span>
-                <span className="block text-xs text-gray-900 truncate">
-                  name@flowbite.com
-                </span>
-              </div>
-              <ul className="py-2">
-                {userDropdownMenu.map((item) => (
-                  <li key={item.name}>
-                    <button
-                      onClick={() => {
-                        setIsUserDropdownOpen(false);
-                        navigate(item.href);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-600"
-                    >
-                      {item.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+     
 
           {/* Mobile menu button */}
           <button
             onClick={() => setIsNavOpen((o) => !o)}
-            className="inline-flex items-center p-2 ml-2 text-gray-900 rounded-lg md:hidden hover:bg-gray-700 focus:ring-2 focus:ring-gray-600"
+            className="inline-flex items-center p-1 ml-1 text-gray-900 rounded-lg md:hidden hover:bg-gray-700 focus:ring-2 focus:ring-gray-600"
           >
             <span className="sr-only">Open main menu</span>
             <svg
@@ -139,7 +101,7 @@ export default function Navbar() {
                     navigate(item.href);
                     setIsNavOpen(false);
                   }}
-                  className="block py-1 px-3 rounded-sm text-gray-900 hover:text-gray-900 hover:bg-gray-200"
+                  className="block py-1 px-2 rounded-sm text-gray-900 hover:text-gray-900 hover:bg-gray-200"
                 >
                   {item.name}
                 </button>

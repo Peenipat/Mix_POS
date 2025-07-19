@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"time"
-    // "github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 
 	// "net/http"
 
@@ -31,7 +31,7 @@ import (
 	bookingRoutes "myapp/modules/barberbooking/routes"
 	bookingServices "myapp/modules/barberbooking/services"
 	coreControllers "myapp/modules/core/controllers"
-	
+
 	_ "myapp/modules/core/docs" // registers as "core"
 	coreModels "myapp/modules/core/models"
 	coreRoutes "myapp/modules/core/routes"
@@ -63,7 +63,8 @@ func main() {
 	if database.DB == nil {
 		log.Fatal("GORM DB is nil. Cannot proceed.")
 	}
-
+	
+	database.DB.Migrator().DropTable(&bookingModels.WorkingHour{})
 	database.DB.AutoMigrate(
 		// Core module: สร้างสิ่งที่เป็นรากก่อน
 		&coreModels.Tenant{},
@@ -119,7 +120,7 @@ func main() {
 	tenantID := uint(1)
 	branchID := uint(1)
 	// 7) Seed Customers → เป็นลูกค้าจากภายนอก ไม่ต้องพึ่ง tenant_id
-	if err := seeds.SeedCustomers(database.DB, tenantID,&branchID); err != nil {
+	if err := seeds.SeedCustomers(database.DB, tenantID, &branchID); err != nil {
 		log.Fatalf("seed customers failed: %v", err)
 	}
 
@@ -196,8 +197,6 @@ func main() {
 	coreRoutes.RegisterBranchRoutes(coreGroup, branchController)
 	coreRoutes.SetupAuthRoutes(coreGroup, userController)
 
-	
-
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)
 	serviceController := bookingControllers.NewServiceController(serviceService)
@@ -220,9 +219,8 @@ func main() {
 	barberWorkloadService := bookingServices.NewBarberWorkloadService(database.DB)
 	barberWorkloadController := bookingControllers.NewBarberWorkloadController(barberWorkloadService)
 
-	calendarService := bookingServices.NewCalendarService(database.DB,workingHourService,workingDayOverrideService)
-	calendarController :=  bookingControllers.NewCalendarController(calendarService)
-
+	calendarService := bookingServices.NewCalendarService(database.DB, workingHourService, workingDayOverrideService)
+	calendarController := bookingControllers.NewCalendarController(calendarService)
 
 	apppointmentStatusLogService := bookingServices.NewAppointmentStatusLogService(database.DB)
 	appointmentService := bookingServices.NewAppointmentService(database.DB, apppointmentStatusLogService)
@@ -233,8 +231,6 @@ func main() {
 	apppointmentLockService := bookingServices.NewAppointmentLockService(database.DB)
 	apppointmentLockController := bookingControllers.NewAppointmentLockController(apppointmentLockService)
 
-	
-
 	bookingGroup := app.Group("/api/v1/barberbooking")
 
 	// Register routes
@@ -244,16 +240,14 @@ func main() {
 	bookingRoutes.RegisterServiceRoutes(bookingGroup, serviceController)
 	bookingRoutes.RegisterCustomerRoutes(bookingGroup, customerController)
 	bookingRoutes.RegisterBarberRoutes(bookingGroup, barberController)
-	
+
 	bookingRoutes.RegisterUnavailabilityRoute(bookingGroup, unavailabilityController)
 	bookingRoutes.RegisterWorkingHourRoute(bookingGroup, *workingHourController)
 
 	bookingRoutes.RegisterBarberWorkloadRoute(bookingGroup, *barberWorkloadController)
-	
+
 	bookingRoutes.RegisterAppointmentStatusLogRoute(bookingGroup, appointmentStatusLogController)
-	bookingRoutes.RegisterCalendarRoute(bookingGroup,calendarController)
-	
-	
+	bookingRoutes.RegisterCalendarRoute(bookingGroup, calendarController)
 
 	for _, r := range app.GetRoutes() {
 		fmt.Printf("%-6s %s\n", r.Method, r.Path)
@@ -274,8 +268,6 @@ func main() {
 	//     Browse: false,
 	//     Index:  "index.html",
 	// }))
-
-
 
 	// Start server
 	app.Get("/api/v1/core/swagger/*", fiberSwagger.WrapHandler)

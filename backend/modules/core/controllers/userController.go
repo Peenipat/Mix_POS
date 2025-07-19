@@ -139,10 +139,10 @@ func (ctrl *UserController) ChangeUserRole(c *fiber.Ctx) error {
 	})
 }
 
-var getAllUsersFunc = services.GetAllUsers
-func InitGetAllUsers(fn func(limit, offset int) ([]Core_authDto.UserInfoResponse, error)) {
-  getAllUsersFunc = fn
-}
+// var getAllUsersFunc = coreServices.GetAllUsers
+// func InitGetAllUsers(fn func(limit, offset int) ([]corePort.UserInfoResponse, error)) {
+//   getAllUsersFunc = fn
+// }
 // GetAllUsers godoc
 // @Summary ดึงข้อมูลผู้ใช้งานทั้งหมด
 // @Description สำหรับ Super Admin ดึง Users ทั้งหมด พร้อม Pagination
@@ -168,11 +168,11 @@ func (ctrl *UserController) GetAllUsers(c *fiber.Ctx) error {
 	return c.Status(200).JSON(users)
   }
 
-  var filterUsersByRoleFunc = services.FilterUsersByRole
+//   var filterUsersByRoleFunc = coreServices.FilterUsersByRole
 
-func InitFilterUsersByRole(fn func(string) ([]Core_authDto.UserInfoResponse, error)) {
-    filterUsersByRoleFunc = fn
-}
+// func InitFilterUsersByRole(fn func(string) ([]corePort.UserInfoResponse, error)) {
+//     filterUsersByRoleFunc = fn
+// }
 // FilterUsersByRole godoc
 // @Summary      ดึงข้อมูลผู้ใช้งานโดยเลือกเฉพาะ role ที่ต้องการ
 // @Description  ใช้สำหรับ Super Admin เพื่อดึง Users เฉพาะ role ที่ระบุ เช่น STAFF, USER, BRANCH_ADMIN

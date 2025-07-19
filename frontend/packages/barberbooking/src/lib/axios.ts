@@ -3,7 +3,7 @@ import axios from "axios";
 // import { RootState } from "@/store";
 
 const instance = axios.create({
-  baseURL: "http://localhost:3001/api/v1",
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}`,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });

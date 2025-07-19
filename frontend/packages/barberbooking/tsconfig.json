@@ -5,18 +5,20 @@
 //     { "path": "./tsconfig.node.json" }
 //   ]
 // }
-
-
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "module": "esnext",
     "rootDir": "src",
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler"
   },
-  "include": ["src", "pages", "components"],
+  "include": [
+    "src",
+  ],
   "references": [
-    { "path": "../shared" }
+    {
+      "path": "../shared"
+    }
   ]
 }

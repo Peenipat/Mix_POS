@@ -8,11 +8,13 @@
     "packages/shared"
   ],
   "scripts": {
+    "build": "npm run build:shared && npm run build:booking",
     "dev:core": "npm --workspace core run dev",
     "build:core": "npm --workspace core run build",
     "preview:core": "npm --workspace core run preview",
     "dev:booking": "npm --workspace booking run dev",
     "build:booking": "npm --workspace booking run build",
+    "build:shared": "npm --workspace @object/shared run build",
     "build:all": "npm run build:core && npm run build:booking"
   },
   "devDependencies": {

@@ -7,7 +7,7 @@ import type { Action, Column } from "../../../components/DataTable";
 import type { Barber } from "../../../types/barber";
 import { useAppSelector } from "../../../store/hook";
 import axios from "../../../lib/axios";
-import { Modal } from "@object/shared"
+import Modal from "@object/shared/components/Modal";
 import type { EditBarberFormData } from "../../../schemas/barberSchema";
 import { editBarberSchema } from "../../../schemas/barberSchema";
 import type { ChangeEvent } from "react";
@@ -169,7 +169,7 @@ export function ManageBarber() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {barbers.map((barber) => (
+              {/* {barbers.map((barber) => (
                 <Card
                   key={barber.id}
                   onView={() => handleView(barber.id)}
@@ -203,7 +203,7 @@ export function ManageBarber() {
                     )}
                   </div>
                 </Card>
-              ))}
+              ))} */}
             </div>
 
           )}

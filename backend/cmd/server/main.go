@@ -63,7 +63,7 @@ func main() {
 	if database.DB == nil {
 		log.Fatal("GORM DB is nil. Cannot proceed.")
 	}
-	
+
 	database.DB.Migrator().DropTable(&bookingModels.WorkingHour{})
 	database.DB.AutoMigrate(
 		// Core module: สร้างสิ่งที่เป็นรากก่อน
@@ -85,6 +85,7 @@ func main() {
 		&bookingModels.AppointmentStatusLog{},
 		&bookingModels.AppointmentReview{},
 		&bookingModels.BarberWorkload{},
+		&bookingModels.AppointmentLock{},
 	)
 
 	// 1) Seed Tenants → เพื่อให้มี tenant ใช้ใน Role, Branch, User

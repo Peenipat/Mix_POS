@@ -1,5 +1,5 @@
 import api from "../lib/axios"; 
-
+import qs from "qs";
 // 🎯 Type สำหรับ Customer
 type CustomerInfo = {
   name: string;
@@ -101,3 +101,30 @@ export async function getAppointmentsByBranch(
   return transformed;
 }
 
+export type GetAppointmentsByBarberQuery = {
+  start?: string;                // "yyyy-MM-dd"
+  end?: string;                  // "yyyy-MM-dd"
+  status?: string[];            // ["COMPLETED", "CONFIRMED"]
+  mode?: "today" | "week" | "past";
+};
+
+export type GetAppointmentsByBarberResponse = {
+  status: string;
+  data: AppointmentBrief[];
+};
+
+export async function getAppointmentsByBarber(
+  barberId: number,
+  query?: GetAppointmentsByBarberQuery
+): Promise<GetAppointmentsByBarberResponse> {
+  const queryString = qs.stringify(
+    {
+      ...query,
+      status: query?.status?.join(","),
+    },
+    { skipNulls: true }
+  );
+
+  const resp = await api.get(`/barberbooking/barbers/${barberId}/appointments?${queryString}`);
+  return resp.data;
+}

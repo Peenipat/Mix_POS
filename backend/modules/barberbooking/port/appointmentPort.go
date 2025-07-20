@@ -17,10 +17,10 @@ type IAppointment interface {
 	CancelAppointment(ctx context.Context,appointmentID uint,actorUserID *uint,actorCustomerID *uint,) error
 	RescheduleAppointment( ctx context.Context,appointmentID uint,newStartTime time.Time,actorUserID *uint, actorCustomerID *uint,) error
 	CalculateAppointmentEndTime(ctx context.Context, serviceID uint, startTime time.Time) (time.Time, error)
-	GetAppointmentsByBarber(ctx context.Context, barberID uint, start *time.Time, end *time.Time) ([]barberBookingModels.Appointment, error)
 	DeleteAppointment(ctx context.Context, appointmentID uint) error
 	GetUpcomingAppointmentsByCustomer(ctx context.Context, customerID uint) (*barberBookingModels.Appointment, error)
     GetAppointmentsByBranch(ctx context.Context,branchID uint,start *time.Time,end *time.Time,) ([]AppointmentBrief, error) 
+	GetAppointmentsByBarber(ctx context.Context,barberID uint,filter AppointmentFilter,) ([]AppointmentBrief, error)
 }
 
 // CreateAppointmentRequest is the payload for creating a new appointment
@@ -98,6 +98,14 @@ type CustomerBrief struct {
 	Name  string `json:"name"`
 	Phone string `json:"phone"`
 }
+
+type AppointmentFilter struct {
+	Start    *time.Time
+	End      *time.Time
+	Status   []barberBookingModels.AppointmentStatus
+	TimeMode string                                 
+}
+
 
 type AppointmentBrief struct {
 	ID         uint          `json:"id"`

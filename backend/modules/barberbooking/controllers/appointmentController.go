@@ -658,89 +658,6 @@ func (ctrl *AppointmentController) RescheduleAppointment(c *fiber.Ctx) error {
 	})
 }
 
-// GET /tenants/:tenant_id/barbers/:barber_id/appointments?start=...&end=...
-// GetAppointmentsByBarber godoc
-// @Summary      ดึงนัดหมายของช่างตัดผม
-// @Description  คืนรายการ Appointment ของช่างตัดผมที่ระบุ ภายใน Tenant ที่กำหนด และช่วงเวลาเลือกได้ (RFC3339)
-// @Tags         Appointment
-// @Accept       json
-// @Produce      json
-// @Param        tenant_id  path      uint      true   "รหัส Tenant"
-// @Param        barber_id  path      uint      true   "รหัส Barber"
-// @Param        start      query     string    false  "เวลาเริ่มต้นกรอง (RFC3339), เช่น 2025-05-30T09:00:00Z"
-// @Param        end        query     string    false  "เวลาสิ้นสุดกรอง (RFC3339), เช่น 2025-05-30T17:00:00Z"
-// @Success      200        {object}  map[string][]barberBookingModels.Appointment  "คืนค่า status success และ array ของ Appointment ใน key `data`"
-// @Failure      400        {object}  map[string]string                            "Invalid tenant_id, barber_id หรือรูปแบบเวลาไม่ถูกต้อง"
-// @Failure      404        {object}  map[string]string                            "Barber not found"
-// @Failure      500        {object}  map[string]string                            "Internal Server Error"
-// @Router       /none [get]
-// @Security     ApiKeyAuth
-func (ctrl *AppointmentController) GetAppointmentsByBarber(c *fiber.Ctx) error {
-	// 1. Parse tenant_id (for consistency; not used in service but ensures valid URL)
-	if _, err := helperFunc.ParseUintParam(c, "tenant_id"); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid tenant_id",
-		})
-	}
-
-	// 2. Parse barber_id
-	barberID, err := helperFunc.ParseUintParam(c, "barber_id")
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid barber_id",
-		})
-	}
-
-	// 3. Parse optional start/end query params (RFC3339)
-	var startPtr, endPtr *time.Time
-
-	if s := c.Query("start", ""); s != "" {
-		t, err := time.Parse(time.RFC3339, s)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"status":  "error",
-				"message": "Invalid start format, expect RFC3339",
-			})
-		}
-		startPtr = &t
-	}
-	if e := c.Query("end", ""); e != "" {
-		t, err := time.Parse(time.RFC3339, e)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"status":  "error",
-				"message": "Invalid end format, expect RFC3339",
-			})
-		}
-		endPtr = &t
-	}
-
-	// 4. Call service
-	appts, err := ctrl.Service.GetAppointmentsByBarber(c.Context(), barberID, startPtr, endPtr)
-	if err != nil {
-		// distinguish not-found vs other errors if service returns specific messages
-		if strings.Contains(err.Error(), "barber with ID") {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"status":  "error",
-				"message": err.Error(),
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed to fetch appointments",
-			"error":   err.Error(),
-		})
-	}
-
-	// 5. Return result
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status": "success",
-		"data":   appts,
-	})
-}
-
 var RolesCanManageAppointment = []coreModels.RoleName{
 	coreModels.RoleNameTenant,
 	coreModels.RoleNameTenantAdmin,
@@ -875,4 +792,91 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		"data":   appts,
 	})
 }
+
+// GetAppointmentsByBarber ดึงการนัดหมายทั้งหมดของช่างในช่วงเวลาหรือสถานะที่กำหนด
+// @Summary      ดึงการนัดหมายทั้งหมดของช่าง
+// @Description  คืนรายการการจองคิวของช่างในระบบ โดยสามารถกรองตามช่วงเวลา, สถานะ หรือ preset mode (today, week, past)
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        barber_id   path      uint     true   "รหัสช่าง (Barber ID)"
+// @Param        start       query     string   false  "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)"
+// @Param        end         query     string   false  "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)"
+// @Param        status      query     string   false  "กรองสถานะ เช่น CONFIRMED,COMPLETED (คั่นด้วย comma)"
+// @Param        mode        query     string   false  "โหมด preset ช่วงเวลา เช่น today, week, past"
+// @Success      200         {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
+// @Failure      400         {object}  map[string]string
+// @Failure      404         {object}  map[string]string
+// @Failure      500         {object}  map[string]string
+// @Router       /barbers/{barber_id}/appointments [get]
+func (ctrl *AppointmentController) GetAppointmentsByBarber(c *fiber.Ctx) error {
+	barberID, err := helperFunc.ParseUintParam(c, "barber_id")
+	if err != nil || barberID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid barber_id",
+		})
+	}
+
+	layout := "2006-01-02"
+	var startTime *time.Time
+	var endTime *time.Time
+	if startStr := c.Query("start"); startStr != "" {
+		t, err := time.Parse(layout, startStr)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid start_time format (yyyy-MM-dd)",
+			})
+		}
+		startTime = &t
+	}
+	if endStr := c.Query("end"); endStr != "" {
+		t, err := time.Parse(layout, endStr)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid end_time format (yyyy-MM-dd)",
+			})
+		}
+		t = t.Add(23*time.Hour + 59*time.Minute + 59*time.Second + 999*time.Millisecond)
+		endTime = &t
+	}
+
+	// timeMode = today, week, past
+	timeMode := c.Query("mode", "")
+
+	// status=CONFIRMED,COMPLETED
+	statusParam := c.Query("status", "")
+	var statusList []barberBookingModels.AppointmentStatus
+	if statusParam != "" {
+		parts := strings.Split(statusParam, ",")
+		for _, s := range parts {
+			statusList = append(statusList, barberBookingModels.AppointmentStatus(strings.ToUpper(strings.TrimSpace(s))))
+		}
+	}
+
+	filter := barberBookingPort.AppointmentFilter{
+		Start:    startTime,
+		End:      endTime,
+		Status:   statusList,
+		TimeMode: timeMode,
+	}
+
+	appts, err := ctrl.Service.GetAppointmentsByBarber(c.Context(), barberID, filter)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data":   appts,
+	})
+}
+
+
+
 

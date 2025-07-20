@@ -671,58 +671,6 @@ func (s *appointmentService) RescheduleAppointment(
 	})
 }
 
-func (s *appointmentService) GetAppointmentsByBarber(
-	ctx context.Context,
-	barberID uint,
-	start *time.Time,
-	end *time.Time,
-) ([]barberBookingModels.Appointment, error) {
-	// 0. validate IDs
-	if barberID == 0 {
-		return nil, fmt.Errorf("invalid barberID: %d", barberID)
-	}
-	// 1. optional: ถ้าส่งทั้ง start+end มา ให้ตรวจ start <= end
-	if start != nil && end != nil && start.After(*end) {
-		return nil, fmt.Errorf("start time %v is after end time %v", *start, *end)
-	}
-
-	// 2. ตรวจว่า barber ยังอยู่ในระบบ (และยังไม่ soft-deleted)
-	var barber barberBookingModels.Barber
-	if err := s.DB.WithContext(ctx).
-		Where("id = ? AND deleted_at IS NULL", barberID).
-		First(&barber).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("barber with ID %d not found", barberID)
-		}
-		return nil, fmt.Errorf("failed to lookup barber: %w", err)
-	}
-
-	// 3. Build query
-	q := s.DB.WithContext(ctx).
-		Model(&barberBookingModels.Appointment{}).
-		Where("barber_id = ?", barberID)
-
-	if start != nil {
-		q = q.Where("start_time >= ?", *start)
-	}
-	if end != nil {
-		q = q.Where("end_time <= ?", *end)
-	}
-
-	// 4. Optionally limit how many you return if no filters (to prevent full table scan)
-	if start == nil && end == nil {
-		q = q.Limit(1000) // หรือพาราม  config มากำหนด
-	}
-
-	// 5. Execute
-	var appts []barberBookingModels.Appointment
-	if err := q.Order("start_time ASC").Find(&appts).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch appointments: %w", err)
-	}
-	return appts, nil
-}
-
-
 
 func (s *appointmentService) GetAppointmentsByBranch(
 	ctx context.Context,
@@ -893,3 +841,131 @@ func (s *appointmentService) CalculateAppointmentEndTime(ctx context.Context, se
 	endTime := startTime.Add(duration)
 	return endTime, nil
 }
+
+func (s *appointmentService) GetAppointmentsByBarber(
+	ctx context.Context,
+	barberID uint,
+	filter barberBookingPort.AppointmentFilter,
+) ([]barberBookingPort.AppointmentBrief, error) {
+	// 1. ตรวจสอบ barber
+	var exists bool
+	if err := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Barber{}).
+		Select("count(*) > 0").
+		Where("id = ? AND deleted_at IS NULL", barberID).
+		Find(&exists).Error; err != nil {
+		return nil, fmt.Errorf("failed to check barber existence: %w", err)
+	}
+	if !exists {
+		return []barberBookingPort.AppointmentBrief{}, nil
+	}
+
+	// 2. กำหนดช่วงเวลาอัตโนมัติจาก filter.TimeMode
+	now := time.Now()
+	switch filter.TimeMode {
+	case "today":
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		end := start.Add(24 * time.Hour)
+		filter.Start = &start
+		filter.End = &end
+	case "week":
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+		start := time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
+		end := start.AddDate(0, 0, 7)
+		filter.Start = &start
+		filter.End = &end
+	case "past":
+		end := now
+		filter.End = &end
+	}
+
+	// 3. Query Appointments
+	var appointments []barberBookingModels.Appointment
+	q := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Appointment{}).
+		Where("barber_id = ?", barberID).
+		Select("id", "branch_id", "service_id", "barber_id", "customer_id", "start_time", "end_time", "status").
+		Preload("Service", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "description", "duration", "price")
+		}).
+		Preload("Barber", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "username")
+		}).
+		Order("start_time ASC")
+
+	if filter.Start != nil {
+		q = q.Where("start_time >= ?", *filter.Start)
+	}
+	if filter.End != nil {
+		q = q.Where("start_time <= ?", *filter.End)
+	}
+	if len(filter.Status) > 0 {
+		q = q.Where("status IN ?", filter.Status)
+	}
+
+	if err := q.Find(&appointments).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch appointments: %w", err)
+	}
+
+	// 4. Load Customers
+	customerIDs := make(map[uint]bool)
+	for _, a := range appointments {
+		if a.CustomerID > 0 {
+			customerIDs[a.CustomerID] = true
+		}
+	}
+	ids := make([]uint, 0, len(customerIDs))
+	for id := range customerIDs {
+		ids = append(ids, id)
+	}
+
+	customerMap := map[uint]barberBookingModels.Customer{}
+	if len(ids) > 0 {
+		var customers []barberBookingModels.Customer
+		if err := s.DB.WithContext(ctx).
+			Model(&barberBookingModels.Customer{}).
+			Where("id IN ?", ids).
+			Select("id", "name", "phone").
+			Find(&customers).Error; err != nil {
+			return nil, fmt.Errorf("failed to fetch customers: %w", err)
+		}
+		for _, c := range customers {
+			customerMap[c.ID] = c
+		}
+	}
+
+	// 5. Map to DTO
+	var result []barberBookingPort.AppointmentBrief
+	for _, a := range appointments {
+		cust := customerMap[a.CustomerID]
+		result = append(result, barberBookingPort.AppointmentBrief{
+			ID:        a.ID,
+			BranchID:  a.BranchID,
+			ServiceID: a.ServiceID,
+			Service: barberBookingPort.ServiceBrief{
+				Name:        a.Service.Name,
+				Description: a.Service.Description,
+				Duration:    a.Service.Duration,
+				Price:       int(a.Service.Price),
+			},
+			BarberID: a.BarberID,
+			Barber: barberBookingPort.BarberBrief{
+				Username: a.Barber.Username,
+			},
+			CustomerID: a.CustomerID,
+			Customer: barberBookingPort.CustomerBrief{
+				Name:  cust.Name,
+				Phone: cust.Phone,
+			},
+			StartTime: a.StartTime,
+			EndTime:   a.EndTime,
+			Status:    string(a.Status),
+		})
+	}
+
+	return result, nil
+}
+

@@ -24,8 +24,6 @@ import HelpPage from "./page/admin/HelpPage";
 import BarberDetail from "./page/admin/barber/Barber_id";
 import BarberLayout from "./layouts/BarberLayout";
 import BarberDashboard from "./page/barbers/BarberDashboard";
-import BarberAppointment from "./page/barbers/AppointmentsHistory";
-import AppointmentsHistory from "./page/barbers/AppointmentsHistory";
 import BarberProfile from "./page/barbers/BarberProfile";
 import CustomerReview from "./page/barbers/CustomerReview";
 import BarberIncome from "./page/barbers/BarberIncome";

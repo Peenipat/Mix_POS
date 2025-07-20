@@ -144,9 +144,7 @@ export const TotalBarberSchedule = ({
     setSelectedDate: (date: string) => void;
 }) => {
     const [slot, setSlot] = useState<string[]>([]);
-    const today = format(new Date(), "yyyy-MM-dd");
-    // const [selectedDate, setSelectedDate] = useState<string>(today);
-
+    const today = format(new Date(), "yyyy-MM-dd")
 
     useEffect(() => {
         async function fetchSlot() {
@@ -217,27 +215,30 @@ export const TotalBarberSchedule = ({
         const slotStart = timeToMinutes(slotStartTime);
         const slotEnd = timeToMinutes(addMinutes(slotStartTime, 30));
 
-        // 1. เช็คจาก appointments
         for (const appt of appointments) {
             if (appt.barber_id !== barberId) continue;
+
             const apptStart = timeToMinutes(appt.start);
             const apptEnd = timeToMinutes(appt.end);
-            if (slotStart < apptEnd && slotEnd > apptStart) return true;
+
+            if (slotStart < apptEnd && slotEnd > apptStart) {
+                return false; 
+            }
         }
 
-        // ✅ 2. เช็คจาก locks ที่ยัง active
         for (const lock of locks || []) {
             if (lock.barber_id !== barberId || !lock.is_active) continue;
-            const lockStart = timeToMinutes(lock.start_time.slice(11, 16)); // "09:30"
-            const lockEnd = timeToMinutes(lock.end_time.slice(11, 16));     // "10:00"
-            if (slotStart < lockEnd && slotEnd > lockStart) return true;
+
+            const lockStart = timeToMinutes(lock.start_time.slice(11, 16));
+            const lockEnd = timeToMinutes(lock.end_time.slice(11, 16));
+
+            if (slotStart < lockEnd && slotEnd > lockStart) {
+                return true; 
+            }
         }
 
         return false;
     }
-
-
-
 
 
     function filterQuarterSlots(slots: string[]) {

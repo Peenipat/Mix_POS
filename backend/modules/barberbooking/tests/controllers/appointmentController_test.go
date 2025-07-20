@@ -29,6 +29,11 @@ type MockAppointmentService struct {
 	mock.Mock
 }
 
+// GetAppointmentsByBarber implements barberBookingPort.IAppointment.
+func (m *MockAppointmentService) GetAppointmentsByBarber(ctx context.Context, barberID uint, filter barberBookingPort.AppointmentFilter) ([]barberBookingPort.AppointmentBrief, error) {
+	panic("unimplemented")
+}
+
 // GetAppointmentsByBranch implements barberBookingPort.IAppointment.
 func (m *MockAppointmentService) GetAppointmentsByBranch(ctx context.Context, branchID uint, start *time.Time, end *time.Time) ([]barberBookingPort.AppointmentBrief, error) {
 	panic("unimplemented")
@@ -137,19 +142,6 @@ func (m *MockAppointmentService) CalculateAppointmentEndTime(
 	return args.Get(0).(time.Time), args.Error(1)
 }
 
-func (m *MockAppointmentService) GetAppointmentsByBarber(
-	ctx context.Context,
-	barberID uint,
-	start *time.Time,
-	end *time.Time,
-) ([]barberBookingModels.Appointment, error) {
-	args := m.Called(ctx, barberID, start, end)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]barberBookingModels.Appointment), args.Error(1)
-}
-
 func (m *MockAppointmentService) DeleteAppointment(
 	ctx context.Context,
 	appointmentID uint,
@@ -178,7 +170,6 @@ func setupAppointmentApp(mockSvc *MockAppointmentService) *fiber.App {
 	app.Get("/tenants/:tenant_id/appointments", ctrl.ListAppointments)
 	app.Post("/tenants/:tenant_id/appointments/:appointment_id/cancel", ctrl.CancelAppointment)
 	app.Post("/tenants/:tenant_id/appointments/:appointment_id/reschedule", ctrl.RescheduleAppointment)
-	app.Get("/tenants/:tenant_id/barbers/:barber_id/appointments", ctrl.GetAppointmentsByBarber)
 	return app
 }
 

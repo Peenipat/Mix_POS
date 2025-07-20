@@ -133,6 +133,90 @@
                 }
             }
         },
+        "/barbers/{barber_id}/appointments": {
+            "get": {
+                "description": "คืนรายการการจองคิวของช่างในระบบ โดยสามารถกรองตามช่วงเวลา, สถานะ หรือ preset mode (today, week, past)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายทั้งหมดของช่าง",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสช่าง (Barber ID)",
+                        "name": "barber_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "กรองสถานะ เช่น CONFIRMED,COMPLETED (คั่นด้วย comma)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "โหมด preset ช่วงเวลา เช่น today, week, past",
+                        "name": "mode",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/branches/{branch_id}/appointments": {
             "get": {
                 "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้",

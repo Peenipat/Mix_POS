@@ -615,6 +615,63 @@ paths:
       summary: ดึงข้อมูลช่างตัดผมตาม ID
       tags:
       - Barber
+  /barbers/{barber_id}/appointments:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการการจองคิวของช่างในระบบ โดยสามารถกรองตามช่วงเวลา, สถานะ
+        หรือ preset mode (today, week, past)
+      parameters:
+      - description: รหัสช่าง (Barber ID)
+        in: path
+        name: barber_id
+        required: true
+        type: integer
+      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: start
+        type: string
+      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: end
+        type: string
+      - description: กรองสถานะ เช่น CONFIRMED,COMPLETED (คั่นด้วย comma)
+        in: query
+        name: status
+        type: string
+      - description: โหมด preset ช่วงเวลา เช่น today, week, past
+        in: query
+        name: mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืน status success และรายการการนัดหมาย
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงการนัดหมายทั้งหมดของช่าง
+      tags:
+      - Appointment
   /branches/{branch_id}/appointments:
     get:
       consumes:

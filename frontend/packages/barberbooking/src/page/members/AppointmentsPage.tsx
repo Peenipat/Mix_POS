@@ -151,9 +151,6 @@ export default function AppointmentsPage() {
         }
     };
 
-
-
-
     const handleClose = async () => {
         setIsModalOpen(false);
         setSelectedBooking(null);
@@ -181,7 +178,6 @@ export default function AppointmentsPage() {
 
         return () => clearInterval(timer);
     }, [isModalOpen, countdown]);
-
 
     const formatTime = (seconds: number) => {
         const min = Math.floor(seconds / 60)
@@ -347,30 +343,46 @@ export default function AppointmentsPage() {
         formState: { errors }
     } = useForm<GuestFormInput>();
 
-    const handleBookingSubmit = async (data: GuestFormInput) => {
+    const handleBookingSubmit = async () => {
+        if (!formData || !selectedBooking || !selectedServiceId) return;
+
         try {
-            const localDateTime = `${selectedBooking?.date}T${selectedBooking?.time}:00`;
+            const localDateTime = `${selectedBooking.date}T${selectedBooking.time}:00`;
             const startTime = new Date(localDateTime).toISOString();
 
             const payload = {
                 customer_id: 0,
                 customer: {
-                    name: data.name,
-                    phone: data.phone
+                    name: formData.name,
+                    phone: formData.phone
                 },
                 branch_id: 1,
-                service_id: selectedServiceId!,
-                barber_id: selectedBooking?.barberId || 0,
+                service_id: selectedServiceId,
+                barber_id: selectedBooking.barberId,
                 start_time: startTime,
                 notes: ""
             };
 
             const result = await bookAppointment(1, payload);
-            console.log("✅ สำเร็จ:", result);
+
+            if (result.status === "success") {
+                console.log("จองสำเร็จ:", result);
+                handleClose();
+            } else {
+                console.error("จองไม่สำเร็จ:", result);
+            }
 
         } catch (err) {
-            console.error("❌ จองไม่สำเร็จ:", err);
+            console.error("จองไม่สำเร็จ:", err);
         }
+    };
+
+
+    const [isConfirmStep, setIsConfirmStep] = useState(false);
+    const [formData, setFormData] = useState<GuestFormInput | null>(null);
+    const onProceedToConfirm = (data: GuestFormInput) => {
+        setFormData(data);        // เก็บข้อมูลลูกค้า
+        setIsConfirmStep(true);   // ซ่อนฟอร์ม → แสดง confirm modal
     };
 
     const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
@@ -482,154 +494,172 @@ export default function AppointmentsPage() {
                         ระบบจะล็อกคิวนี้ไว้ {formatTime(countdown)} นาที
                     </div>
 
-                    <form onSubmit={handleSubmit(handleBookingSubmit)}>
-                        <div
-                            id="modal-fix"
-                            className={selectedBooking ? "block" : "hidden"}
-                        >
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium">วันที่จอง</label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full bg-gray-200 rounded-md"
-                                    value={selectedBooking?.date || ""}
-                                    readOnly
-                                />
-                            </div>
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium">เวลา</label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full bg-gray-200 rounded-md"
-                                    value={selectedBooking?.time || ""}
-                                    readOnly
-                                />
-                            </div>
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium ">ช่าง</label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full bg-gray-200 rounded-md"
-                                    value={selectedBooking?.barberName || ""}
-                                    readOnly
-                                />
-                            </div>
-                        </div>
-
-                        <div id="modal-form">
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium">ชื่อลูกค้า</label>
-                                <Controller
-                                    name="name"
-                                    control={control}
-                                    defaultValue=""
-                                    rules={{ required: "กรุณากรอกชื่อ" }}
-                                    render={({ field }) => (
-                                        <input
-                                            {...field}
-                                            className="input input-bordered w-full rounded-md"
-                                            placeholder="กรุณากรอกชื่อลูกค้า"
-                                        />
-                                    )}
-                                />
+                    {!isConfirmStep && (
+                        <form onSubmit={handleSubmit(onProceedToConfirm)}>
+                            <div
+                                id="modal-fix"
+                                className={selectedBooking ? "block" : "hidden"}
+                            >
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium">วันที่จอง</label>
+                                    <input
+                                        type="text"
+                                        className="input input-bordered w-full bg-gray-200 rounded-sm p-1"
+                                        value={selectedBooking?.date || ""}
+                                        readOnly
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium">เวลา</label>
+                                    <input
+                                        type="text"
+                                        className="input input-bordered w-full bg-gray-200 rounded-sm p-1"
+                                        value={selectedBooking?.time || ""}
+                                        readOnly
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium ">ช่าง</label>
+                                    <input
+                                        type="text"
+                                        className="input input-bordered w-full bg-gray-200 rounded-sm p-1"
+                                        value={selectedBooking?.barberName || ""}
+                                        readOnly
+                                    />
+                                </div>
                             </div>
 
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium">เบอร์โทรศัพท์</label>
-                                <Controller
-                                    name="phone"
-                                    control={control}
-                                    defaultValue=""
-                                    rules={{
-                                        required: "กรุณากรอกเบอร์โทร",
-                                        pattern: {
-                                            value: /^[0-9]{9,10}$/,
-                                            message: "เบอร์โทรไม่ถูกต้อง"
-                                        }
-                                    }}
-                                    render={({ field }) => (
-                                        <input
-                                            {...field}
-                                            className="input input-bordered w-full rounded-md"
-                                            placeholder="กรุณากรอกเบอร์โทร"
-                                        />
-                                    )}
-                                />
-
-                            </div>
-                        </div>
-                        <h3 className="mb-1">เลือกบริการ</h3>
-                        <div className="grid grid-cols-4 w-full gap-3 ">
-                            {loadingServices && <p>Loading services…</p>}
-                            {errorServices && (
-                                <p className="text-red-500">Error loading services: {errorServices}</p>
-                            )}
-
-                            {services.map((service) => {
-                                const isSelected = service.id === selectedServiceId;
-                                if (selectedServiceId && !isSelected) return null;
-
-                                return (
-                                    <div
-                                        key={service.id}
-                                        className="bg-gray-100 rounded-xl shadow-lg flex flex-col p-1"
-                                    >
-                                        <div className="flex items-center p-1">
-                                            {/* ข้อความ */}
-                                            <div className="flex flex-col justify-center flex-grow overflow-hidden">
-                                                <div className="text-lg font-semibold truncate">{service.name}</div>
-                                                <div className="text-gray-400 text-sm truncate">{service.description}</div>
-                                            </div>
-
-                                            {/* ราคา + นาที */}
-                                            <div className="bg-gray-400 text-white text-right rounded-md px-1 py-1 flex flex-col items-end justify-center min-w-[60px]">
-                                                <span className="text-md font-bold">฿{service.price}</span>
-                                                <span className="text-sm">{service.duration} นาที</span>
-                                            </div>
-                                        </div>
-
-                                        {!isSelected ? (
-                                            <button
-                                                type="button"
-                                                className="w-full bg-green-400 hover:bg-green-700 text-white  rounded"
-                                                onClick={() => setSelectedServiceId(service.id)}
-                                            >
-                                                เลือก
-                                            </button>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                className="w-full bg-gray-300 text-gray-700  rounded"
-                                                onClick={() => setSelectedServiceId(null)}
-                                            >
-                                                ยกเลิก
-                                            </button>
+                            <div id="modal-form">
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium">ชื่อลูกค้า</label>
+                                    <Controller
+                                        name="name"
+                                        control={control}
+                                        defaultValue=""
+                                        rules={{ required: "กรุณากรอกชื่อ" }}
+                                        render={({ field }) => (
+                                            <input
+                                                {...field}
+                                                className="input input-bordered w-full rounded-sm p-1"
+                                                placeholder="กรุณากรอกชื่อลูกค้า"
+                                            />
                                         )}
+                                    />
+                                </div>
 
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium">เบอร์โทรศัพท์</label>
+                                    <Controller
+                                        name="phone"
+                                        control={control}
+                                        defaultValue=""
+                                        rules={{
+                                            required: "กรุณากรอกเบอร์โทร",
+                                            pattern: {
+                                                value: /^[0-9]{9,10}$/,
+                                                message: "เบอร์โทรไม่ถูกต้อง"
+                                            }
+                                        }}
+                                        render={({ field }) => (
+                                            <input
+                                                {...field}
+                                                className="input input-bordered w-full rounded-sm p-1"
+                                                placeholder="กรุณากรอกเบอร์โทร"
+                                            />
+                                        )}
+                                    />
+
+                                </div>
+                            </div>
+                            <h3 className="mb-1">เลือกบริการ</h3>
+                            <div className="grid grid-cols-4 w-full gap-3 ">
+                                {loadingServices && <p>Loading services…</p>}
+                                {errorServices && (
+                                    <p className="text-red-500">Error loading services: {errorServices}</p>
+                                )}
+
+                                {services.map((service) => {
+                                    const isSelected = service.id === selectedServiceId;
+                                    if (selectedServiceId && !isSelected) return null;
+
+                                    return (
+                                        <div
+                                            key={service.id}
+                                            className="bg-gray-100 rounded-xl shadow-lg flex flex-col p-1"
+                                        >
+                                            <div className="flex items-center p-1">
+                                                {/* ข้อความ */}
+                                                <div className="flex flex-col justify-center flex-grow overflow-hidden">
+                                                    <div className="text-lg font-semibold truncate">{service.name}</div>
+                                                    <div className="text-gray-400 text-sm truncate">{service.description}</div>
+                                                </div>
+
+                                                {/* ราคา + นาที */}
+                                                <div className="bg-gray-400 text-white text-right rounded-md px-1 py-1 flex flex-col items-end justify-center min-w-[60px]">
+                                                    <span className="text-md font-bold">฿{service.price}</span>
+                                                    <span className="text-sm">{service.duration} นาที</span>
+                                                </div>
+                                            </div>
+
+                                            {!isSelected ? (
+                                                <button
+                                                    type="button"
+                                                    className="w-full bg-green-400 hover:bg-green-700 text-white  rounded"
+                                                    onClick={() => setSelectedServiceId(service.id)}
+                                                >
+                                                    เลือก
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="w-full bg-gray-300 text-gray-700  rounded"
+                                                    onClick={() => setSelectedServiceId(null)}
+                                                >
+                                                    ยกเลิก
+                                                </button>
+                                            )}
+
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
 
-                        <div className="flex gap-3 pt-4">
-                            <button
-                                className="w-full bg-gray-600 hover:bg-green-700 text-white py-1 rounded"
-                                onClick={handleClose}
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    className="w-full bg-gray-600 hover:bg-green-700 text-white py-1 rounded"
+                                    onClick={handleClose}
 
-                            >
-                                ยกเลิก
-                            </button>
-                            <button
-                                type="submit"
-                                className="w-full bg-green-600 hover:bg-green-700 text-white py-1 rounded"
-                                id="comfirm-booking"
-                            >
-                                ยืนยันการจอง
-                            </button>
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white py-1 rounded"
+                                    id="comfirm-booking"
+                                >
+                                    ดำเนินการต่อ
+                                </button>
 
-                        </div>
-                    </form>
+                            </div>
+                        </form>
+                    )}
+
+                    {isConfirmStep && (
+                        <ConfirmModal
+                            hide={false}
+                            onConfirm={() => handleSubmit(handleBookingSubmit)()}
+                            bookingInfo={{
+                                date: selectedBooking?.date,
+                                time: selectedBooking?.time,
+                                customerName: formData?.name,
+                                barberName: selectedBooking?.barberName,
+                                serviceName: services.find((s) => s.id === selectedServiceId)?.name,
+                                price: Number(services.find((s) => s.id === selectedServiceId)?.price) || 0,
+                                duration: Number(services.find((s) => s.id === selectedServiceId)?.duration) || 0,
+                            }}
+                        />
+                    )}
                 </Modal>
 
 
@@ -652,6 +682,74 @@ export default function AppointmentsPage() {
         </div >
     );
 }
+
+interface ConfirmModalProps {
+    hide: boolean;
+    onConfirm: () => void;
+    bookingInfo: {
+        date?: string;
+        time?: string;
+        customerName?: string;
+        barberName?: string;
+        serviceName?: string;
+        price?: number;
+        duration?: number;
+    };
+}
+
+const ConfirmModal = ({ hide, onConfirm, bookingInfo }: ConfirmModalProps) => {
+    return (
+        <div className={`${hide ? "hidden" : ""} w-full flex`}>
+            <div className="w-1/2">
+                <PaymentOptions />
+            </div>
+
+            <div className="w-1/2 flex flex-col gap-3">
+                <h2 className="text-2xl font-semibold mt-2 text-center">ใบจอง</h2>
+
+                <div className="flex justify-between text-base px-2">
+                    <p>วันที่จอง: <span className="font-medium">{bookingInfo.date}</span></p>
+                    <p>เวลาที่จอง: <span className="font-medium">{bookingInfo.time}</span></p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-1 text-base px-2 mt-0">
+                    <p>ชื่อลูกค้า:</p>
+                    <p className="text-right">{bookingInfo.customerName}</p>
+
+                    <p>สมาชิก:</p>
+                    <p className="text-right">ไม่ได้เป็น</p>
+
+                    <p>ช่างที่เลือก:</p>
+                    <p className="text-right">{bookingInfo.barberName}</p>
+
+                    <p>บริการที่เลือก:</p>
+                    <p className="text-right">{bookingInfo.serviceName}</p>
+
+                    <p>ราคา:</p>
+                    <p className="text-right">{bookingInfo.price} บาท</p>
+
+                    <p>เวลาโดยประมาณ:</p>
+                    <p className="text-right">{bookingInfo.duration} นาที</p>
+                </div>
+
+                <div className="text-center">
+                    <p>ขอบคุณที่ใช้บริการ</p>
+                </div>
+
+                <div className="pt-4">
+                    <button
+                        type="button"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
+                        onClick={onConfirm}
+                    >
+                        ยืนยันการจอง
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 interface BookingModalProps {
     isOpen: boolean;
     hide: boolean
@@ -868,10 +966,10 @@ const BookingFormExample = ({ isOpen, hide }: BookingFormProps) => {
 };
 
 
-interface ConfirmModalProps {
+interface ConfirmModalProps2 {
     hide: boolean
 }
-const ConfirmExample = ({ hide }: ConfirmModalProps) => {
+const ConfirmExample = ({ hide }: ConfirmModalProps2) => {
     return (
         <div className={`${hide ? "hidden" : ""} w-full flex`}>
             <div className="w-1/2">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import {
   Clock,
   CheckCircle,
@@ -44,7 +45,9 @@ export default function BarberDashboard() {
   const [appointments, setAppointments] = useState<AppointmentBrief[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const BARBER_ID = 1;
+  console.log(appointments[0])
+
+  const BARBER_ID = 2;
 
   useEffect(() => {
     async function fetchAppointments() {
@@ -131,7 +134,7 @@ export default function BarberDashboard() {
               >
                 <div>
                   <div className="text-sm text-gray-500">
-                    {appt.start} - {appt.end}
+                  {dayjs(appt.start).format("HH:mm")} - {dayjs(appt.end).format("HH:mm")}
                   </div>
                   <div className="text-lg font-semibold">
                     {appt.customer.name}

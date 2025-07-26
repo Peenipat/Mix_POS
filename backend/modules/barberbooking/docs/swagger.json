@@ -8,6 +8,57 @@
     },
     "basePath": "/api/v1/barberbooking",
     "paths": {
+        "/appointments/by-phone": {
+            "get": {
+                "description": "คืนรายการการจองทั้งหมดของลูกค้าที่ใช้เบอร์โทรนั้นในระบบ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายด้วยเบอร์โทร",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "เบอร์โทรลูกค้า (Customer Phone)",
+                        "name": "phone",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/barbers/{barber_id}": {
             "get": {
                 "description": "คืนข้อมูล Barber ตามรหัสที่ระบุ",
@@ -219,7 +270,7 @@
         },
         "/branches/{branch_id}/appointments": {
             "get": {
-                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้",
+                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้ เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้",
                 "consumes": [
                     "application/json"
                 ],
@@ -240,14 +291,20 @@
                     },
                     {
                         "type": "string",
-                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15",
                         "name": "start",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20",
                         "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)",
+                        "name": "filter",
                         "in": "query"
                     }
                 ],
@@ -260,7 +317,7 @@
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -269,7 +326,7 @@
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "ไม่พบข้อมูล",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -278,7 +335,7 @@
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3609,6 +3666,87 @@
                     },
                     "500": {
                         "description": "Failed to update working hours",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/workinghour/branches/{branch_id}/slots": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ดึงช่วงเวลาที่เปิดให้บริการในแต่ละวัน โดยสามารถกรองได้ตามวันนี้, สัปดาห์นี้ หรือเดือนนี้ พร้อมทั้งกรองช่วงเวลา (เช่น 09:00-12:30)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingHour"
+                ],
+                "summary": "ดึง slot เวลาที่ว่างของสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสผู้เช่า (Tenant ID)",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา (Branch ID)",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ประเภทการกรองวันที่: week (สัปดาห์นี้), month (เดือนนี้), หรือเว้นไว้เพื่อดึงแค่วันนี้",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาเริ่มต้นที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 09:00)",
+                        "name": "from_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาสิ้นสุดที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 12:30)",
+                        "name": "to_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status และ slot รายวัน เช่น { '2025-07-22': ['09:00', '09:30', ...] }",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "พารามิเตอร์ไม่ถูกต้อง เช่น tenant_id หรือ branch_id ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

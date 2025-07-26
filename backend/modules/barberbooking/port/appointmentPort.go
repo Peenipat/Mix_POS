@@ -19,8 +19,18 @@ type IAppointment interface {
 	CalculateAppointmentEndTime(ctx context.Context, serviceID uint, startTime time.Time) (time.Time, error)
 	DeleteAppointment(ctx context.Context, appointmentID uint) error
 	GetUpcomingAppointmentsByCustomer(ctx context.Context, customerID uint) (*barberBookingModels.Appointment, error)
-    GetAppointmentsByBranch(ctx context.Context,branchID uint,start *time.Time,end *time.Time,) ([]AppointmentBrief, error) 
+	GetAppointmentsByBranch(
+		ctx context.Context,
+		branchID uint,
+		start *time.Time,
+		end *time.Time,
+		filterType string, 
+	) ([]AppointmentBrief, error)
 	GetAppointmentsByBarber(ctx context.Context,barberID uint,filter AppointmentFilter,) ([]AppointmentBrief, error)
+	GetAppointmentsByPhone(
+		ctx context.Context,
+		phone string,
+	) ([]AppointmentBrief, error)
 }
 
 // CreateAppointmentRequest is the payload for creating a new appointment

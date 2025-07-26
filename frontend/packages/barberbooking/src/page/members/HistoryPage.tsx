@@ -101,36 +101,98 @@ export const mockAppointmentHistory = [
         review: null,
     },
 ];
-import { useState } from "react";
+export type AppointmentHistoryItem = {
+    id: string | number;
+    barberName: string;
+    serviceName: string;
+    appointmentDate: string;     // รูปแบบ: yyyy-MM-dd
+    appointmentTime: string;     // รูปแบบ: HH:mm
+    branchName: string;
+    status: string;
+    review?: {
+        rating: number;
+        comment: string;
+    };
+};
+
+import { useEffect, useState } from "react";
+import { getAppointmentsByPhone } from "../../api/appointment";
+import { format } from "date-fns/format";
 export default function HistoryPage() {
+    const [phone,setPhone] = useState('')
     const [search, setSearch] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [onlyUpcoming, setOnlyUpcoming] = useState(false);
+    const [appointments, setAppointments] = useState<AppointmentHistoryItem[]>([]);
 
-    const today = new Date().toISOString().split("T")[0]; // yyyy-MM-dd
+    async function loadAppointmentsByPhone(phone: string) {
+        try {
+            const raw = await getAppointmentsByPhone(phone)
+            const mapped = transformAppointments(raw);
+            setAppointments(mapped);
+        } catch (err) {
+            console.error("Failed to load appointments:", err);
+            setAppointments([]);
+        }
+    }
 
-    const filteredAppointments = mockAppointmentHistory.filter((appt) => {
-        const inSearch =
-            appt.barberName.includes(search) || appt.serviceName.includes(search);
+    const today = new Date().toISOString().split("T")[0];
+    function translateStatus(status: string): string {
+        switch (status.toUpperCase()) {
+            case "COMPLETED":
+                return "เสร็จสิ้น";
+            case "CONFIRMED":
+                return "ยืนยันแล้ว";
+            case "PENDING":
+                return "รอยืนยัน";
+            case "CANCELLED":
+                return "ยกเลิก";
+            case "NO_SHOW":
+                return "ไม่มา";
+            default:
+                return status;
+        }
+    }
 
-        const inDateRange =
-            (!startDate || appt.appointmentDate >= startDate) &&
-            (!endDate || appt.appointmentDate <= endDate);
 
-        const isUpcoming = !onlyUpcoming || appt.appointmentDate > today;
+    function transformAppointments(raw: any[]): AppointmentHistoryItem[] {
+        return raw.map((a) => {
+            const fullDateTimeStr = `${a.date}T${a.start}`; // "2025-07-27T10:30"
+            const startDate = new Date(fullDateTimeStr);
 
-        return inSearch && inDateRange && isUpcoming;
-    });
+            return {
+                id: a.id,
+                barberName: a.barber?.username || "ไม่ระบุ",
+                serviceName: a.service?.name || "ไม่ระบุ",
+                appointmentDate: format(startDate, "yyyy-MM-dd"),
+                appointmentTime: format(startDate, "HH:mm"),
+                branchName: a.branch?.name || "ไม่ระบุ", // ยังไม่มี? ใส่ "ไม่ระบุ"
+                status: translateStatus(a.status),
+                review: a.review
+                    ? {
+                        rating: a.review.rating,
+                        comment: a.review.comment,
+                    }
+                    : undefined,
+            };
+        });
+    }
 
+
+    useEffect(() => {
+        if (phone.length >= 10) {
+            loadAppointmentsByPhone(phone);
+        }
+    }, [phone]);
     return (
         <div className="p-4 space-y-4">
-            <h2 className="text-xl font-bold">ประวัติการนัดหมาย</h2>
+            <h2 className="text-xl font-bold">ประวัติการจองคิว</h2>
             <input
                 id="phone-box"
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 placeholder="กรอกเบอร์โทร"
                 className="input input-bordered"
             />
@@ -166,10 +228,10 @@ export default function HistoryPage() {
                 </label>
             </div>
             <div className="grid gap-2 lg:grid-cols-2">
-                {filteredAppointments.length === 0 ? (
+                {appointments.length === 0 ? (
                     <p className="text-gray-500 italic">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p>
                 ) : (
-                    filteredAppointments.map((appt) => (
+                    appointments.map((appt) => (
                         <div
                             key={appt.id}
                             className="p-4 border rounded-md shadow-sm bg-white space-y-1"
@@ -178,7 +240,7 @@ export default function HistoryPage() {
                                 {appt.serviceName} กับ {appt.barberName}
                             </div>
                             <div className="text-sm text-gray-600">
-                                วันที่: {appt.appointmentDate} เวลา: {appt.appointmentTime} <br />
+                                วันที่: {format(new Date(appt.appointmentDate), "dd-MM-yyyy")} เวลา: {appt.appointmentTime} <br />
                                 สาขา: {appt.branchName} | สถานะ: {appt.status}
                             </div>
                             {appt.review ? (

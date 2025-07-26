@@ -96,7 +96,6 @@ export default function AppointmentsPage() {
                 getAppointmentLocks(1, 1, barber.id, dateParam)
             )
         );
-
         const merged = allLocks.flat();
         setLocks(merged);
     };
@@ -109,16 +108,12 @@ export default function AppointmentsPage() {
 
 
     const handleOpenModal = async (date: string, barberId: number, time: string) => {
-
         const barber = barbers.find((b) => b.id === barberId);
         if (!barber) return;
-
         try {
             setLoading(true);
-            console.log("Date : ", date, "time : ", time)
             const start = new Date(`${date}T${time}:00`);
             const end = new Date(start.getTime() + 30 * 60 * 1000);
-            console.log("start : ", start, "end : ", end)
 
             const lock: AppointmentLockResponse = await createAppointmentLock(1, 1, {
                 barber_id: barberId,
@@ -137,15 +132,11 @@ export default function AppointmentsPage() {
                 lockId: lock.id,
             });
 
-
-
             setCountdown(420);
             setIsModalOpen(true);
         } catch (err: any) {
-            console.error(err);
             alert("ไม่สามารถจอง slot นี้ได้ เพราะมีคนกำลังจองอยู่แล้ว");
             await fetchLocks();
-
         } finally {
             setLoading(false);
         }
@@ -191,12 +182,6 @@ export default function AppointmentsPage() {
         message: string;
         variant: "success" | "error";
     } | null>(null);
-
-    // const handleBookingSubmit = (e: React.FormEvent) => {
-    //     e.preventDefault();
-    //     handleClose();
-    //     setToastInfo({ message: "จองคิวสำเร็จเรียบร้อย!", variant: "success" });
-    // };
 
     const bookingStepsMock = [
         {
@@ -381,18 +366,11 @@ export default function AppointmentsPage() {
     const [isConfirmStep, setIsConfirmStep] = useState(false);
     const [formData, setFormData] = useState<GuestFormInput | null>(null);
     const onProceedToConfirm = (data: GuestFormInput) => {
-        setFormData(data);        // เก็บข้อมูลลูกค้า
-        setIsConfirmStep(true);   // ซ่อนฟอร์ม → แสดง confirm modal
+        setFormData(data);        
+        setIsConfirmStep(true);   
     };
 
-    const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
-    useEffect(() => {
-        async function fetchAppointment() {
-            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate);
-            setAppointmentList(appointments ?? []);
-        }
-        fetchAppointment();
-    }, [selectedDate]);
+
 
     return (
         <div className="h-full">
@@ -402,7 +380,7 @@ export default function AppointmentsPage() {
                 </h1>
                 <div className="grid grid-cols-1 md:grid-cols-3">
                     <div className="md:col-span-2 md:p-0 px-8 pt-0">
-                        <TotalBarberSchedule barbers={barbers} onClick={handleOpenModal} appointments={appointmentList} locks={locks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+                        <TotalBarberSchedule barbers={barbers} onClick={handleOpenModal}  locks={locks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
                     </div>
                     <div className="max-w-xl hidden md:block">
                         <div className="border rounded-md p-2 space-y-4 bg-gray-50">
@@ -1032,18 +1010,6 @@ const ConfirmExample = ({ hide }: ConfirmModalProps2) => {
         </div>
     )
 }
-
-
-
-
-
-{/* <button onClick={handleOpen} className="bg-blue-600 text-white px-4 py-2 rounded">
-                    เปิด Modal
-                </button> */}
-
-
-
-
 
 function PaymentOptions() {
     const [paymentMethod, setPaymentMethod] = useState("");

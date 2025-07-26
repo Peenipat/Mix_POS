@@ -4,7 +4,7 @@ package barberBookingModels
 import (
 	"time"
 	"gorm.io/gorm"
-	coreModels "myapp/modules/core/models"
+	
 )
 
 // AppointmentStatus แทนสถานะการจองคิว
@@ -28,7 +28,7 @@ type Appointment struct {
 	Service    Service           `gorm:"foreignKey:ServiceID" json:"service,omitempty"`
 
 	BarberID   uint             `gorm:"index" json:"barber_id,omitempty"`
-	Barber     coreModels.User      `gorm:"foreignKey:BarberID;references:ID" json:"barber,omitempty"`
+	Barber     Barber      		`json:"barber"`
 
 	CustomerID uint              `gorm:"not null;index" json:"customer_id"`
 	Customer   *Customer 		 `gorm:"-" json:"customer,omitempty"`

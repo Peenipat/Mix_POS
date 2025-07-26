@@ -532,6 +532,40 @@ info:
   title: BarberBooking API
   version: "1.0"
 paths:
+  /appointments/by-phone:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการการจองทั้งหมดของลูกค้าที่ใช้เบอร์โทรนั้นในระบบ
+      parameters:
+      - description: เบอร์โทรลูกค้า (Customer Phone)
+        in: query
+        name: phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืน status success และรายการการนัดหมาย
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงการนัดหมายด้วยเบอร์โทร
+      tags:
+      - Appointment
   /barbers/{barber_id}:
     delete:
       consumes:
@@ -676,20 +710,25 @@ paths:
     get:
       consumes:
       - application/json
-      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้
+      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้
+        เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้
       parameters:
       - description: รหัสสาขา (Branch ID)
         in: path
         name: branch_id
         required: true
         type: integer
-      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)'
+      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15'
         in: query
         name: start
         type: string
-      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)'
+      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20'
         in: query
         name: end
+        type: string
+      - description: 'ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)'
+        in: query
+        name: filter
         type: string
       produces:
       - application/json
@@ -700,19 +739,19 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Bad Request
+          description: กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ
           schema:
             additionalProperties:
               type: string
             type: object
         "404":
-          description: Not Found
+          description: ไม่พบข้อมูล
           schema:
             additionalProperties:
               type: string
             type: object
         "500":
-          description: Internal Server Error
+          description: เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์
           schema:
             additionalProperties:
               type: string
@@ -2939,6 +2978,61 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: อัปเดตเวลาเปิด-ปิดของสาขา (หลายวัน)
+      tags:
+      - WorkingHour
+  /tenants/{tenant_id}/workinghour/branches/{branch_id}/slots:
+    get:
+      consumes:
+      - application/json
+      description: ดึงช่วงเวลาที่เปิดให้บริการในแต่ละวัน โดยสามารถกรองได้ตามวันนี้,
+        สัปดาห์นี้ หรือเดือนนี้ พร้อมทั้งกรองช่วงเวลา (เช่น 09:00-12:30)
+      parameters:
+      - description: รหัสผู้เช่า (Tenant ID)
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัสสาขา (Branch ID)
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'ประเภทการกรองวันที่: week (สัปดาห์นี้), month (เดือนนี้), หรือเว้นไว้เพื่อดึงแค่วันนี้'
+        in: query
+        name: filter
+        type: string
+      - description: 'เวลาเริ่มต้นที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 09:00)'
+        in: query
+        name: from_time
+        type: string
+      - description: 'เวลาสิ้นสุดที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 12:30)'
+        in: query
+        name: to_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'คืนค่า status และ slot รายวัน เช่น { ''2025-07-22'': [''09:00'',
+            ''09:30'', ...] }'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: พารามิเตอร์ไม่ถูกต้อง เช่น tenant_id หรือ branch_id ไม่ถูกต้อง
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึง slot เวลาที่ว่างของสาขา
       tags:
       - WorkingHour
   /users/{user_id}/barber:

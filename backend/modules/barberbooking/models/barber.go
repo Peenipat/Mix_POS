@@ -2,7 +2,7 @@ package barberBookingModels
 
 import (
 	"time"
-
+	 coreModels "myapp/modules/core/models"
 	"gorm.io/gorm"
 )
 
@@ -11,6 +11,7 @@ type Barber struct {
 
 	BranchID 		uint 			`gorm:"not null;index" json:"branch_id"`
 	UserID   		uint 			`gorm:"not null;uniqueIndex" json:"user_id"`
+	User   			coreModels.User `json:"user"`
 	TenantID 		uint 			`gorm:"not null;" json:"tenant_id" `
 	PhoneNumber 	string      	`gorm:"type:varchar(20);not null" json:"phone_number"`
 	RoleUser     	string      	`gorm:"type:varchar(100);" json:"role_user"`

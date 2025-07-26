@@ -232,3 +232,67 @@ func (ctrl *WorkingHourController) CreateWorkingHours(c *fiber.Ctx) error {
 		"message": "Working hour created",
 	})
 }
+
+
+// GetAvailableSlots godoc
+// @Summary      ดึง slot เวลาที่ว่างของสาขา
+// @Description  ดึงช่วงเวลาที่เปิดให้บริการในแต่ละวัน โดยสามารถกรองได้ตามวันนี้, สัปดาห์นี้ หรือเดือนนี้ พร้อมทั้งกรองช่วงเวลา (เช่น 09:00-12:30)
+// @Tags         WorkingHour
+// @Accept       json
+// @Produce      json
+// @Param        tenant_id    path      uint     true   "รหัสผู้เช่า (Tenant ID)"
+// @Param        branch_id    path      uint     true   "รหัสสาขา (Branch ID)"
+// @Param        filter       query     string   false  "ประเภทการกรองวันที่: week (สัปดาห์นี้), month (เดือนนี้), หรือเว้นไว้เพื่อดึงแค่วันนี้"
+// @Param        from_time    query     string   false  "เวลาเริ่มต้นที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 09:00)"
+// @Param        to_time      query     string   false  "เวลาสิ้นสุดที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 12:30)"
+// @Success      200          {object}  map[string]interface{}  "คืนค่า status และ slot รายวัน เช่น { '2025-07-22': ['09:00', '09:30', ...] }"
+// @Failure      400          {object}  map[string]string  "พารามิเตอร์ไม่ถูกต้อง เช่น tenant_id หรือ branch_id ไม่ถูกต้อง"
+// @Failure      500          {object}  map[string]string  "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์"
+// @Router       /tenants/{tenant_id}/workinghour/branches/{branch_id}/slots [get]
+// @Security     ApiKeyAuth
+func (ctrl *WorkingHourController) GetAvailableSlots(c *fiber.Ctx) error {
+	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
+	if err != nil || branchID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "invalid branch_id",
+		})
+	}
+
+	tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
+	if err != nil || tenantID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "invalid tenant_id",
+		})
+	}
+
+	filter := c.Query("filter") 
+
+	// เวลาเริ่ม–สิ้นสุด
+	fromTime := c.Query("from_time")
+	toTime := c.Query("to_time")
+
+	var fromPtr, toPtr *string
+	if fromTime != "" {
+		fromPtr = &fromTime
+	}
+	if toTime != "" {
+		toPtr = &toTime
+	}
+
+	// เรียก service
+	slots, err := ctrl.Service.GetAvailableSlots(c.Context(), branchID, tenantID, filter, fromPtr, toPtr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data":   slots,
+	})
+}
+

@@ -5,7 +5,7 @@ import { useForm, } from "react-hook-form";
 import { appointmentForm } from "../schemas/appointmentSchema";
 // @ts-ignore
 import { Datepicker } from "flowbite-datepicker";
-import TimeSelector from "../components/TimeSelector";
+// import TimeSelector from "../components/TimeSelector";
 import axios from "../lib/axios";
 import type { Barber } from "../types/barber";
 import { appointmentSchema } from "../schemas/appointmentSchema";
@@ -294,7 +294,7 @@ export default function Home() {
                 {errors.date && <p className="text-red-500">{errors.date.message}</p>}
 
                 <label className="">เลือกเวลา</label>
-                <TimeSelector setValue={setValue} date={watch('date')} disabled={!watch("date")} />
+                {/* <TimeSelector setValue={setValue} date={watch('date')} disabled={!watch("date")} /> */}
                 {errors.time && <p className="text-red-500">{errors.time.message}</p>}
                 <label className="block ">ข้อความถึงช่าง</label>
                 <input

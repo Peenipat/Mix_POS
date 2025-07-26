@@ -62,15 +62,17 @@ export type AppointmentBrief = {
 };
 
 import { format } from "date-fns";
-
 export async function getAppointmentsByBranch(
   branchId: number,
   start?: string, 
-  end?: string
+  end?: string,
+  filter?: "" | "week" | "month" | null
 ): Promise<AppointmentBrief[]> {
   const params: Record<string, string> = {};
+
   if (start) params.start = start;
   if (end) params.end = end;
+  if (filter) params.filter = filter;
 
   const resp = await api.get(`/barberbooking/branches/${branchId}/appointments`, {
     params,
@@ -126,5 +128,47 @@ export async function getAppointmentsByBarber(
   );
 
   const resp = await api.get(`/barberbooking/barbers/${barberId}/appointments?${queryString}`);
-  return resp.data;
+
+  const transformed = (resp.data.data ?? []).map((item: any): AppointmentBrief => ({
+    ...item,
+    start: item.start_time,
+    end: item.end_time,
+  }));
+
+  return {
+    status: resp.data.status,
+    data: transformed,
+  };
+}
+
+export async function getAppointmentsByPhone(phone: string): Promise<AppointmentBrief[]> {
+  if (!phone) throw new Error("Phone number is required");
+
+  const resp = await api.get("/barberbooking/appointments/by-phone", {
+    params: { phone },
+  });
+
+  const rawData = resp.data.data;
+
+  const transformed: AppointmentBrief[] = rawData.map((a: any) => {
+    const startDate = new Date(a.start_time);
+    const endDate = new Date(a.end_time);
+
+    return {
+      id: a.id,
+      branch_id: a.branch_id,
+      service_id: a.service_id,
+      service: a.service,
+      barber_id: a.barber_id,
+      barber: a.barber,
+      customer_id: a.customer_id,
+      customer: a.customer,
+      status: a.status,
+      date: format(startDate, "yyyy-MM-dd"),
+      start: format(startDate, "HH:mm"),
+      end: format(endDate, "HH:mm"),
+    };
+  });
+
+  return transformed;
 }

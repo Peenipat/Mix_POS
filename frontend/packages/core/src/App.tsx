@@ -18,6 +18,7 @@ import Unauthorized from "./page/unauthorized";
 import React from "react";
 import ManageTenant from "./page/admin/super_admin/ManageTenant";
 import TenantDetail from "./page/admin/super_admin/Tenant$id";
+import SendMessage from "./page/admin/super_admin/SendMessage";
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="log" element={<LogTablePage />} />
         <Route path="tenant" element={<ManageTenant/>}/>
         <Route path="tenant/:id" element={<TenantDetail/>}/>
+        <Route path="send_message" element={<SendMessage/>}/>
       </Route>
 
       {/* ต้องเป็น BRANCH_ADMIN */}

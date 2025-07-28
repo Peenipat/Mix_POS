@@ -167,8 +167,6 @@ definitions:
         type: string
       id:
         type: integer
-      phone_number:
-        type: string
       role_user:
         type: string
       tenant_id:
@@ -327,8 +325,6 @@ definitions:
     properties:
       description:
         type: string
-      phone_number:
-        type: string
       user_id:
         type: integer
     type: object
@@ -357,12 +353,16 @@ definitions:
       description:
         type: string
       email:
-        description: ถ้าต้องการอัปเดตอีเมลด้วย
+        type: string
+      img_name:
+        type: string
+      img_path:
         type: string
       phone_number:
         type: string
+      role_user:
+        type: string
       username:
-        description: ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย
         type: string
     type: object
   barberBookingPort.UpsertBarberWorkloadRequest:
@@ -2630,8 +2630,7 @@ paths:
         name: barber_id
         required: true
         type: integer
-      - description: Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username,
-          Email)
+      - description: ข้อมูล Barber ที่ต้องการอัปเดต
         in: body
         name: body
         required: true

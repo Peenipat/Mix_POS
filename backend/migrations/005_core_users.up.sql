@@ -4,7 +4,7 @@ CREATE TABLE users (
   username      TEXT           NOT NULL,                  -- ชื่อแสดงบน UI
   email         TEXT           NOT NULL UNIQUE,           -- อีเมลเข้าสู่ระบบ (unique)
   password      TEXT           NOT NULL,                  -- รหัสผ่าน bcrypt hash
-  phone_number  VARCHAR(10) NOT NULL DEFAULT ''
+  phone_number  VARCHAR(10) NOT NULL DEFAULT '',
   role_id       INT            NOT NULL,                  -- FK ไปยัง roles.id
   branch_id     INT            NULL,                      -- FK ไปยัง branches.id
   img_path      TEXT           NULL,

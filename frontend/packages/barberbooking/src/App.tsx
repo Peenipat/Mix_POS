@@ -11,7 +11,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import { RoleName } from "./types/role";
 import AdminDashboard from "./page/admin/AdminDashboard";
 import { ManageBarber } from "./page/admin/barber/Barber_index";
-import { ManageService } from "./page/admin/ManageService";
+import { ManageService } from "./page/admin/service/service_index";
 import { ManageCustomer } from "./page/admin/ManageCustomer";
 import { ManageAppointments } from "./page/admin/ManageAppointments";
 import ServicePage from "./page/ServicePage";

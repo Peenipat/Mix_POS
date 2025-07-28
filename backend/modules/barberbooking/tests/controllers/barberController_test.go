@@ -3,6 +3,7 @@ package barberBookingControllers_test
 import (
 	// "bytes"
 	"encoding/json"
+	"mime/multipart"
 	// "errors"
 	"context"
 	barberBookingControllers "myapp/modules/barberbooking/controllers"
@@ -23,6 +24,18 @@ type MockBarberService struct {
 	mock.Mock
 }
 
+// UpdateBarber implements barberBookingPort.IBarber.
+func (m *MockBarberService) UpdateBarber(ctx context.Context, barberID uint, payload *barberBookingPort.UpdateBarberRequest, file *multipart.FileHeader) (*barberBookingModels.Barber, error) {
+	panic("unimplemented")
+}
+
+// UpdateBarber implements barberBookingPort.IBarber.
+
+// GetBarberByID implements barberBookingPort.IBarber.
+func (m *MockBarberService) GetBarberByID(ctx context.Context, id uint) (*barberBookingPort.BarberDetailResponse, error) {
+	panic("unimplemented")
+}
+
 // ListUserNotBarber implements barberBookingPort.IBarber.
 func (m *MockBarberService) ListUserNotBarber(ctx context.Context, branchID *uint) ([]barberBookingPort.UserNotBarber, error) {
 	panic("unimplemented")
@@ -38,25 +51,9 @@ func (m *MockBarberService) CreateBarber(ctx context.Context, barber *barberBook
 	return args.Error(0)
 }
 
-func (m *MockBarberService) GetBarberByID(ctx context.Context, barberID uint) (*barberBookingModels.Barber, error) {
-	args := m.Called(ctx, barberID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*barberBookingModels.Barber), args.Error(1)
-}
-
 func (m *MockBarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingPort.BarberWithUser, error) {
 	args := m.Called(ctx, branchID)
 	return args.Get(0).([]barberBookingPort.BarberWithUser), args.Error(1)
-}
-
-func (m *MockBarberService) UpdateBarber(ctx context.Context,barberID uint,updated *barberBookingModels.Barber,updatedUsername string,updatedEmail string,) (*barberBookingModels.Barber, error) {
-	args := m.Called(ctx, barberID, updated)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*barberBookingModels.Barber), args.Error(1)
 }
 
 func (m *MockBarberService) DeleteBarber(ctx context.Context, barberID uint) error {
@@ -92,7 +89,7 @@ func setupBarberTestApp(mockSvc barberBookingPort.IBarber) *fiber.App {
 	app.Post("/barbers", controller.CreateBarber)
 	app.Get("/barbers/:barber_id", controller.GetBarberByID)
 	app.Get("/branches/:branch_id/barbers", controller.ListBarbersByBranch)
-	app.Put("/barbers/:barber_id", controller.UpdateBarber)
+	// app.Put("/barbers/:barber_id", controller.UpdateBarber)
 	app.Delete("/barbers/:barber_id", controller.DeleteBarber)
 	app.Get("/users/:user_id/barber", controller.GetBarberByUser)
 	app.Get("/tenants/:tenant_id/barbers", controller.ListBarbersByTenant)

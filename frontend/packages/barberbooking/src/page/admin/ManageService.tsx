@@ -33,7 +33,7 @@ export const editServiceSchema = z.object({
 
 export type EditServiceFormData = z.infer<typeof editServiceSchema>;
 
-export function ManageService() {
+export function ManageServiceOld() {
 
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);

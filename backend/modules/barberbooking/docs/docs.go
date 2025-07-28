@@ -3155,7 +3155,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username, Email)",
+                        "description": "ข้อมูล Barber ที่ต้องการอัปเดต",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -4318,9 +4318,6 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "phone_number": {
-                    "type": "string"
-                },
                 "role_user": {
                     "type": "string"
                 },
@@ -4555,9 +4552,6 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "phone_number": {
-                    "type": "string"
-                },
                 "user_id": {
                     "type": "integer"
                 }
@@ -4599,14 +4593,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
-                    "description": "ถ้าต้องการอัปเดตอีเมลด้วย",
+                    "type": "string"
+                },
+                "img_name": {
+                    "type": "string"
+                },
+                "img_path": {
                     "type": "string"
                 },
                 "phone_number": {
                     "type": "string"
                 },
+                "role_user": {
+                    "type": "string"
+                },
                 "username": {
-                    "description": "ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย",
                     "type": "string"
                 }
             }

@@ -7,6 +7,4 @@ export interface Barber {
     img_path:string;
     img_name:string;
     description:string;
-
 }
-   

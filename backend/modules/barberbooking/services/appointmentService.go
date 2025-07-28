@@ -383,7 +383,7 @@ func (s *appointmentService) UpdateAppointment(
 		var out barberBookingModels.Appointment
 		if err := tx.
 			Preload("Service").
-			Preload("Customer").
+			// Preload("Customer").
 			First(&out, ap.ID).Error; err != nil {
 			return fmt.Errorf("failed to fetch updated appointment: %w", err)
 		}
@@ -676,7 +676,8 @@ func (s *appointmentService) GetAppointmentsByBranch(
 	branchID uint,
 	start *time.Time,
 	end *time.Time,
-	filterType string, 
+	filterType string,
+	excludeStatus []barberBookingModels.AppointmentStatus,
 ) ([]barberBookingPort.AppointmentBrief, error) {
 	// 1. Validate barber ในสาขานั้น
 	var barberIDs []uint
@@ -720,6 +721,7 @@ func (s *appointmentService) GetAppointmentsByBranch(
 
 	// 3. Query appointment
 	var appointments []barberBookingModels.Appointment
+
 	q := s.DB.WithContext(ctx).
 		Model(&barberBookingModels.Appointment{}).
 		Where("barber_id IN ?", barberIDs).
@@ -731,6 +733,10 @@ func (s *appointmentService) GetAppointmentsByBranch(
 			return db.Select("id", "username")
 		}).
 		Order("start_time ASC")
+
+	if len(excludeStatus) > 0 {
+		q = q.Where("status NOT IN ?", excludeStatus)
+	}
 
 	if startTime != nil {
 		q = q.Where("start_time >= ?", *startTime)
@@ -1076,4 +1082,3 @@ func (s *appointmentService) GetAppointmentsByPhone(
 
 	return result, nil
 }
-

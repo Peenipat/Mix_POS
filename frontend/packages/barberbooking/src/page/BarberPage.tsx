@@ -251,7 +251,7 @@ export const TotalBarberSchedule = ({
         barberId: number,
         slot: string,
         appointments: AppointmentBrief[] | undefined,
-        selectedDate: string // <- เพิ่มเข้ามา
+        selectedDate: string 
     ): "full" | "top" | "bottom" | null {
         if (!appointments) return null;
 
@@ -335,12 +335,18 @@ export const TotalBarberSchedule = ({
     const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
     useEffect(() => {
         async function fetchAppointment() {
-            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption);
+            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption,["CANCELLED"]);
             setAppointmentList(appointments ?? []);
         }
         fetchAppointment();
     }, [selectedDate]);
-    console.log("✅ slotMap", slotMap);
+
+    function handdlesFilter(){
+        setSelectedOption("")
+        setStartTime("")
+        setEndTime("")
+        setOpenFilter(!openFilter)
+    }
 
     return (
         <div className="flex flex-col border rounded-md overflow-auto shadow-md bg-white">
@@ -359,7 +365,7 @@ export const TotalBarberSchedule = ({
                     />
                     <button
                         id="filter-button"
-                        onClick={() => setOpenFilter(!openFilter)}
+                        onClick={() => handdlesFilter()}
                         className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center transition"
                     >
                         <MdFilterAlt size={20} className="mr-1" />

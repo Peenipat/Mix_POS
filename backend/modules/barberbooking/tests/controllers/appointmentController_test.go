@@ -29,13 +29,13 @@ type MockAppointmentService struct {
 	mock.Mock
 }
 
-// GetAppointmentsByPhone implements barberBookingPort.IAppointment.
-func (m *MockAppointmentService) GetAppointmentsByPhone(ctx context.Context, phone string) ([]barberBookingPort.AppointmentBrief, error) {
+// GetAppointmentsByBranch implements barberBookingPort.IAppointment.
+func (m *MockAppointmentService) GetAppointmentsByBranch(ctx context.Context, branchID uint, start *time.Time, end *time.Time, filterType string, excludeStatus []barberBookingModels.AppointmentStatus) ([]barberBookingPort.AppointmentBrief, error) {
 	panic("unimplemented")
 }
 
-// GetAppointmentsByBranch implements barberBookingPort.IAppointment.
-func (m *MockAppointmentService) GetAppointmentsByBranch(ctx context.Context, branchID uint, start *time.Time, end *time.Time, filterType string) ([]barberBookingPort.AppointmentBrief, error) {
+// GetAppointmentsByPhone implements barberBookingPort.IAppointment.
+func (m *MockAppointmentService) GetAppointmentsByPhone(ctx context.Context, phone string) ([]barberBookingPort.AppointmentBrief, error) {
 	panic("unimplemented")
 }
 

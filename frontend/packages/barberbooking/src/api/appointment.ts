@@ -1,4 +1,4 @@
-import api from "../lib/axios"; 
+import api from "../lib/axios";
 import qs from "qs";
 // 🎯 Type สำหรับ Customer
 type CustomerInfo = {
@@ -12,8 +12,8 @@ export type BookAppointmentPayload = {
   service_id: number;
   start_time: string;
   notes?: string;
-  customer_id: number;         
-  customer?: CustomerInfo;     
+  customer_id: number;
+  customer?: CustomerInfo;
 };
 
 
@@ -55,24 +55,29 @@ export type AppointmentBrief = {
     name: string;
     phone: string;
   };
-  date: string;   
-  start: string;  
-  end: string;    
+  date: string;
+  start: string;
+  end: string;
   status: string;
 };
 
 import { format } from "date-fns";
 export async function getAppointmentsByBranch(
   branchId: number,
-  start?: string, 
+  start?: string,
   end?: string,
-  filter?: "" | "week" | "month" | null
+  filter?: "" | "week" | "month" | null,
+  excludeStatus?: string[] 
 ): Promise<AppointmentBrief[]> {
   const params: Record<string, string> = {};
 
   if (start) params.start = start;
   if (end) params.end = end;
   if (filter) params.filter = filter;
+
+  if (excludeStatus && excludeStatus.length > 0) {
+    params.exclude_status = excludeStatus.join(","); 
+  }
 
   const resp = await api.get(`/barberbooking/branches/${branchId}/appointments`, {
     params,
@@ -171,4 +176,27 @@ export async function getAppointmentsByPhone(phone: string): Promise<Appointment
   });
 
   return transformed;
+}
+
+
+export async function updateAppointmentStatus(
+  tenantId: number,
+  appointmentId: number,
+  status: string,
+  userId?: number
+) {
+  const payload: any = {
+    status,
+  };
+
+  if (userId) {
+    payload.user_id = userId;
+  }
+
+  const resp = await api.put(
+    `/barberbooking/tenants/${tenantId}/appointments/${appointmentId}`,
+    payload
+  );
+
+  return resp.data.data; 
 }

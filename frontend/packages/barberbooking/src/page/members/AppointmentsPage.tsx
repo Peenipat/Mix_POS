@@ -9,7 +9,7 @@ import { TotalBarberSchedule } from "../BarberPage";
 import "intro.js/introjs.css";
 import introJs from "intro.js";
 import { useForm, Controller } from "react-hook-form";
-import { AppointmentBrief, bookAppointment, getAppointmentsByBranch } from "../../api/appointment";
+import { AppointmentBrief, bookAppointment } from "../../api/appointment";
 import { AppointmentLock, AppointmentLockResponse, createAppointmentLock, getAppointmentLocks, releaseAppointmentLock } from "../../api/appointmentLock";
 import { format } from "date-fns";
 

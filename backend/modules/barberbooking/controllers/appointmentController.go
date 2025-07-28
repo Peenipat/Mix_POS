@@ -740,6 +740,7 @@ func (ctrl *AppointmentController) DeleteAppointment(c *fiber.Ctx) error {
 // @Param        start       query     string   false  "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15"
 // @Param        end         query     string   false  "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20"
 // @Param        filter      query     string   false  "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)"
+// @Param        exclude_status query     string   false  "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)"
 // @Success      200         {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
 // @Failure      400         {object}  map[string]string        "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ"
 // @Failure      404         {object}  map[string]string        "ไม่พบข้อมูล"
@@ -783,8 +784,17 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		endTime = &t
 	}
 
+	rawStatuses := c.Query("exclude_status") // ตัวอย่าง: "CANCELLED,NO_SHOW"
+	var excludeStatuses []barberBookingModels.AppointmentStatus
+	if rawStatuses != "" {
+		for _, s := range strings.Split(rawStatuses, ",") {
+			status := barberBookingModels.AppointmentStatus(strings.ToUpper(strings.TrimSpace(s)))
+			excludeStatuses = append(excludeStatuses, status)
+		}
+	}
+
 	// เรียก service พร้อมส่ง filterType เพิ่ม
-	appts, err := ctrl.Service.GetAppointmentsByBranch(c.Context(), branchID, startTime, endTime, filterType)
+	appts, err := ctrl.Service.GetAppointmentsByBranch(c.Context(), branchID, startTime, endTime, filterType,excludeStatuses)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",

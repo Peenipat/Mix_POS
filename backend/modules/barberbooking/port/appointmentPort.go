@@ -25,6 +25,7 @@ type IAppointment interface {
 		start *time.Time,
 		end *time.Time,
 		filterType string, 
+		excludeStatus []barberBookingModels.AppointmentStatus,
 	) ([]AppointmentBrief, error)
 	GetAppointmentsByBarber(ctx context.Context,barberID uint,filter AppointmentFilter,) ([]AppointmentBrief, error)
 	GetAppointmentsByPhone(

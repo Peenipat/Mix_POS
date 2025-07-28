@@ -313,6 +313,12 @@ const docTemplate = `{
                         "description": "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)",
                         "name": "filter",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)",
+                        "name": "exclude_status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4146,13 +4152,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "barber": {
-                    "$ref": "#/definitions/coreModels.User"
+                    "$ref": "#/definitions/barberBookingModels.Barber"
                 },
                 "barber_id": {
                     "type": "integer"
                 },
                 "branch_id": {
-                    "description": "ไม่ preload branch",
                     "type": "integer"
                 },
                 "created_at": {
@@ -4195,7 +4200,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
-                    "description": "อ้าง user ที่สร้างคิว (ไม่มี FK)",
                     "type": "integer"
                 }
             }
@@ -4243,12 +4247,14 @@ const docTemplate = `{
                 "CANCELLED",
                 "COMPLETED",
                 "NO_SHOW",
+                "IN_SERVICE",
                 "RESCHEDULED"
             ],
             "x-enum-comments": {
                 "StatusCancelled": "ยกเลิก",
                 "StatusComplete": "จบงาน",
                 "StatusConfirmed": "รับ",
+                "StatusInService": "กำลังให้บริการ",
                 "StatusPending": "รอดำเนินการ",
                 "StatusRescheduled": "เปลี่ยนเวลา"
             },
@@ -4258,6 +4264,7 @@ const docTemplate = `{
                 "StatusCancelled",
                 "StatusComplete",
                 "StatusNoShow",
+                "StatusInService",
                 "StatusRescheduled"
             ]
         },
@@ -4322,6 +4329,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/coreModels.User"
                 },
                 "user_id": {
                     "type": "integer"
@@ -4813,6 +4823,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "phone_number": {
+                    "type": "string"
                 },
                 "role": {
                     "$ref": "#/definitions/coreModels.Role"

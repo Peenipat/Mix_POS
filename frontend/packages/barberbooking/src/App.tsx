@@ -37,14 +37,17 @@ import ToastManagement from "@object/shared/page/ToastManagement";
 export default function App() {
   const dispatch = useAppDispatch();
   const location = useLocation();
-
-  // initialized เพื่อควบคุม Loading screen
   const [initialized, setInitialized] = useState(false);
-  // ref เพื่อบอกว่าโหลด /me ไปแล้วหรือยัง
   const didFetchMe = useRef(false);
 
+  const protectedPrefixes = ["/admin", "/barber",];
+
+  const isProtected = protectedPrefixes.some((prefix) =>
+    location.pathname.startsWith(prefix)
+  );
+
   useEffect(() => {
-    if (!didFetchMe.current && location.pathname.startsWith("/admin")) {
+    if (!didFetchMe.current && isProtected) {
       didFetchMe.current = true;
       dispatch(loadCurrentUser())
         .catch(() => {
@@ -53,10 +56,10 @@ export default function App() {
         .finally(() => {
           setInitialized(true);
         });
+    } else if (!didFetchMe.current) {
+      setInitialized(true);
     }
-
-    setInitialized(true);
-  }, [dispatch,]);
+  }, [location.pathname]);
 
 
   return (

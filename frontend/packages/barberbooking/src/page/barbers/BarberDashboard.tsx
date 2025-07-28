@@ -10,7 +10,9 @@ import {
 import {
   AppointmentBrief,
   getAppointmentsByBarber,
+  updateAppointmentStatus,
 } from "../../api/appointment";
+import { useAppSelector } from "../../store/hook";
 
 // 🔁 แปลง status จาก backend → ไทย
 function translateStatus(status: string): string {
@@ -39,6 +41,11 @@ const statusIcon: Record<string, JSX.Element> = {
 };
 
 export default function BarberDashboard() {
+  const me = useAppSelector((state) => state.auth.me);
+
+  const userId = me?.id
+  const tenantId = me?.tenant_ids[0];
+  const branchId = me?.branch_id;
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
@@ -53,6 +60,7 @@ export default function BarberDashboard() {
     async function fetchAppointments() {
       setIsLoading(true);
       try {
+
         const resp = await getAppointmentsByBarber(BARBER_ID, {
           start: selectedDate,
           end: selectedDate,
@@ -69,12 +77,18 @@ export default function BarberDashboard() {
     fetchAppointments();
   }, [selectedDate]);
 
-  const updateStatus = (id: number, newStatus: string) => {
-    setAppointments((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, status: newStatus.toUpperCase() } : a
-      )
-    );
+  const updateStatus = async (id: number, newStatus: string) => {
+    try {
+      if (tenantId) {
+        await updateAppointmentStatus(tenantId, id, newStatus, userId);
+      }
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status: newStatus.toUpperCase() } : a))
+      );
+    } catch (error) {
+      console.error("อัปเดตสถานะล้มเหลว", error);
+      alert("อัปเดตสถานะไม่สำเร็จ");
+    }
   };
 
   return (
@@ -93,7 +107,7 @@ export default function BarberDashboard() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <SummaryCard label="จำนวนคิวทั้งหมด" count={appointments.length} />
         <SummaryCard
           label="เสร็จแล้ว"
@@ -109,13 +123,6 @@ export default function BarberDashboard() {
           }
           color="red"
         />
-        <SummaryCard
-          label="กำลังให้บริการ"
-          count={
-            appointments.filter((a) => translateStatus(a.status) === "กำลังให้บริการ").length
-          }
-          color="blue"
-        />
       </div>
 
       {/* Appointments */}
@@ -130,51 +137,64 @@ export default function BarberDashboard() {
             return (
               <li
                 key={appt.id}
-                className="border rounded p-4 shadow-sm bg-white flex justify-between items-center"
+                className="border rounded p-2.5 shadow-sm bg-white flex justify-between items-center"
               >
-                <div>
-                  <div className="text-sm text-gray-500">
-                  {dayjs(appt.start).format("HH:mm")} - {dayjs(appt.end).format("HH:mm")}
-                  </div>
-                  <div className="text-lg font-semibold">
-                    {appt.customer.name}
-                  </div>
-                  <div className="text-sm text-gray-700">
-                    {appt.service.name}
-                  </div>
-                </div>
-
-                <div className="text-right space-y-1">
+                <div >
                   <div
-                    className={`text-sm font-medium px-2 py-1 rounded inline-flex items-center ${
-                      translated === "รอให้บริการ"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : translated === "กำลังให้บริการ"
+                    className={`text-sm font-medium px-1 py-0.5 rounded inline-flex items-center mb-1 ${translated === "รอให้บริการ"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : translated === "กำลังให้บริการ"
                         ? "bg-blue-100 text-blue-800"
                         : translated === "เสร็จแล้ว"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
                   >
                     {statusIcon[translated]}
                     <span>{translated}</span>
                   </div>
+                  <div className="text-lg font-semibold">
+                    คุณ {appt.customer.name}
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    <span className="text-sm text-gray-500 mr-3 ">
+                      {dayjs(appt.start).format("HH:mm")} - {dayjs(appt.end).format("HH:mm")}
+                    </span>
+                    {appt.service.name}
+                  </div>
+                </div>
 
-                  {/* ปุ่มเปลี่ยนสถานะ */}
+                <div className="flex gap-3">
                   {translated === "รอให้บริการ" && (
                     <button
-                      className="text-sm text-blue-600 underline"
-                      onClick={() => updateStatus(appt.id, "CONFIRMED")}
+                      className="w-[120px] text-sm text-blue-800 bg-blue-50 py-1 rounded text-center"
+                      onClick={() => updateStatus(appt.id, "IN_SERVICE")}
                     >
                       เริ่มให้บริการ
                     </button>
                   )}
                   {translated === "กำลังให้บริการ" && (
                     <button
-                      className="text-sm text-green-600 underline"
+                      className="w-[120px] text-sm text-green-700 bg-green-50 py-1 rounded text-center"
                       onClick={() => updateStatus(appt.id, "COMPLETED")}
                     >
                       เสร็จสิ้น
+                    </button>
+                  )}
+                  {translated === "ยกเลิก" && (
+                    <button
+                      className="w-[120px] text-sm text-yellow-700 bg-yellow-50 py-1 rounded text-center"
+                      onClick={() => updateStatus(appt.id, "CONFIRMED")}
+                    >
+                      กู้คืนนัด
+                    </button>
+                  )}
+                  {translated !== "เสร็จแล้ว" && (
+                    <button
+                      className="w-[120px] text-sm text-red-800 bg-red-50 py-1 rounded text-center"
+                      onClick={() => updateStatus(appt.id, "CANCELLED")}
+                    >
+                      ยกเลิกนัด
                     </button>
                   )}
                 </div>

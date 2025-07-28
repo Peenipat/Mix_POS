@@ -51,11 +51,10 @@ definitions:
   barberBookingModels.Appointment:
     properties:
       barber:
-        $ref: '#/definitions/coreModels.User'
+        $ref: '#/definitions/barberBookingModels.Barber'
       barber_id:
         type: integer
       branch_id:
-        description: ไม่ preload branch
         type: integer
       created_at:
         type: string
@@ -84,7 +83,6 @@ definitions:
       updated_at:
         type: string
       user_id:
-        description: อ้าง user ที่สร้างคิว (ไม่มี FK)
         type: integer
     type: object
   barberBookingModels.AppointmentReview:
@@ -117,12 +115,14 @@ definitions:
     - CANCELLED
     - COMPLETED
     - NO_SHOW
+    - IN_SERVICE
     - RESCHEDULED
     type: string
     x-enum-comments:
       StatusCancelled: ยกเลิก
       StatusComplete: จบงาน
       StatusConfirmed: รับ
+      StatusInService: กำลังให้บริการ
       StatusPending: รอดำเนินการ
       StatusRescheduled: เปลี่ยนเวลา
     x-enum-varnames:
@@ -131,6 +131,7 @@ definitions:
     - StatusCancelled
     - StatusComplete
     - StatusNoShow
+    - StatusInService
     - StatusRescheduled
   barberBookingModels.AppointmentStatusLog:
     properties:
@@ -174,6 +175,8 @@ definitions:
         type: integer
       updated_at:
         type: string
+      user:
+        $ref: '#/definitions/coreModels.User'
       user_id:
         type: integer
     type: object
@@ -505,6 +508,8 @@ definitions:
         type: string
       id:
         type: integer
+      phone_number:
+        type: string
       role:
         $ref: '#/definitions/coreModels.Role'
       role_id:
@@ -729,6 +734,11 @@ paths:
       - description: 'ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)'
         in: query
         name: filter
+        type: string
+      - description: รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย
+          ,)
+        in: query
+        name: exclude_status
         type: string
       produces:
       - application/json

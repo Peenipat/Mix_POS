@@ -15,6 +15,9 @@ export const editBarberSchema = z.object({
       .max(10, "เบอร์โทร 10 หลัก"),
     img_path:z.string().optional(),
     img_name:z.string().optional(),
+    branch_id:z.number(),
+    description: z.string().optional(),
+    roleUser: z.string().optional(),
     profilePicture: z.any().optional(),
   });
   

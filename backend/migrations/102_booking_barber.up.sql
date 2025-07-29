@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS barbers (
   tenant_id   INT            NOT NULL, 
   description VARCHAR(100)   NOT NULL,
   role_user   VARCHAR(100)   NULL,
-  img_path    TEXT           NULL,
-  img_name    TEXT           NULL,
   created_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่สร้างแถว
   updated_at  TIMESTAMPTZ    NOT NULL DEFAULT now(),    -- วันที่แก้ไขล่าสุด
   deleted_at  TIMESTAMPTZ    NULL                 

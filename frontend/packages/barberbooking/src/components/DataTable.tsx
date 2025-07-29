@@ -17,7 +17,7 @@ type DataTableProps<T> = {
   showDelete?: boolean;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
-  actions?: Action<T>[]; // additional custom actions
+  actions?: Action<T>[]; 
 };
 
 export function DataTable<T extends Record<string, any>>({

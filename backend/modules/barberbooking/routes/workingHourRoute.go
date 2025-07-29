@@ -13,6 +13,7 @@ func RegisterWorkingHourRoute(router fiber.Router ,ctrl barberBookingController.
 	group := router.Group("/tenants/:tenant_id/workinghour")
 	
 	group.Get("/branches/:branch_id",ctrl.GetWorkingHours)
+	group.Get("/branches/:branch_id/slots",ctrl.GetAvailableSlots)
 
 	group.Use(middlewares.RequireAuth())
 	group.Post("branches/:branch_id",ctrl.CreateWorkingHours)

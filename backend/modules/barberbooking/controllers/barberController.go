@@ -2,16 +2,15 @@ package barberBookingController
 
 import (
 	"log"
+	"mime/multipart"
 	helperFunc "myapp/modules/barberbooking"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 )
 
 type BarberController struct {
@@ -187,12 +186,6 @@ func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
             "message": "user_id is required",
         })
     }
-    if strings.TrimSpace(body.PhoneNumber) == "" {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":  "error",
-            "message": "phone_number is required",
-        })
-    }
 
 
     // 5) สร้าง payload ของ Barber
@@ -201,7 +194,6 @@ func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
         BranchID:    branchID,
         UserID:      body.UserID,
         Description: body.Description,
-        PhoneNumber: strings.TrimSpace(body.PhoneNumber),
     }
 
     // 6) เรียก service สร้าง
@@ -219,20 +211,22 @@ func (ctrl *BarberController) CreateBarber(c *fiber.Ctx) error {
     })
 }
 
+
+
 // UpdateBarber godoc
 // @Summary      แก้ไขข้อมูลช่างตัดผม
 // @Description  อัปเดตข้อมูล Barber ตามรหัสที่ระบุ (ต้องมีสิทธิ์ TenantAdmin, Tenant หรือ BranchAdmin)
 // @Tags         Barber
 // @Accept       json
 // @Produce      json
-// @Param        tenant_id  path      uint                              true  "รหัส Tenant"
-// @Param        barber_id  path      uint                              true  "รหัส Barber"
-// @Param        body       body      barberBookingPort.UpdateBarberRequest  true  "Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username, Email)"
-// @Success      200        {object}  map[string]interface{}            "คืนค่า status success และข้อมูล Barber ใน key `data`"
-// @Failure      400        {object}  map[string]string                "Invalid tenant_id/barber_id หรือ Invalid request body"
-// @Failure      403        {object}  map[string]string                "Permission denied"
-// @Failure      404        {object}  map[string]string                "Barber not found"
-// @Failure      500        {object}  map[string]string                "Failed to update Barber"
+// @Param        tenant_id  path      uint      true   "รหัส Tenant"
+// @Param        barber_id  path      uint      true   "รหัส Barber"
+// @Param        body       body      barberBookingPort.UpdateBarberRequest  true   "ข้อมูล Barber ที่ต้องการอัปเดต"
+// @Success      200        {object}  map[string]interface{}  "คืนค่า status success และข้อมูล Barber ใน key `data`"
+// @Failure      400        {object}  map[string]string       "Invalid tenant_id/barber_id หรือ Invalid request body"
+// @Failure      403        {object}  map[string]string       "Permission denied"
+// @Failure      404        {object}  map[string]string       "Barber not found"
+// @Failure      500        {object}  map[string]string       "Failed to update Barber"
 // @Router       /tenants/{tenant_id}/barbers/{barber_id}/update-barber [put]
 // @Security     ApiKeyAuth
 func (ctrl *BarberController) UpdateBarber(c *fiber.Ctx) error {
@@ -245,62 +239,66 @@ func (ctrl *BarberController) UpdateBarber(c *fiber.Ctx) error {
         })
     }
 
-    // 2. ดึง barber_id จาก path parameter
+    // 2. ดึง barber_id
     barberID, err := helperFunc.ParseUintParam(c, "barber_id")
     if err != nil {
-        return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
             "status":  "error",
             "message": "Invalid barber_id",
             "error":   err.Error(),
         })
     }
 
-    // 3. แปลง body เป็น DTO
-    var payload barberBookingPort.UpdateBarberRequest
-    if err := c.BodyParser(&payload); err != nil {
+    // 3. รับ Multipart Form
+    form, err := c.MultipartForm()
+    if err != nil {
         return c.Status(http.StatusBadRequest).JSON(fiber.Map{
             "status":  "error",
-            "message": "Invalid request body",
+            "message": "Invalid multipart form",
             "error":   err.Error(),
         })
     }
 
-    // 4. ดึงข้อมูล barber ปัจจุบัน
-    existingBarber, err := ctrl.BarberService.GetBarberByID(c.Context(), barberID)
+    // ✅ 4. ดึงไฟล์จาก form
+    var file *multipart.FileHeader
+    if files, ok := form.File["profilePicture"]; ok && len(files) > 0 {
+        file = files[0]
+    }
+
+    // ✅ 5. Map form values ไปยัง struct
+    payload := barberBookingPort.UpdateBarberRequest{
+        Username:    form.Value["username"][0],
+        Description: form.Value["description"][0],
+        Email:       form.Value["email"][0],
+        PhoneNumber: form.Value["phone_number"][0],
+        ImgPath:     form.Value["img_path"][0],
+        ImgName:     form.Value["img_name"][0],
+        RoleUser:    form.Value["role_user"][0],
+    }
+
+    // ✅ แปลง branch_id จาก string → uint
+    if val := form.Value["branch_id"]; len(val) > 0 {
+        branchIDParsed, err := strconv.ParseUint(val[0], 10, 64)
+        if err != nil {
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+                "status":  "error",
+                "message": "Invalid branch_id",
+                "error":   err.Error(),
+            })
+        }
+        payload.BranchID = uint(branchIDParsed)
+    }
+
+    // 6. เรียก service โดยส่งไฟล์แนบไปด้วย
+    _, err = ctrl.BarberService.UpdateBarber(c.Context(), barberID, &payload, file)
     if err != nil {
-        if err == gorm.ErrRecordNotFound {
+        if err.Error() == "barber not found" {
             return c.Status(http.StatusNotFound).JSON(fiber.Map{
                 "status":  "error",
                 "message": "Barber not found",
             })
         }
-        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Failed to fetch barber",
-            "error":   err.Error(),
-        })
-    }
-    if existingBarber == nil {
-        return c.Status(http.StatusNotFound).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Barber not found",
-        })
-    }
 
-    // 5. เซ็ตค่าที่จะแก้ไขลงใน existingBarber
-    existingBarber.BranchID = payload.BranchID
-    existingBarber.PhoneNumber = payload.PhoneNumber
-    existingBarber.Description = payload.Description
-
-    // 6. เรียก Service ให้ทำการอัปเดตทั้งใน table barbers และอัปเดตชื่อ-อีเมลในตาราง users
-    updatedBarber, err := ctrl.BarberService.UpdateBarber(
-        c.Context(),
-        barberID,
-        existingBarber,
-        payload.Username,
-        payload.Email,
-    )
-    if err != nil {
         return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
             "status":  "error",
             "message": "Failed to update barber",
@@ -308,13 +306,16 @@ func (ctrl *BarberController) UpdateBarber(c *fiber.Ctx) error {
         })
     }
 
-    // 7. ส่งผลลัพธ์กลับ
-    return c.Status(http.StatusOK).JSON(fiber.Map{
+    // 7. ส่งผลลัพธ์
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
         "status":  "success",
         "message": "Barber updated",
-        "data":    updatedBarber,
     })
 }
+
+
+
+
 
 // DeleteBarber godoc
 // @Summary      ลบช่างตัดผม

@@ -11,6 +11,7 @@ import (
 func RegisterAppointmentRoute(router fiber.Router ,ctrl *barberBookingController.AppointmentController){
 	router.Get("/branches/:branch_id/appointments",ctrl.GetAppointmentsByBranch)
 	router.Get("/barbers/:barber_id/appointments",ctrl.GetAppointmentsByBarber)
+	router.Get("/appointments/by-phone",ctrl.GetAppointmentsByPhone)
 	group := router.Group("/tenants/:tenant_id/appointments")
 	group.Get("/", ctrl.ListAppointments) //รอเช็คเรื่อง not_found //
 	group.Get("/barbers/:barber_id/availability", ctrl.CheckBarberAvailability) //ยังไม่ผ่านใน dev

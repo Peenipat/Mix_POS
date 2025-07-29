@@ -14,6 +14,12 @@ import { MdFilterAlt } from "react-icons/md";
 import { AppointmentBrief, getAppointmentsByBranch } from "../api/appointment";
 import { AppointmentLock } from "../api/appointmentLock";
 
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import customParseFormat from "dayjs/plugin/customParseFormat"; // หากใช้ format พิเศษ
+import dayjs from 'dayjs';
+dayjs.extend(isSameOrBefore);
+dayjs.extend(customParseFormat);
+
 export default function BarberPage() {
     const [barbers, setBarbers] = useState<Barber[]>([]);
     const [loadingBarbers, setLoadingBarbers] = useState<boolean>(false);
@@ -130,7 +136,7 @@ export default function BarberPage() {
 export const TotalBarberSchedule = ({
     barbers,
     onClick,
-    appointments = [], // for mock
+    appointments = [],
     locks = [],
     selectedDate,
     setSelectedDate
@@ -143,21 +149,73 @@ export const TotalBarberSchedule = ({
     selectedDate: string;
     setSelectedDate: (date: string) => void;
 }) => {
-    const [slot, setSlot] = useState<string[]>([]);
+    const [slotMap, setSlotMap] = useState<Record<string, string[]>>({});
     const today = format(new Date(), "yyyy-MM-dd")
+    const [startTime, setStartTime] = useState<string>("");
+    const [endTime, setEndTime] = useState<string>("");
+    const [selectedOption, setSelectedOption] = useState<"week" | "month" | "" | null>("");
+
+    const fetchSlot = useCallback(async () => {
+        try {
+            const result = await getWorkingHourRangeAxios(
+                1,
+                1,
+                new Date(selectedDate),
+                selectedOption
+                    ? {
+                        filter: selectedOption as "week" | "month",
+                        fromTime: startTime || undefined,
+                        toTime: endTime || undefined,
+                    }
+                    : undefined
+            );
+
+            if (!result) {
+                setSlotMap({});
+                return;
+            }
+            console.log("🔍 result from API:", result);
+
+            if (result.type === "range") {
+                const generatedMap: Record<string, string[]> = {};
+
+                // 🔍 หาวันแรก–วันสุดท้ายใน range
+                const allDates = Object.keys(result.data).sort();
+                const startDate = dayjs(allDates[0]);
+                const endDate = dayjs(allDates[allDates.length - 1]);
+
+                for (let d = startDate; d.isSameOrBefore(endDate); d = d.add(1, 'day')) {
+                    const dateStr = d.format("YYYY-MM-DD");
+                    const range = result.data[dateStr];
+
+                    // ✅ ตรวจว่ามี start/end ไหม
+                    if (range && typeof range === "object" && "start" in range && "end" in range) {
+                        generatedMap[dateStr] = generateTimeSlots(range.start, range.end);
+                    } else {
+                        generatedMap[dateStr] = []; // ร้านปิด หรือไม่มีข้อมูล
+                    }
+                }
+                Object.entries(result.data).forEach(([date, val]) => {
+                    console.log("📅", date, "➡️", val);
+                });
+
+                setSlotMap(generatedMap);
+            }
+            else if (result.type === "single") {
+                // 📦 แบบวันเดียว
+                const generated = generateTimeSlots(result.start, result.end);
+                setSlotMap({ [result.date]: generated });
+            }
+        } catch (err) {
+            console.error("❌ Failed to fetch slots:", err);
+            setSlotMap({});
+        }
+    }, [selectedDate, selectedOption, startTime, endTime]);
+
 
     useEffect(() => {
-        async function fetchSlot() {
-            const result = await getWorkingHourRangeAxios(1, 1, new Date(selectedDate));
-            if (result?.start && result?.end) {
-                const generated = generateTimeSlots(result.start, result.end);
-                setSlot(generated);
-            } else {
-                setSlot([]);
-            }
-        }
         fetchSlot();
-    }, [selectedDate]);
+    }, [fetchSlot, selectedDate, selectedOption, startTime, endTime]);
 
 
     function generateTimeSlots(start: string, end: string): string[] {
@@ -192,7 +250,8 @@ export const TotalBarberSchedule = ({
     function getBookingFraction(
         barberId: number,
         slot: string,
-        appointments?: AppointmentBrief[]
+        appointments: AppointmentBrief[] | undefined,
+        selectedDate: string 
     ): "full" | "top" | "bottom" | null {
         if (!appointments) return null;
 
@@ -201,6 +260,7 @@ export const TotalBarberSchedule = ({
 
         for (const app of appointments) {
             if (app.barber_id !== barberId || app.date !== selectedDate) continue;
+
             const appStart = timeToMinutes(app.start);
             const appEnd = timeToMinutes(app.end);
 
@@ -208,8 +268,10 @@ export const TotalBarberSchedule = ({
             if (appStart <= slotStart && appEnd > slotStart && appEnd <= slotEnd) return "top";
             if (appStart >= slotStart && appStart < slotEnd && appEnd >= slotEnd) return "bottom";
         }
+
         return null;
     }
+
 
     function isSlotLocked(barberId: number, slotStartTime: string): boolean {
         const slotStart = timeToMinutes(slotStartTime);
@@ -222,7 +284,7 @@ export const TotalBarberSchedule = ({
             const apptEnd = timeToMinutes(appt.end);
 
             if (slotStart < apptEnd && slotEnd > apptStart) {
-                return false; 
+                return false;
             }
         }
 
@@ -233,29 +295,58 @@ export const TotalBarberSchedule = ({
             const lockEnd = timeToMinutes(lock.end_time.slice(11, 16));
 
             if (slotStart < lockEnd && slotEnd > lockStart) {
-                return true; 
+                return true;
             }
         }
 
         return false;
     }
 
-
-    function filterQuarterSlots(slots: string[]) {
-        return slots.filter((time) => {
-            const minute = time.split(":")[1];
-            return ["00", "30"].includes(minute);
-        });
+    function isPastSlot(dateStr: string, timeStr: string): boolean {
+        const slotDateTime = dayjs(`${dateStr} ${timeStr}`, "YYYY-MM-DD HH:mm");
+        return slotDateTime.isBefore(dayjs());
     }
+
     const options = [
-        { label: "สัปดาห์นี้", value: 1 },
-        { label: "เดือนนี้", value: 2 },
-    ];
-    const [startTime, setStartTime] = useState<string>("");
-    const [endTime, setEndTime] = useState<string>("");
-    const [selectedOption, setSelectedOption] = useState<number | null>(null);
+        { label: "สัปดาห์นี้", value: "week" },
+        { label: "เดือนนี้", value: "month" },
+    ] as const;
+
     const [openFilter, setOpenFilter] = useState<boolean>(false)
 
+    const allTimeSlots: string[] = (() => {
+        const slots: string[] = [];
+        const current = new Date();
+        current.setHours(0, 0, 0, 0);
+
+        const end = new Date();
+        end.setHours(23, 59, 0, 0);
+
+        while (current <= end) {
+            const hour = current.getHours().toString().padStart(2, "0");
+            const minute = current.getMinutes().toString().padStart(2, "0");
+            slots.push(`${hour}:${minute}`);
+            current.setMinutes(current.getMinutes() + 60);
+        }
+
+        return slots;
+    })();
+
+    const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
+    useEffect(() => {
+        async function fetchAppointment() {
+            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption,["CANCELLED"]);
+            setAppointmentList(appointments ?? []);
+        }
+        fetchAppointment();
+    }, [selectedDate]);
+
+    function handdlesFilter(){
+        setSelectedOption("")
+        setStartTime("")
+        setEndTime("")
+        setOpenFilter(!openFilter)
+    }
 
     return (
         <div className="flex flex-col border rounded-md overflow-auto shadow-md bg-white">
@@ -267,20 +358,20 @@ export const TotalBarberSchedule = ({
                         type="date"
                         min={today}
                         value={selectedDate}
+                        disabled={selectedOption !== ""}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="input input-bordered p-2 rounded-md border border-gray-300"
+                        className={`input input-bordered p-2 rounded-md border border-gray-300 ${selectedOption !== "" ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""
+                            }`}
                     />
                     <button
                         id="filter-button"
-                        onClick={() => setOpenFilter(!openFilter)}
+                        onClick={() => handdlesFilter()}
                         className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center transition"
                     >
                         <MdFilterAlt size={20} className="mr-1" />
                         ตัวกรอง
                     </button>
                 </div>
-
-                {/* Filter Options */}
                 <div
                     id="all-option"
                     className={`mt-4 space-y-3 transition-all duration-300 ${openFilter ? "block" : "hidden"}`}
@@ -294,9 +385,7 @@ export const TotalBarberSchedule = ({
                                         type="checkbox"
                                         checked={selectedOption === option.value}
                                         onChange={() =>
-                                            setSelectedOption(
-                                                selectedOption === option.value ? null : option.value
-                                            )
+                                            setSelectedOption(selectedOption === option.value ? "" : option.value)
                                         }
                                         className="w-4 h-4 text-blue-600 border-gray-300"
                                     />
@@ -308,121 +397,133 @@ export const TotalBarberSchedule = ({
                         {/* Time Selectors */}
                         <div className="flex gap-3 items-center flex-wrap">
                             <div id="time-option" className="flex gap-3 items-center flex-wrap">
-                                <select
-                                    className="border p-2 rounded-md text-sm"
-                                    value={startTime}
-                                    onChange={(e) => setStartTime(e.target.value)}
-                                >
+                                <select value={startTime} onChange={(e) => setStartTime(e.target.value)}>
                                     <option value="">เวลาเริ่มต้น</option>
-                                    {filterQuarterSlots(slot).map((time) => (
-                                        <option key={`start-${time}`} value={time}>
-                                            {time}
-                                        </option>
+                                    {allTimeSlots.map((time) => (
+                                        <option key={`start-${time}`} value={time}>{time}</option>
                                     ))}
                                 </select>
                                 <span>-</span>
-                                <select
-                                    className="border p-2 rounded-md text-sm"
-                                    value={endTime}
-                                    onChange={(e) => setEndTime(e.target.value)}
-                                >
+                                <select value={endTime} onChange={(e) => setEndTime(e.target.value)}>
                                     <option value="">เวลาสิ้นสุด</option>
-                                    {filterQuarterSlots(slot).map((time) => (
-                                        <option key={`end-${time}`} value={time}>
-                                            {time}
-                                        </option>
+                                    {allTimeSlots.map((time) => (
+                                        <option key={`start-${time}`} value={time}>{time}</option>
                                     ))}
                                 </select>
                             </div>
 
                             <button
                                 id="search-button"
+                                onClick={fetchSlot}
                                 className="bg-gray-700 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
                             >
                                 ค้นหา
                             </button>
+
+
                         </div>
                     </div>
                 </div>
             </div>
             <div id="data-box">
-                <div className="flex text-center font-semibold bg-gray-100 divide-x divide-gray-300 border-b border-gray-300">
-                    <div className="py-2 w-[120px]">เวลา</div>
-                    {barbers.map((barber) => (
-                        <div key={barber.id} className="py-2 flex-1" id="barber-name">
-                            {barber.username}
-                        </div>
-                    ))}
-                </div>
-
                 <div className="w-full">
-                    {slot.length === 0 ? (
+                    {Object.entries(slotMap).length === 0 ? (
                         <div className="text-center text-red-500 font-semibold py-6">
-                            วันที่ {selectedDate.split("-").reverse().join("/")} ร้านปิด
+                            ไม่พบเวลาทำงานในช่วงนี้
                         </div>
-                    ) : (slot.map((time, timeIndex) => (
-                        <div
-                            key={timeIndex}
-                            className={`flex `}
-                            id="barber-time"
-                        >
-                            <div className="w-[120px] py-2 bg-gray-100 font-semibold text-center" >{time}</div>
-                            {barbers.map((barber) => {
-                                const fraction = getBookingFraction(barber.id, time, appointments);
-                                const isLocked = isSlotLocked(barber.id, time);
-                                return (
-                                    <div key={barber.id + "_" + timeIndex} className="relative h-14 flex-1 border-l">
+                    ) : (
+                        Object.entries(slotMap).map(([date, times]) => (
+                            <div key={date} className="mb-6">
 
-                                        {/* จองแล้ว (red) */}
-                                        {fraction === "full" && (
-                                            <div className="absolute top-0 h-full w-full bg-red-400 flex items-end justify-center text-white font-semibold pointer-events-none z-20">
-                                                <p>จองแล้ว</p>
+                                <div className="bg-gray-200 text-gray-800 font-bold px-4 py-2">
+                                    วันที่ {date.split("-").reverse().join("/")}
+                                </div>
+                                <div className="flex text-center font-semibold bg-gray-100 divide-x divide-gray-300 border-b border-gray-300">
+                                    <div className="py-2 w-[120px]">เวลา</div>
+                                    {barbers.map((barber) => (
+                                        <div key={barber.id} className="py-2 flex-1" id="barber-name">
+                                            {barber.username}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {times.length === 0 ? (
+                                    <div className="text-center text-red-500 font-semibold py-4">ร้านปิด</div>
+                                ) : (
+                                    times.map((time, timeIndex) => (
+                                        <div key={timeIndex} className="flex" id="barber-time">
+                                            <div className="w-[120px] py-2 bg-gray-100 font-semibold text-center">
+                                                {time}
                                             </div>
-                                        )}
+                                            {barbers.map((barber) => {
+                                                const fraction = getBookingFraction(barber.id, time, appointmentList, date);
+                                                return (
+                                                    <div key={barber.id + "_" + timeIndex} className="relative h-14 flex-1 border-l">
+                                                        {/* จองแล้ว (red) */}
+                                                        {fraction === "full" && (
+                                                            <div className="absolute top-0 h-full w-full bg-red-400 flex items-end justify-center text-white font-semibold pointer-events-none z-20">
+                                                                <p>จองแล้ว</p>
+                                                            </div>
+                                                        )}
 
-                                        {/* ว่าง (green) */}
-                                        {(fraction === "bottom" || fraction === null) && !isSlotLocked(barber.id, time) && (
-                                            <div
-                                                className={`absolute top-0 ${fraction === "bottom" ? "h-1/2" : "h-full"} w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer z-10`}
-                                                onClick={() => onClick?.(selectedDate, barber.id, time)}
-                                            >
-                                                ว่าง
-                                            </div>
-                                        )}
-                                        {fraction === "top" && !isSlotLocked(barber.id, time) && (
-                                            <div
-                                                className="absolute bottom-0 h-1/2 w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer z-10"
-                                                onClick={() => onClick?.(selectedDate, barber.id, addMinutes(time, 15))}
-                                            >
-                                                ว่าง
-                                            </div>
-                                        )}
+                                                        {/* ว่าง (green) */}
+                                                        {(fraction === "bottom" || fraction === null) &&
+                                                            !isSlotLocked(barber.id, time) &&
+                                                            !isPastSlot(date, time) && (
+                                                                <div
+                                                                    className={`absolute top-0 ${fraction === "bottom" ? "h-1/2" : "h-full"} w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer z-10`}
+                                                                    onClick={() => onClick?.(date, barber.id, time)}
+                                                                >
+                                                                    ว่าง
+                                                                </div>
+                                                            )}
 
-                                        {/* จองครึ่ง (red overlay) */}
-                                        {fraction === "top" && (
-                                            <div className="absolute top-0 h-1/2 w-full bg-red-400 flex justify-center items-end pb-[2px] text-white font-semibold text-sm pointer-events-none z-20" />
-                                        )}
-                                        {fraction === "bottom" && (
-                                            <div className="absolute bottom-0 h-1/2 w-full bg-red-400 flex justify-center items-start pt-[2px] text-white font-semibold text-sm pointer-events-none z-20" />
-                                        )}
+                                                        {fraction === "top" &&
+                                                            !isSlotLocked(barber.id, time) &&
+                                                            !isPastSlot(date, time) && (
+                                                                <div
+                                                                    className="absolute bottom-0 h-1/2 w-full bg-green-100 text-green-600 font-semibold flex items-center justify-center hover:bg-green-200 cursor-pointer z-10"
+                                                                    onClick={() => onClick?.(date, barber.id, addMinutes(time, 15))}
+                                                                >
+                                                                    ว่าง
+                                                                </div>
+                                                            )}
 
-                                        {isSlotLocked(barber.id, time) && (
-                                            <div className="absolute inset-0 bg-yellow-300/80 flex items-end justify-center text-black font-semibold pointer-events-none z-0">
-                                                มีคนกำลังจองอยู่...
-                                            </div>
-                                        )}
-                                    </div>
+                                                        {/* Slot หมดเวลา */}
+                                                        {isPastSlot(date, time) && (
+                                                            <div className="absolute inset-0 bg-gray-300/70 flex items-center justify-center text-gray-600 font-semibold pointer-events-none z-0">
+                                                                หมดเวลา
+                                                            </div>
+                                                        )}
 
 
+                                                        {/* จองครึ่ง (red overlay) */}
+                                                        {fraction === "top" && (
+                                                            <div className="absolute top-0 h-1/2 w-full bg-red-400 flex justify-center items-end pb-[2px] text-white font-semibold text-sm pointer-events-none z-20" />
+                                                        )}
+                                                        {fraction === "bottom" && (
+                                                            <div className="absolute bottom-0 h-1/2 w-full bg-red-400 flex justify-center items-start pt-[2px] text-white font-semibold text-sm pointer-events-none z-20" />
+                                                        )}
 
-
-                                );
-                            })}
-                        </div>
-                    )))}
+                                                        {isSlotLocked(barber.id, time) && (
+                                                            <div className="absolute inset-0 bg-yellow-300/80 flex items-end justify-center text-black font-semibold pointer-events-none z-0">
+                                                                มีคนกำลังจองอยู่...
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
-        </div>
+
+
+        </div >
     );
 };
 
@@ -687,4 +788,3 @@ export function BarberScheduleContainer({
         />
     );
 }
-

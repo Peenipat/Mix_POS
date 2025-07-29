@@ -25,7 +25,6 @@ const crumbsMap: Record<string, string> = {
   help: "ความช่วยเหลือ & ติดต่อผู้พัฒนา",
   contact: "ติดต่อผู้พัฒนา",
   profile: "ข้อมูลส่วนตัว",
-  setting:"ตั้งค่า"
 };
 
 const groupedMenu: MenuGroup[] = [
@@ -49,7 +48,6 @@ const groupedMenu: MenuGroup[] = [
     key: "etc",
     label: "อื่น ๆ",
     items: [
-      { to: "setting", label: "ตั้งค่า" ,status: "comingsoon"},
       { to: "contact", label: "ติดต่อผู้พัฒนา" },
     ],
   },

@@ -33,6 +33,7 @@ import TestLayout from "./page/testLayout";
 import ManagerWebIndex from "./page/admin/manage_web/web_index";
 import UIConfiglayout from "@object/shared/layouts/UIConfiglayout";
 import ToastManagement from "@object/shared/page/ToastManagement";
+import { CustomerDetail } from "./page/admin/Customer_id";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -98,6 +99,7 @@ export default function App() {
         <Route path="barber/:id" element={<BarberDetail />} />
         <Route path="service" element={<ManageService />} />
         <Route path="customer" element={<ManageCustomer />} />
+        <Route path="customer/:id" element={<CustomerDetail />} />
         <Route path="appointments" element={<ManageAppointments />} />
         <Route path="working" element={<ManageTime />} />
         <Route path="help" element={<HelpPage />} />

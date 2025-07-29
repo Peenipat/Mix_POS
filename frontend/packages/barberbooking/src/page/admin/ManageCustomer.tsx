@@ -4,15 +4,17 @@ import { DataTable } from "../../components/DataTable";
 import type { Action, Column } from "../../components/DataTable";
 import { useAppSelector } from "../../store/hook";
 import axios from "../../lib/axios";
+import { useNavigate } from "react-router-dom";
 
 interface Customer {
     id: number;
-    Name: string;
+    name: string;
     email: string;
-    Phone: string;
+    phone: string;
   }
 
 export function ManageCustomer() {
+  const navigate = useNavigate();
   const me = useAppSelector((state) => state.auth.me);
   const tenantId = me?.tenant_ids[0];
   const branchId = me?.branch_id;
@@ -21,6 +23,10 @@ export function ManageCustomer() {
   const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
   const [errorCustomers, setErrorCustomers] = useState<string | null>(null);
   const didFetchCustomers = useRef(false);
+
+  const handleCustomerDetail = (customerId: number) => {
+    navigate(`/admin/customer/${customerId}`)
+  }
 
   useEffect(() => {
     if (!tenantId || didFetchCustomers.current) return;
@@ -64,29 +70,18 @@ export function ManageCustomer() {
       header: "#",
       accessor: (_row, rowIndex) => rowIndex + 1, 
     },
-    { header: "Name",        accessor: "Name" },
+    { header: "Name",        accessor: "name" },
     { header: "Email",       accessor: "email" },
-    { header: "Phone",       accessor: "Phone" },
+    { header: "Phone",       accessor: "phone" },
   ];
 
   const viewAction: Action<Customer> = {
     label: "ดูประวัติการจอง",
-    onClick: (row) => console.log("edit customer", row),
+    onClick: (row) => handleCustomerDetail(row.id),
     className: "text-blue-600",
   };
 
-  const editAction: Action<Customer> = {
-    label: "Edit",
-    onClick: (row) => console.log("edit customer", row),
-    className: "text-blue-600",
-  };
-  const deleteAction: Action<Customer> = {
-    label: "Delete",
-    onClick: (row) => console.log("delete customer", row),
-    className: "text-red-600",
-  };
 
-  // === ถ้าทุกอย่างพร้อมแล้ว ให้แสดง DataTable ===
   return (
     <div>
       <h2 className="text-xl mb-4">Customers for Tenant {tenantId}</h2>
@@ -94,7 +89,7 @@ export function ManageCustomer() {
         data={customers}
         columns={columns}
         onRowClick={(r) => console.log("row clicked", r)}
-        actions={[viewAction,editAction, deleteAction]}
+        actions={[viewAction]}
         showEdit={false}
         showDelete={false}
       />

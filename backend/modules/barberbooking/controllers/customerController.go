@@ -91,13 +91,14 @@ func (ctrl *CustomerController) GetAllCustomers(c *fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        tenant_id  path      uint                             true  "รหัส Tenant"
+// @Param        branch_id  path      uint                             true  "รหัส Branch"
 // @Param        cus_id     path      uint                             true  "รหัส Customer"
 // @Success      200        {object}  map[string]interface{}          "คืนค่า status success, message และข้อมูล Customer ใน key `data`"
 // @Failure      400        {object}  map[string]string               "Invalid tenant_id หรือ invalid cus_id"
 // @Failure      403        {object}  map[string]string               "Permission denied"
 // @Failure      404        {object}  map[string]string               "Customer not found"
 // @Failure      500        {object}  map[string]string               "Failed to fetch customer"
-// @Router      /tenants/:tenant_id/customers/:cus_id [get]
+// @Router      /tenants/{tenant_id}/branch/{branch_id}/customers/{cus_id} [get]
 // @Security     ApiKeyAuth
 func (ctrl *CustomerController) GetCustomerByID(c *fiber.Ctx) error {
 	// 1. เช็คสิทธิ์
@@ -134,7 +135,6 @@ func (ctrl *CustomerController) GetCustomerByID(c *fiber.Ctx) error {
 		})
 	}
 
-	// 5. Not found
 	if customer == nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"status":  "error",
@@ -142,7 +142,6 @@ func (ctrl *CustomerController) GetCustomerByID(c *fiber.Ctx) error {
 		})
 	}
 
-	// 6. Success
 	return c.JSON(fiber.Map{
 		"status":  "success",
 		"message": "Customer retrieved",

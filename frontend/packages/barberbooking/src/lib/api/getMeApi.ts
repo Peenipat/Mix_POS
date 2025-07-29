@@ -1,5 +1,5 @@
 // src/lib/api/getMeApi.ts
-import axios from '../axios'; // ควรเป็น instance เดิมของคุณ ที่ตั้ง withCredentials: true แล้ว
+import axios from '../axios'; 
 
 export interface Me {
   id: number;
@@ -11,8 +11,6 @@ export interface Me {
 }
 
 export async function getMeApi(): Promise<Me> {
-  // GET /core/user/me → backend จะตอบ { status: "success", data: { ... } }
-  // หรือในบางการ implement อาจตอบแค่ data โดยตรง เช่น { data: { id, username, ... } }
   const resp = await axios.get<{ data: Me }>('/core/user/me');
   return resp.data.data;
 }

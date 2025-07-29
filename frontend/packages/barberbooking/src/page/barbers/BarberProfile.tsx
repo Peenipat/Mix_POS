@@ -1,3 +1,5 @@
+import { useAppSelector } from "../../store/hook";
+
 const mockBarber = {
     id: 1,
     name: "คุณบอย",
@@ -10,6 +12,13 @@ const mockBarber = {
 };
 
 export default function BarberProfile() {
+      const me = useAppSelector((state) => state.auth.me);
+    
+      // ดึง tenantId และ branchId
+      const tenantId = me?.tenant_ids[0];
+      const branchId = me?.branch_id;
+
+      console.log(me)
     return (
         <div className="max-w-xl mx-auto p-4 bg-white rounded-lg shadow space-y-4">
             <h2 className="text-2xl font-bold text-center">โปรไฟล์ช่างตัดผม</h2>
@@ -17,10 +26,10 @@ export default function BarberProfile() {
             <div className="flex flex-col items-center space-y-2">
                 <img
                     src={mockBarber.profilePicture}
-                    alt={mockBarber.name}
+                    alt={me?.username}
                     className="w-24 h-24 rounded-full object-cover"
                 />
-                <h3 className="text-xl font-semibold">{mockBarber.name}</h3>
+                <h3 className="text-xl font-semibold">{me?.username}</h3>
                 <p className="text-gray-500">ประสบการณ์: {mockBarber.experience}</p>
             </div>
 

@@ -8,6 +8,57 @@
     },
     "basePath": "/api/v1/barberbooking",
     "paths": {
+        "/appointments/by-phone": {
+            "get": {
+                "description": "คืนรายการการจองทั้งหมดของลูกค้าที่ใช้เบอร์โทรนั้นในระบบ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายด้วยเบอร์โทร",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "เบอร์โทรลูกค้า (Customer Phone)",
+                        "name": "phone",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/barbers/{barber_id}": {
             "get": {
                 "description": "คืนข้อมูล Barber ตามรหัสที่ระบุ",
@@ -219,7 +270,7 @@
         },
         "/branches/{branch_id}/appointments": {
             "get": {
-                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้",
+                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้ เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้",
                 "consumes": [
                     "application/json"
                 ],
@@ -240,14 +291,26 @@
                     },
                     {
                         "type": "string",
-                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15",
                         "name": "start",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)",
+                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20",
                         "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)",
+                        "name": "exclude_status",
                         "in": "query"
                     }
                 ],
@@ -260,7 +323,7 @@
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -269,7 +332,7 @@
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "ไม่พบข้อมูล",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -278,7 +341,7 @@
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -571,6 +634,113 @@
                     },
                     "500": {
                         "description": "Failed to delete service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/services/{service_id}": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "แก้ไขข้อมูลบริการและรูปภาพ (เฉพาะผู้มีสิทธิ์)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "แก้ไขบริการ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Service ID",
+                        "name": "service_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ชื่อบริการ",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "คำอธิบาย",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ระยะเวลา (นาที)",
+                        "name": "duration",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "ราคา",
+                        "name": "price",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "รูปภาพใหม่ (optional)",
+                        "name": "file",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1697,82 +1867,6 @@
                         }
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "สร้างบริการใหม่",
-                "parameters": [
-                    {
-                        "description": "Payload สำหรับสร้าง Service (Name, Duration, Price)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Service"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "คืนค่า status success และข้อความยืนยันการสร้าง",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body หรือ Invalid tenant ID หรือ Invalid service input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to create service",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
             }
         },
         "/tenants/:tenant_id/branch/:branch_id/services/:service_id": {
@@ -1825,86 +1919,6 @@
                     },
                     "500": {
                         "description": "Failed to fetch service",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "อัปเดต Service ตามรหัสที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Service"
-                ],
-                "summary": "แก้ไขข้อมูลบริการ",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Service",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Payload สำหรับอัปเดต Service (Name, Duration, Price)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Service"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และข้อมูล Service ที่อัปเดตใน key `data`",
-                        "schema": {
-                            "$ref": "#/definitions/barberBookingModels.Service"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid service ID หรือ Invalid request body หรือ Invalid service input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Service not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to update service",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2065,85 +2079,6 @@
             }
         },
         "/tenants/:tenant_id/customers/:cus_id": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "คืนข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Customer"
-                ],
-                "summary": "ดึงข้อมูลลูกค้าตาม ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Tenant",
-                        "name": "tenant_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "รหัส Customer",
-                        "name": "cus_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และข้อมูล Customer ใน key `data`",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid tenant_id หรือ invalid cus_id",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Customer not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to fetch customer",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "put": {
                 "security": [
                     {
@@ -3085,7 +3020,7 @@
                         "required": true
                     },
                     {
-                        "description": "Payload สำหรับอัปเดต Barber (BranchID, UserID, PhoneNumber, Username, Email)",
+                        "description": "ข้อมูล Barber ที่ต้องการอัปเดต",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -3131,6 +3066,194 @@
                     },
                     "500": {
                         "description": "Failed to update Barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branch/{branch_id}/customers/{cus_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนข้อมูล Customer ตามรหัสที่ระบุ ภายใต้ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ดึงข้อมูลลูกค้าตาม ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Customer",
+                        "name": "cus_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status success, message และข้อมูล Customer ใน key `data`",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant_id หรือ invalid cus_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch customer",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branch/{branch_id}/services": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "เพิ่ม Service ใหม่ภายใต้ Tenant ของผู้ใช้ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant หรือ TenantAdmin)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Service"
+                ],
+                "summary": "สร้างบริการใหม่",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ชื่อบริการ",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "คำอธิบาย",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ระยะเวลา (นาที)",
+                        "name": "duration",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "ราคา",
+                        "name": "price",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "รูปภาพประกอบบริการ (optional)",
+                        "name": "file",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "คืนค่า status success พร้อมข้อมูลบริการที่ถูกสร้าง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body หรือ tenant ID หรือข้อมูลไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create service",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3619,6 +3742,87 @@
                 }
             }
         },
+        "/tenants/{tenant_id}/workinghour/branches/{branch_id}/slots": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ดึงช่วงเวลาที่เปิดให้บริการในแต่ละวัน โดยสามารถกรองได้ตามวันนี้, สัปดาห์นี้ หรือเดือนนี้ พร้อมทั้งกรองช่วงเวลา (เช่น 09:00-12:30)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "WorkingHour"
+                ],
+                "summary": "ดึง slot เวลาที่ว่างของสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสผู้เช่า (Tenant ID)",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา (Branch ID)",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ประเภทการกรองวันที่: week (สัปดาห์นี้), month (เดือนนี้), หรือเว้นไว้เพื่อดึงแค่วันนี้",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาเริ่มต้นที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 09:00)",
+                        "name": "from_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาสิ้นสุดที่ต้องการกรอง (รูปแบบ: HH:mm เช่น 12:30)",
+                        "name": "to_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status และ slot รายวัน เช่น { '2025-07-22': ['09:00', '09:30', ...] }",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "พารามิเตอร์ไม่ถูกต้อง เช่น tenant_id หรือ branch_id ไม่ถูกต้อง",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/users/{user_id}/barber": {
             "get": {
                 "security": [
@@ -4001,13 +4205,12 @@
             "type": "object",
             "properties": {
                 "barber": {
-                    "$ref": "#/definitions/coreModels.User"
+                    "$ref": "#/definitions/barberBookingModels.Barber"
                 },
                 "barber_id": {
                     "type": "integer"
                 },
                 "branch_id": {
-                    "description": "ไม่ preload branch",
                     "type": "integer"
                 },
                 "created_at": {
@@ -4050,7 +4253,6 @@
                     "type": "string"
                 },
                 "user_id": {
-                    "description": "อ้าง user ที่สร้างคิว (ไม่มี FK)",
                     "type": "integer"
                 }
             }
@@ -4098,12 +4300,14 @@
                 "CANCELLED",
                 "COMPLETED",
                 "NO_SHOW",
+                "IN_SERVICE",
                 "RESCHEDULED"
             ],
             "x-enum-comments": {
                 "StatusCancelled": "ยกเลิก",
                 "StatusComplete": "จบงาน",
                 "StatusConfirmed": "รับ",
+                "StatusInService": "กำลังให้บริการ",
                 "StatusPending": "รอดำเนินการ",
                 "StatusRescheduled": "เปลี่ยนเวลา"
             },
@@ -4113,6 +4317,7 @@
                 "StatusCancelled",
                 "StatusComplete",
                 "StatusNoShow",
+                "StatusInService",
                 "StatusRescheduled"
             ]
         },
@@ -4166,9 +4371,6 @@
                 "id": {
                     "type": "integer"
                 },
-                "phone_number": {
-                    "type": "string"
-                },
                 "role_user": {
                     "type": "string"
                 },
@@ -4177,6 +4379,9 @@
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/coreModels.User"
                 },
                 "user_id": {
                     "type": "integer"
@@ -4400,9 +4605,6 @@
                 "description": {
                     "type": "string"
                 },
-                "phone_number": {
-                    "type": "string"
-                },
                 "user_id": {
                     "type": "integer"
                 }
@@ -4444,14 +4646,21 @@
                     "type": "string"
                 },
                 "email": {
-                    "description": "ถ้าต้องการอัปเดตอีเมลด้วย",
+                    "type": "string"
+                },
+                "img_name": {
+                    "type": "string"
+                },
+                "img_path": {
                     "type": "string"
                 },
                 "phone_number": {
                     "type": "string"
                 },
+                "role_user": {
+                    "type": "string"
+                },
                 "username": {
-                    "description": "ถ้าต้องการอัปเดตชื่อผู้ใช้ด้วย",
                     "type": "string"
                 }
             }
@@ -4668,6 +4877,9 @@
                 },
                 "id": {
                     "type": "integer"
+                },
+                "phone_number": {
+                    "type": "string"
                 },
                 "role": {
                     "$ref": "#/definitions/coreModels.Role"

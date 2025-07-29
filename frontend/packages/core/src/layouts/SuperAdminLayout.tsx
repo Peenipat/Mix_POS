@@ -8,6 +8,7 @@ const crumbsMap: Record<string, string> = {
   users: "Manage Users",
   tenant: "Manage Tenant",
   log: "System Log",
+  send_message:"Send message management"
 };
 
 export default function SuperAdminLayout() {
@@ -94,6 +95,14 @@ export default function SuperAdminLayout() {
                 className="flex items-center p-2 text-white rounded-lg dark:text-white hover:bg-gray-700 dark:hover:bg-gray-700"
               >
                 <span className="flex-1 ml-3 whitespace-nowrap">System Log</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="send_message"
+                className="flex items-center p-2 text-white rounded-lg dark:text-white hover:bg-gray-700 dark:hover:bg-gray-700"
+              >
+                <span className="flex-1 ml-3 whitespace-nowrap">Send Message Management</span>
               </Link>
             </li>
           </ul>

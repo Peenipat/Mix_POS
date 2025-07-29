@@ -12,7 +12,12 @@ import Toggle from "@object/shared/components/Toggle";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { editWorkingHourSchema, EditWorkingHourFormData } from "../../schemas/WorkingHourSchema";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 type WorkingHour = {
     id: number;
@@ -157,7 +162,7 @@ export default function ManageTime() {
 
             {/* Add Override Form */}
             <section>
-                <h2 className="text-xl font-semibold mb-2">เพิ่มวันทำการเฉพาะกิจ</h2>
+                <h2 className="text-xl font-semibold mb-2">เพิ่มเวลาเปิด - ปิด กรณีพิเศษ</h2>
                 <div className="space-y-4">
                     <input
                         type="date"
@@ -182,6 +187,16 @@ export default function ManageTime() {
                                 className="input input-bordered"
                                 value={newOverride.end_time}
                                 onChange={(e) => setNewOverride({ ...newOverride, end_time: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium">
+                                หมายเหตุ
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="หมายเหตุ"
+                                className={`w-full input input-bordered`}
                             />
                         </div>
                     </div>
@@ -262,12 +277,12 @@ export function EditWorkingHourModal({
                     weekday: workingHour.Weekday,
                     start_time: null,
                     end_time: null,
-                    is_closed: true
+                    is_closed: true,
                 }]
                 : [{
                     weekday: workingHour.Weekday,
-                    start_time: new Date(`2025-01-01T${data.start_time}:00`).toISOString(),
-                    end_time: new Date(`2025-01-01T${data.end_time}:00`).toISOString(),
+                    start_time: dayjs.tz(`2025-01-01T${data.start_time}:00`, "Asia/Bangkok").toISOString(),
+                    end_time: dayjs.tz(`2025-01-01T${data.end_time}:00`, "Asia/Bangkok").toISOString(),
                     is_closed: false,
                 }];
 
@@ -294,6 +309,7 @@ export function EditWorkingHourModal({
 
 
     if (!isOpen || !workingHour) return null;
+    console.log("📆 Working day selected:", workingHour?.Weekday);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="แก้ไขเวลาเปิด-ปิด">

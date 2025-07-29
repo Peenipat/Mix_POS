@@ -10,6 +10,7 @@ import (
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
 	"strings"
+	"time"
 )
 
 type WorkingHourService struct {
@@ -41,6 +42,7 @@ func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID ui
 			return fmt.Errorf("invalid weekday: %d", wh.Weekday)
 		}
 
+		fmt.Println( "weekday=", wh.Weekday) 
 		var existing barberBookingModels.WorkingHour
 		err := tx.
 			Where("branch_id = ? AND tenant_id = ? AND weekday = ?", branchID, tenantID, wh.Weekday).
@@ -77,7 +79,6 @@ func (s *WorkingHourService) UpdateWorkingHours(ctx context.Context, branchID ui
 	return tx.Commit().Error
 }
 
-
 func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID uint, input barberBookingDto.WorkingHourInput) error {
 	if input.Weekday < 0 || input.Weekday > 6 {
 		return fmt.Errorf("invalid weekday: %d", input.Weekday)
@@ -101,4 +102,143 @@ func (s *WorkingHourService) CreateWorkingHours(ctx context.Context, branchID ui
 	}
 
 	return nil
+}
+
+func (s *WorkingHourService) GetAvailableSlots(
+	ctx context.Context,
+	branchID uint,
+	tenantID uint,
+	filter string, // "week", "month", หรือ ""
+	fromTime *string, // nullable
+	toTime *string,
+) (map[string][]string, error) {
+	loc := time.Now().Location()
+	now := time.Now().In(loc)
+
+	var dates []time.Time
+
+	switch filter {
+	case "week":
+		isoWeekday := getWeekday(now)
+		monday := now.AddDate(0, 0, -(isoWeekday - 1)).Truncate(24 * time.Hour)
+		for i := 0; i < 7; i++ {
+			d := monday.AddDate(0, 0, i)
+			if d.Before(now.Truncate(24 * time.Hour)) {
+				continue
+			}
+			dates = append(dates, d)
+		}
+	case "month":
+		firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
+		for d := firstDay; d.Month() == now.Month(); d = d.AddDate(0, 0, 1) {
+			if d.Before(now.Truncate(24 * time.Hour)) {
+				continue
+			}
+			dates = append(dates, d)
+		}
+	default:
+		dates = []time.Time{now.Truncate(24 * time.Hour)}
+	}
+
+	defaultHours, err := s.GetWorkingHours(ctx, branchID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	startStr := dates[0].Format("2006-01-02")
+	endStr := dates[len(dates)-1].Format("2006-01-02")
+	var overrides []barberBookingModels.WorkingDayOverride
+	if err := s.DB.WithContext(ctx).
+		Where("branch_id = ? AND work_date BETWEEN ? AND ? AND deleted_at IS NULL", branchID, startStr, endStr).
+		Find(&overrides).Error; err != nil {
+		return nil, err
+	}
+	overrideMap := make(map[string]barberBookingModels.WorkingDayOverride)
+	for _, o := range overrides {
+		overrideMap[o.WorkDate.Format("2006-01-02")] = o
+	}
+
+	result := make(map[string][]string)
+	for _, date := range dates {
+		dayStr := date.Format("2006-01-02")
+		var start, end string
+
+		if o, ok := overrideMap[dayStr]; ok {
+			if o.IsClosed {
+				result[dayStr] = []string{} 
+				continue
+			}
+			start = o.StartTime.Format("15:04")
+			end = o.EndTime.Format("15:04")
+		} else {
+			weekday := getWeekday(date)
+			found := false
+			for _, d := range defaultHours {
+				if d.Weekday == weekday {
+					if d.IsClosed {
+						result[dayStr] = []string{} 
+						found = true
+						break
+					}
+					start = d.StartTime.Format("15:04")
+					end = d.EndTime.Format("15:04")
+					found = true
+					break
+				}
+			}
+			if !found {
+				result[dayStr] = []string{} 
+				continue
+			}
+		}
+		
+
+		realStart := start
+		realEnd := end
+		if fromTime != nil {
+			realStart = maxTime(start, *fromTime)
+		}
+		if toTime != nil {
+			realEnd = minTime(end, *toTime)
+		}
+		if realStart >= realEnd {
+			continue
+		}
+
+		result[dayStr] = generateSlots(realStart, realEnd, 30)
+	}
+
+	return result, nil
+}
+
+func generateSlots(start string, end string, interval int) []string {
+	slots := []string{}
+	layout := "15:04"
+
+	startTime, _ := time.Parse(layout, start)
+	endTime, _ := time.Parse(layout, end)
+
+	for t := startTime; !t.After(endTime); t = t.Add(time.Minute * time.Duration(interval)) {
+		s := t.Format("15:04")
+		slots = append(slots, s)
+	}
+	return slots
+}
+
+
+
+func getWeekday(t time.Time) int {
+	return int(t.Weekday())
+}
+func maxTime(a, b string) string {
+	if a > b {
+		return a
+	}
+	return b
+}
+func minTime(a, b string) string {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -732,17 +732,19 @@ func (ctrl *AppointmentController) DeleteAppointment(c *fiber.Ctx) error {
 }
 
 // @Summary      ดึงการนัดหมายทั้งหมดของช่างในสาขา
-// @Description  คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาเริ่มต้นและสิ้นสุดได้
+// @Description  คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้ เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้
 // @Tags         Appointment
 // @Accept       json
 // @Produce      json
 // @Param        branch_id   path      uint     true   "รหัสสาขา (Branch ID)"
-// @Param        start       query     string   false  "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd)"
-// @Param        end         query     string   false  "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd)"
+// @Param        start       query     string   false  "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15"
+// @Param        end         query     string   false  "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20"
+// @Param        filter      query     string   false  "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)"
+// @Param        exclude_status query     string   false  "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)"
 // @Success      200         {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
-// @Failure      400         {object}  map[string]string
-// @Failure      404         {object}  map[string]string
-// @Failure      500         {object}  map[string]string
+// @Failure      400         {object}  map[string]string        "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ"
+// @Failure      404         {object}  map[string]string        "ไม่พบข้อมูล"
+// @Failure      500         {object}  map[string]string        "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์"
 // @Router       /branches/{branch_id}/appointments [get]
 func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
@@ -753,10 +755,12 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		})
 	}
 
+	filterType := c.Query("filter") 
+
 	var startTime *time.Time
 	var endTime *time.Time
-
 	layout := "2006-01-02"
+
 	if startStr := c.Query("start"); startStr != "" {
 		t, err := time.Parse(layout, startStr)
 		if err != nil {
@@ -767,6 +771,7 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		}
 		startTime = &t
 	}
+
 	if endStr := c.Query("end"); endStr != "" {
 		t, err := time.Parse(layout, endStr)
 		if err != nil {
@@ -779,7 +784,17 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		endTime = &t
 	}
 
-	appts, err := ctrl.Service.GetAppointmentsByBranch(c.Context(), branchID, startTime, endTime)
+	rawStatuses := c.Query("exclude_status") // ตัวอย่าง: "CANCELLED,NO_SHOW"
+	var excludeStatuses []barberBookingModels.AppointmentStatus
+	if rawStatuses != "" {
+		for _, s := range strings.Split(rawStatuses, ",") {
+			status := barberBookingModels.AppointmentStatus(strings.ToUpper(strings.TrimSpace(s)))
+			excludeStatuses = append(excludeStatuses, status)
+		}
+	}
+
+	// เรียก service พร้อมส่ง filterType เพิ่ม
+	appts, err := ctrl.Service.GetAppointmentsByBranch(c.Context(), branchID, startTime, endTime, filterType,excludeStatuses)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -792,6 +807,7 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		"data":   appts,
 	})
 }
+
 
 // GetAppointmentsByBarber ดึงการนัดหมายทั้งหมดของช่างในช่วงเวลาหรือสถานะที่กำหนด
 // @Summary      ดึงการนัดหมายทั้งหมดของช่าง
@@ -876,6 +892,41 @@ func (ctrl *AppointmentController) GetAppointmentsByBarber(c *fiber.Ctx) error {
 		"data":   appts,
 	})
 }
+
+// GetAppointmentsByPhone ดึงรายการการจองของลูกค้าจากเบอร์โทร
+// @Summary      ดึงการนัดหมายด้วยเบอร์โทร
+// @Description  คืนรายการการจองทั้งหมดของลูกค้าที่ใช้เบอร์โทรนั้นในระบบ
+// @Tags         Appointment
+// @Accept       json
+// @Produce      json
+// @Param        phone     query     string   true   "เบอร์โทรลูกค้า (Customer Phone)"
+// @Success      200       {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
+// @Failure      400       {object}  map[string]string
+// @Failure      500       {object}  map[string]string
+// @Router       /appointments/by-phone [get]
+func (ctrl *AppointmentController) GetAppointmentsByPhone(c *fiber.Ctx) error {
+	phone := strings.TrimSpace(c.Query("phone"))
+	if phone == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "กรุณาระบุเบอร์โทรศัพท์ (phone)",
+		})
+	}
+
+	appts, err := ctrl.Service.GetAppointmentsByPhone(c.Context(), phone)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data":   appts,
+	})
+}
+
 
 
 

@@ -33,18 +33,22 @@ import TestLayout from "./page/testLayout";
 import ManagerWebIndex from "./page/admin/manage_web/web_index";
 import UIConfiglayout from "@object/shared/layouts/UIConfiglayout";
 import ToastManagement from "@object/shared/page/ToastManagement";
+import { CustomerDetail } from "./page/admin/Customer_id";
 
 export default function App() {
   const dispatch = useAppDispatch();
   const location = useLocation();
-
-  // initialized เพื่อควบคุม Loading screen
   const [initialized, setInitialized] = useState(false);
-  // ref เพื่อบอกว่าโหลด /me ไปแล้วหรือยัง
   const didFetchMe = useRef(false);
 
+  const protectedPrefixes = ["/admin", "/barber",];
+
+  const isProtected = protectedPrefixes.some((prefix) =>
+    location.pathname.startsWith(prefix)
+  );
+
   useEffect(() => {
-    if (!didFetchMe.current && location.pathname.startsWith("/admin")) {
+    if (!didFetchMe.current && isProtected) {
       didFetchMe.current = true;
       dispatch(loadCurrentUser())
         .catch(() => {
@@ -53,10 +57,10 @@ export default function App() {
         .finally(() => {
           setInitialized(true);
         });
+    } else if (!didFetchMe.current) {
+      setInitialized(true);
     }
-
-    setInitialized(true);
-  }, [dispatch,]);
+  }, [location.pathname]);
 
 
   return (
@@ -95,6 +99,7 @@ export default function App() {
         <Route path="barber/:id" element={<BarberDetail />} />
         <Route path="service" element={<ManageService />} />
         <Route path="customer" element={<ManageCustomer />} />
+        <Route path="customer/:id" element={<CustomerDetail />} />
         <Route path="appointments" element={<ManageAppointments />} />
         <Route path="working" element={<ManageTime />} />
         <Route path="help" element={<HelpPage />} />

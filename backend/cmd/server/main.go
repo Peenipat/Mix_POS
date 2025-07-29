@@ -191,12 +191,17 @@ func main() {
 	authSvc := coreServices.NewAuthService(database.DB, logSvc)
 	coreControllers.InitAuthHandler(authSvc, logSvc)
 
+	telegramService := coreServices.NewTelegramService()
+	telegramController := coreControllers.NewTelegramController(telegramService)
+
 	coreGroup := app.Group("/api/v1/core")
 	coreRoutes.RegisterUserRoutes(coreGroup, userController)
 	coreRoutes.RegisterTenantRoutes(coreGroup, tenantController)
 	coreRoutes.RegisterTenantUserRoutes(coreGroup, tenantUserController)
 	coreRoutes.RegisterBranchRoutes(coreGroup, branchController)
 	coreRoutes.SetupAuthRoutes(coreGroup, userController)
+	coreRoutes.RegisterTelegramRoutes(coreGroup,telegramController)
+	
 
 	// === Barber Booking Module: Service Feature ===
 	serviceService := bookingServices.NewServiceService(database.DB)
@@ -231,6 +236,8 @@ func main() {
 
 	apppointmentLockService := bookingServices.NewAppointmentLockService(database.DB)
 	apppointmentLockController := bookingControllers.NewAppointmentLockController(apppointmentLockService)
+
+
 
 	bookingGroup := app.Group("/api/v1/barberbooking")
 

@@ -34,9 +34,14 @@ func SeedUsers(db *gorm.DB) error {
         }
     }
 
-    // โหลด Default Branch (ใช้สำหรับทุกบทบาทที่ผูกสาขา)
+    // โหลด Default Branch 
     var branch coreModels.Branch
     if err := db.Where("name = ?", "Branch 1").First(&branch).Error; err != nil {
+        return err
+    }
+
+    var branch2 coreModels.Branch
+    if err := db.Where("name = ?", "Branch 2").First(&branch2).Error; err != nil {
         return err
     }
 
@@ -57,6 +62,7 @@ func SeedUsers(db *gorm.DB) error {
         {"tenant_admin", "tenant_admin@gmail.com", "12345678", roleTA.ID, &branch.ID,"barbers","barber3.jpg"},
         // Branch Admin (เฉพาะสาขา)
         {"branch_admin", "branch_admin@gmail.com", "12345678", roleBA.ID, &branch.ID,"barbers","barber2.jpg"},
+        {"branch_admin2", "branch2_admin@gmail.com", "12345678", roleBA.ID, &branch2.ID,"barbers","barber2.jpg"},
         // Assistant Manager
         {"assistant_mgr", "assistant@gmail.com", "12345678", roleAM.ID, &branch.ID,"barbers","barber4.jpg"},
         // Staff

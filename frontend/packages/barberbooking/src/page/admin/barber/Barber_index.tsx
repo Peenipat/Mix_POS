@@ -25,6 +25,7 @@ export function ManageBarber() {
   const branchId = Number(me?.branch_id);
 
   const [barbers, setBarbers] = useState<Barber[]>([]);
+
   const [editBarber, setEditBarber] = useState<Barber>()
   const [deleteBarber, setDeleteBarber] = useState<Barber>()
   const [loadingBarbers, setLoadingBarbers] = useState<boolean>(false);
@@ -34,6 +35,7 @@ export function ManageBarber() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [showMessage, setShowMessage] = useState(false);
 
   const [viewMode, setViewMode] = useState<"table" | "card">("card");
 
@@ -42,8 +44,7 @@ export function ManageBarber() {
       setBarbers(prev => prev.filter(b => b.id !== deleteBarber.id));
     }
   };
-  const handleView = (barberId:number)=>{
-    console.log(barberId)
+  const handleEdit = (barberId: number) => {
     navigate(`/admin/barber/${barberId}`)
   }
 
@@ -104,12 +105,16 @@ export function ManageBarber() {
     <div className="space-y-6">
       {/* ปุ่มควบคุม */}
       <div className="flex flex-wrap items-center gap-4 justify-between">
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="btn btn-primary"
-        >
-          + เพิ่มช่างคนใหม่
-        </button>
+        <div>
+          <button
+            onClick={() => alert("ยังไม่พร้อมใช้งาน")}
+            className="bg-blue-600 text-white p-1.5 rounded-md disabled:bg-gray-400 disabled:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={true}
+          >
+            + เพิ่มช่างคนใหม่
+          </button>
+          <span className="text-red-800 bg-red-100 p-1 rounded-md text-xs ml-1">ยังไม่พร้อมใช้งาน</span>
+        </div>
 
         <div className="flex gap-2">
           <button
@@ -157,8 +162,7 @@ export function ManageBarber() {
                 { header: "เบอร์โทร", accessor: "phone_number" },
               ]}
               onEdit={(b) => {
-                setEditBarber(b);
-                setIsEditOpen(true);
+                handleEdit(b.id)
               }}
               onDelete={(b) => {
                 setDeleteBarber(b);
@@ -172,10 +176,8 @@ export function ManageBarber() {
               {/* {barbers.map((barber) => (
                 <Card
                   key={barber.id}
-                  onView={() => handleView(barber.id)}
                   onEdit={() => {
-                    setEditBarber(barber);
-                    setIsEditOpen(true);
+                    handleEdit(barber.id)
                   }}
                   onDelete={() => {
                     setDeleteBarber(barber);
@@ -214,12 +216,6 @@ export function ManageBarber() {
             barber={deleteBarber}
             onDelete={handleDeleteSuccess}
             onClose={() => setIsDeleteOpen(false)}
-            onCreate={handleCreated}
-          />
-          <EditBarberModal
-            isOpen={isEditOpen}
-            barber={editBarber}
-            onClose={() => setIsEditOpen(false)}
             onCreate={handleCreated}
           />
           <CreateBarberModal
@@ -430,200 +426,6 @@ function CreateBarberModal({
   );
 }
 
-interface EditBarberModalProps {
-  isOpen: boolean;
-  barber: Barber | undefined;
-  onClose: () => void;
-  onCreate: () => void;
-}
-function EditBarberModal({
-  isOpen,
-  barber,
-  onClose,
-  onCreate,
-}: EditBarberModalProps) {
-  if (!isOpen || !barber) {
-    return null;
-  }
-
-  const me = useAppSelector((state) => state.auth.me);
-  const statusMe = useAppSelector((state) => state.auth.statusMe);
-
-  const tenantId = me?.tenant_ids?.[0];
-  const branchId = me?.branch_id;
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<EditBarberFormData>({
-    resolver: zodResolver(editBarberSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      phone_number: "",
-      img_path: "",
-      img_name: "",
-      profilePicture: "",
-    },
-  });
-
-  useEffect(() => {
-    if (isOpen && barber) {
-      reset({
-        username: barber.username,
-        email: barber.email,
-        phone_number: barber.phone_number,
-        img_path: barber.img_path,
-        img_name: barber.img_name,
-      });
-    }
-  }, [isOpen, barber, reset]);
-
-  if (statusMe === "loading") return null;
-  if (statusMe === "succeeded" && !me) return null;
-  const [previewUrl, setPreviewUrl] = useState<string | null>(`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${barber.img_path}/${barber.img_name}`);
-
-  const onSubmit = async (data: EditBarberFormData) => {
-    if (!tenantId || !branchId) {
-      return;
-    }
-
-    try {
-      const res = await axios.put<{ status: string }>(
-        `/barberbooking/tenants/${tenantId}/barbers/${barber.id}`,
-        {
-          branch_id: branchId,
-          user_id: barber.user_id,
-          phone_number: data.phone_number,
-          username: data.username,
-          email: data.email,
-        }
-      );
-      if (res.data.status !== "success") {
-        throw new Error(res.data.status);
-      }
-      onCreate();
-      onClose();
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
-
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Barber">
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="mb-4">
-          <label className="block text-gray-700 dark:text-gray-200 mb-1">
-            รูปภาพโปรไฟล์
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            {...register("profilePicture")}
-            className="file-input file-input-bordered w-full"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const url = URL.createObjectURL(file);
-                setPreviewUrl(url);
-              }
-            }}
-          />
-          {/* {errors.profilePicture && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.profilePicture.message}
-            </p>
-          )} */}
-          {previewUrl && previewUrl !== "" && (
-            <div className="mt-3">
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="h-20 w-24 object-cover rounded-md border object-top"
-              />
-            </div>
-          )}
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 dark:text-gray-200 mb-1">
-            ชื่อผู้ใช้
-          </label>
-          <input
-            type="text"
-            {...register("username")}
-            className={`w-full input input-bordered ${errors.username ? "border-red-500" : ""
-              }`}
-          />
-          {errors.username && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.username.message}
-            </p>
-          )}
-        </div>
-
-        {/* Email */}
-        <div className="mb-4">
-          <label className="block text-gray-700 dark:text-gray-200 mb-1">
-            อีเมล์
-          </label>
-          <input
-            type="email"
-            {...register("email")}
-            readOnly
-            className={`w-full input input-bordered bg-gray-200 ${errors.email ? "border-red-500" : ""}`}
-          />
-          {errors.email && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
-
-        {/* Phone Number */}
-        <div className="mb-4">
-          <label className="block text-gray-700 dark:text-gray-200 mb-1">
-            เบอร์โทร
-          </label>
-          <input
-            type="text"
-            {...register("phone_number")}
-            placeholder="0812345678"
-            className={`w-full input input-bordered ${errors.phone_number ? "border-red-500" : ""
-              }`}
-          />
-          {errors.phone_number && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.phone_number.message}
-            </p>
-          )}
-        </div>
-
-        <div className="flex justify-end space-x-2 mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost"
-            disabled={isSubmitting}
-          >
-            ยกเลิก
-          </button>
-          <button
-            type="submit"
-            className={`btn btn-primary ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "กำลังบันทึกข้อมูล…" : "ยืนยัน"}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 
 interface DeleteBarberModalProps {
   isOpen: boolean;
@@ -656,7 +458,7 @@ function DeleteBarberModal({
   const handleDelete = async () => {
     try {
       const res = await axios.delete<{ status: string }>(
-        `/barberbooking/tenants/${tenantId}/barbers/${barber.id}`
+        `/barberbooking/barbers/${barber.id}`
       );
       if (res.data.status === "success") {
         onDelete()

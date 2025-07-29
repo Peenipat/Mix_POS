@@ -2,10 +2,12 @@ package barberBookingControllers_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
@@ -31,23 +33,23 @@ type MockService struct {
 	mock.Mock
 }
 
-func (m *MockService) GetAllServices(tenantID uint, branchID uint) ([]barberBookingModels.Service, error){
+// UpdateService implements barberBookingPort.IServiceService.
+func (m *MockService) UpdateService(ctx context.Context, serviceID uint, payload *barberBookingPort.UpdateServiceRequest, file *multipart.FileHeader) (*barberBookingModels.Service, error) {
+	panic("unimplemented")
+}
+
+// CreateService implements barberBookingPort.IServiceService.
+func (m *MockService) CreateService(ctx context.Context, tenantID uint, branchID uint, payload *barberBookingPort.CreateServiceRequest, file *multipart.FileHeader) (*barberBookingModels.Service, error) {
+	panic("unimplemented")
+}
+
+func (m *MockService) GetAllServices(tenantID uint, branchID uint) ([]barberBookingModels.Service, error) {
 	args := m.Called()
 	return args.Get(0).([]barberBookingModels.Service), args.Error(1)
 }
 
 func (m *MockService) GetServiceByID(id uint) (*barberBookingModels.Service, error) {
 	args := m.Called(id)
-	return args.Get(0).(*barberBookingModels.Service), args.Error(1)
-}
-
-func (m *MockService)CreateService(tenantID uint, branchID uint,service *barberBookingModels.Service) error {
-	args := m.Called(service)
-	return args.Error(0)
-}
-
-func (m *MockService) UpdateService(id uint, service *barberBookingModels.Service) (*barberBookingModels.Service, error) {
-	args := m.Called(id, service)
 	return args.Get(0).(*barberBookingModels.Service), args.Error(1)
 }
 
@@ -177,15 +179,15 @@ func TestCreateService(t *testing.T) {
 	app.Post("/services", func(c *fiber.Ctx) error {
 		// middleware จำลอง auth
 		c.Locals("role", c.Get("X-Mock-Role"))
-		c.Locals("tenant_id", uint(123))  
+		c.Locals("tenant_id", uint(123))
 		return ctrl.CreateService(c)
 	})
 
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("role", c.Get("X-Mock-Role"))
-		c.Locals("tenant_id", uint(1))   // ← ตรงนี้เพิ่ม tenant_id
+		c.Locals("tenant_id", uint(1)) // ← ตรงนี้เพิ่ม tenant_id
 		return c.Next()
-	  })
+	})
 
 	// CASE 1: Success (TENANT_ADMIN)
 	t.Run("CreateService_Success_TenantAdmin", func(t *testing.T) {
@@ -561,22 +563,22 @@ func TestUpdateService(t *testing.T) {
 
 	t.Run("UpdateService_ConcurrentRequests", func(t *testing.T) {
 		var wg sync.WaitGroup
-	
+
 		for i := 0; i < 20; i++ {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
-	
+
 				// 🔁 Create isolated mock service per goroutine
 				mockSvc := new(MockService)
-	
+
 				mockSvc.On("GetServiceByID", mock.AnythingOfType("uint")).Return(&barberBookingModels.Service{
 					ID:       1,
 					Name:     "Original",
 					Duration: 20,
 					Price:    100,
 				}, nil).Maybe()
-	
+
 				mockSvc.On("UpdateService", mock.AnythingOfType("uint"), mock.Anything).
 					Return(&barberBookingModels.Service{
 						ID:       1,
@@ -584,16 +586,16 @@ func TestUpdateService(t *testing.T) {
 						Duration: 30,
 						Price:    200,
 					}, nil).Maybe()
-	
+
 				app := setupTestApp(mockSvc)
-	
+
 				body := request{Name: fmt.Sprintf("Service %d", index), Duration: 30, Price: 200}
 				reqBody, _ := json.Marshal(body)
-	
+
 				req := httptest.NewRequest("PUT", "/services/1", bytes.NewReader(reqBody))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Mock-Role", "TENANT_ADMIN")
-	
+
 				resp, err := app.Test(req)
 				assert.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
@@ -601,8 +603,5 @@ func TestUpdateService(t *testing.T) {
 		}
 		wg.Wait()
 	})
-	
-	
-	
 
 }

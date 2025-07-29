@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"time"
 
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
+	aws "myapp/cmd/worker"
 
 	"gorm.io/gorm"
 )
@@ -31,8 +33,6 @@ func (s *BarberService) CreateBarber(ctx context.Context, barber *barberBookingM
 		return fmt.Errorf("user_id is required")
 	}
 
-
-	// ลบ record เดิมที่ถูก soft-delete ไปแล้ว (ถ้ามี user_id เดิม)
 	var existing barberBookingModels.Barber
 	err := s.DB.WithContext(ctx).
 		Unscoped(). // (return DeleteAt != nil)
@@ -55,26 +55,56 @@ func (s *BarberService) CreateBarber(ctx context.Context, barber *barberBookingM
 }
 
 // GetBarberByID fetches a single barber by ID
-func (s *BarberService) GetBarberByID(ctx context.Context, id uint) (*barberBookingModels.Barber, error) {
+func (s *BarberService) GetBarberByID(ctx context.Context, id uint) (*barberBookingPort.BarberDetailResponse, error) {
 	var barber barberBookingModels.Barber
-	if err := s.DB.WithContext(ctx).First(&barber, id).Error; err != nil {
+
+	if err := s.DB.WithContext(ctx).
+		Preload("User").
+		First(&barber, id).Error; err != nil {
 		return nil, err
 	}
-	return &barber, nil
+
+	resp := &barberBookingPort.BarberDetailResponse{
+		ID:          barber.ID,
+		BranchID:    barber.BranchID,
+		TenantID:    barber.TenantID,
+		UserID:      barber.UserID,
+		RoleUser:    barber.RoleUser,
+		Description: barber.Description,
+		User: struct {
+			ID          uint   `json:"id"`
+			Username    string `json:"username"`
+			Email       string `json:"email"`
+			PhoneNumber string `json:"phone_number"`
+			BranchID    uint   `json:"branch_id"`
+			ImgPath     string `json:"Img_path"`
+			ImgName     string `json:"Img_name"`
+		}{
+			ID:          barber.User.ID,
+			Username:    barber.User.Username,
+			Email:       barber.User.Email,
+			PhoneNumber: barber.User.PhoneNumber,
+			BranchID:    *barber.User.BranchID,
+			ImgPath:     barber.User.Img_path,
+			ImgName:     barber.User.Img_name,
+		},
+	}
+
+	return resp, nil
 }
 
 // ListBarbers optionally filters by branch_id
 func (s *BarberService) ListBarbersByBranch(ctx context.Context, branchID *uint) ([]barberBookingPort.BarberWithUser, error) {
-    // Make a slice of the port’s DTO type
-    var rows []barberBookingPort.BarberWithUser
+	// Make a slice of the port’s DTO type
+	var rows []barberBookingPort.BarberWithUser
 
-    q := s.DB.WithContext(ctx).
-        Model(&barberBookingModels.Barber{}).
-        Select(`
+	q := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Barber{}).
+		Select(`
             barbers.id,
             barbers.branch_id,
             barbers.user_id,
-			barbers.phone_number,
+			users.phone_number,
             users.username,
             users.email,
             users.img_path,
@@ -84,75 +114,82 @@ func (s *BarberService) ListBarbersByBranch(ctx context.Context, branchID *uint)
             barbers.created_at,
             barbers.updated_at
         `).
-        Joins(`LEFT JOIN users ON users.id = barbers.user_id`)
+		Joins(`LEFT JOIN users ON users.id = barbers.user_id`)
 
-    if branchID != nil {
-        q = q.Where("barbers.branch_id = ?", *branchID)
-    }
+	if branchID != nil {
+		q = q.Where("barbers.branch_id = ?", *branchID)
+	}
 
-    if err := q.Scan(&rows).Error; err != nil {
-        return nil, err
-    }
-    return rows, nil
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
-// UpdateBarber updates barber info
 func (s *BarberService) UpdateBarber(
-    ctx context.Context,
-    barberID uint,
-    updated *barberBookingModels.Barber,
-    updatedUsername string,
-    updatedEmail string,
+	ctx context.Context,
+	barberID uint,
+	payload *barberBookingPort.UpdateBarberRequest,
+	file *multipart.FileHeader, // ✅ เพิ่มรับไฟล์
 ) (*barberBookingModels.Barber, error) {
-    // 1. ดึงข้อมูล barber ปัจจุบัน
-    var barber barberBookingModels.Barber
-    if err := s.DB.WithContext(ctx).First(&barber, barberID).Error; err != nil {
-        return nil, err
-    }
+	// 1. ดึง Barber ปัจจุบัน
+	var barber barberBookingModels.Barber
+	if err := s.DB.WithContext(ctx).
+		Preload("User").
+		First(&barber, barberID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("barber not found")
+		}
+		return nil, fmt.Errorf("failed to fetch barber: %w", err)
+	}
 
-    // 2. ถ้าอยากอัปเดตเบอร์โทรศัพท์ ให้เซ็ตเข้าไป
-    barber.PhoneNumber = updated.PhoneNumber
+	// 2. ถ้ามีการอัปโหลดไฟล์รูปใหม่ → อัปโหลดไป S3
+	if file != nil {
+		imgPath, imgName, err := aws.UploadToS3(file, "barbers")
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload image to S3: %w", err)
+		}
+		barber.User.Img_path = imgPath
+		barber.User.Img_name = imgName
+	}
 
-    // 3. (ถ้าต้องการเปลี่ยนสาขา หรือเปลี่ยนผู้ใช้ที่ผูกอยู่ ก็ใส่ตรงนี้)
-    barber.BranchID = updated.BranchID
-    barber.UserID = updated.UserID
+	// 3. อัปเดต Barber fields
+	barber.BranchID = payload.BranchID
+	barber.Description = payload.Description
+	barber.RoleUser = payload.RoleUser
+	barber.UpdatedAt = time.Now()
 
-    barber.Description = updated.Description
+	// 4. อัปเดต User fields
+	if payload.Username != "" {
+		barber.User.Username = payload.Username
+	}
+	if payload.Email != "" {
+		barber.User.Email = payload.Email
+	}
+	if payload.PhoneNumber != "" {
+		barber.User.PhoneNumber = payload.PhoneNumber
+	}
+	// ไม่ต้องอัปเดต img_path/img_name จาก payload แล้ว เพราะถ้าไฟล์ใหม่มาเราจัดการให้แล้ว
+	barber.User.UpdatedAt = time.Now()
 
-    // 4. อัปเดตวันที่แก้ไข
-    barber.UpdatedAt = time.Now()
+	// 5. Save ทั้ง barber และ user
+	if err := s.DB.WithContext(ctx).Save(&barber).Error; err != nil {
+		return nil, fmt.Errorf("failed to save barber: %w", err)
+	}
+	if err := s.DB.WithContext(ctx).Save(&barber.User).Error; err != nil {
+		return nil, fmt.Errorf("failed to save user: %w", err)
+	}
 
-    // 5. บันทึกลง table barbers
-    if err := s.DB.WithContext(ctx).Save(&barber).Error; err != nil {
-        return nil, err
-    }
+	// 6. Reload barber อีกรอบ
+	if err := s.DB.WithContext(ctx).
+		Preload("User").
+		Preload("User.Role").
+		First(&barber, barber.ID).Error; err != nil {
+		return nil, fmt.Errorf("failed to reload updated barber: %w", err)
+	}
 
-    // 6. ถ้าต้องการอัปเดตข้อมูลในตาราง users (username / email) ก็ทำแยกอีกที
-    if updatedUsername != "" || updatedEmail != "" {
-        // ดึง User record เดิมตาม barber.UserID
-        var user coreModels.User
-        if err := s.DB.WithContext(ctx).First(&user, barber.UserID).Error; err != nil {
-            return nil, err
-        }
-
-        // เซ็ตค่าถ้ามีส่งมา
-        if updatedUsername != "" {
-            user.Username = updatedUsername
-        }
-        if updatedEmail != "" {
-            user.Email = updatedEmail
-        }
-        user.UpdatedAt = time.Now()
-
-        if err := s.DB.WithContext(ctx).Save(&user).Error; err != nil {
-            return nil, err
-        }
-    }
-
-    // 7. รีเทิร์น barber object กลับไป (ถ้าต้องการ preload ข้อมูล user/branch เพิ่ม ให้ใช้ Preload ก่อน Save)
-    return &barber, nil
+	return &barber, nil
 }
-
 
 // DeleteBarber performs soft delete
 func (s *BarberService) DeleteBarber(ctx context.Context, id uint) error {
@@ -187,35 +224,29 @@ func (s *BarberService) ListBarbersByTenant(ctx context.Context, tenantID uint) 
 }
 
 func (s *BarberService) ListUserNotBarber(ctx context.Context, branchID *uint) ([]barberBookingPort.UserNotBarber, error) {
-    // 1. ถ้า branchID เป็น nil ให้รีเทิร์น error ทันที
-    if branchID == nil {
-        return nil, errors.New("branchID is required")
-    }
+	// 1. ถ้า branchID เป็น nil ให้รีเทิร์น error ทันที
+	if branchID == nil {
+		return nil, errors.New("branchID is required")
+	}
 
-    rows := []barberBookingPort.UserNotBarber{}
+	rows := []barberBookingPort.UserNotBarber{}
 
-    q := s.DB.WithContext(ctx).
-    Model(&coreModels.User{}).
-    Select(`
+	q := s.DB.WithContext(ctx).
+		Model(&coreModels.User{}).
+		Select(`
         users.id           AS user_id,
         users.username     AS username,
         users.email        AS email,
         users.created_at   AS created_at,
         users.updated_at   AS updated_at
     `).
-    Joins(`
+		Joins(`
         LEFT JOIN barbers 
           ON barbers.user_id = users.id `).
-    Where("barbers.id IS NULL AND users.branch_id = ?", *branchID)
+		Where("barbers.id IS NULL AND users.branch_id = ?", *branchID)
 
-    if err := q.Scan(&rows).Error; err != nil {
-        return nil, err
-    }
-    return rows, nil
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
-
-
-
-
-
-

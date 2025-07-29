@@ -1,6 +1,6 @@
 import api from "../lib/axios";
 import qs from "qs";
-// 🎯 Type สำหรับ Customer
+import { format } from "date-fns";
 type CustomerInfo = {
   name: string;
   phone: string;
@@ -61,7 +61,6 @@ export type AppointmentBrief = {
   status: string;
 };
 
-import { format } from "date-fns";
 export async function getAppointmentsByBranch(
   branchId: number,
   start?: string,

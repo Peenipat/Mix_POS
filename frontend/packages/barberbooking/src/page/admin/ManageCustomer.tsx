@@ -5,8 +5,6 @@ import type { Action, Column } from "../../components/DataTable";
 import { useAppSelector } from "../../store/hook";
 import axios from "../../lib/axios";
 
-
-
 interface Customer {
     id: number;
     Name: string;
@@ -15,22 +13,15 @@ interface Customer {
   }
 
 export function ManageCustomer() {
-  // 1) อ่านข้อมูลโปรไฟล์ผู้ใช้ (me) จาก Redux store
   const me = useAppSelector((state) => state.auth.me);
-
-  // 2) ดึง tenantId (สมมติว่า customer ถูกผูกกับ tenant เท่านั้น)
   const tenantId = me?.tenant_ids[0];
   const branchId = me?.branch_id;
 
-  // 3) state สำหรับเก็บรายการ customer
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
   const [errorCustomers, setErrorCustomers] = useState<string | null>(null);
-
-  // 4) ref เพื่อบล็อกไม่ให้ fetch ซ้ำ
   const didFetchCustomers = useRef(false);
 
-  // === useEffect: โหลดรายการ Customer เมื่อมี tenantId ===
   useEffect(() => {
     if (!tenantId || didFetchCustomers.current) return;
     didFetchCustomers.current = true;
@@ -39,7 +30,6 @@ export function ManageCustomer() {
       setLoadingCustomers(true);
       setErrorCustomers(null);
       try {
-        // เรียก API สมมติเป็น /barberbooking/tenants/{tenantId}/customers
         const res = await axios.get<{ status: string; data: Customer[] }>(
           `/barberbooking/tenants/${tenantId}/branch/${branchId}/customers`
         );
@@ -59,7 +49,6 @@ export function ManageCustomer() {
     loadCustomers();
   }, [tenantId]);
 
-  // === แสดงสถานะ Loading / Error ของ Customer ===
   if (!tenantId) {
     return <p className="text-red-500">Cannot determine tenant information.</p>;
   }
@@ -70,7 +59,6 @@ export function ManageCustomer() {
     return <p className="text-red-500">Error loading customers: {errorCustomers}</p>;
   }
 
-  // === กำหนดคอลัมน์และ actions สำหรับ DataTable ===
   const columns: Column<Customer>[] = [
     {
       header: "#",

@@ -162,7 +162,7 @@ export default function ManageTime() {
 
             {/* Add Override Form */}
             <section>
-                <h2 className="text-xl font-semibold mb-2">เพิ่มวันทำการเฉพาะกิจ</h2>
+                <h2 className="text-xl font-semibold mb-2">เพิ่มเวลาเปิด - ปิด กรณีพิเศษ</h2>
                 <div className="space-y-4">
                     <input
                         type="date"
@@ -187,6 +187,16 @@ export default function ManageTime() {
                                 className="input input-bordered"
                                 value={newOverride.end_time}
                                 onChange={(e) => setNewOverride({ ...newOverride, end_time: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium">
+                                หมายเหตุ
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="หมายเหตุ"
+                                className={`w-full input input-bordered`}
                             />
                         </div>
                     </div>
@@ -263,18 +273,18 @@ export function EditWorkingHourModal({
 
         try {
             const payload = isClosed
-            ? [{
-                weekday: workingHour.Weekday,
-                start_time: null,
-                end_time: null,
-                is_closed: true,
-              }]
-            : [{
-                weekday: workingHour.Weekday,
-                start_time: dayjs.tz(`2025-01-01T${data.start_time}:00`, "Asia/Bangkok").toISOString(),
-                end_time: dayjs.tz(`2025-01-01T${data.end_time}:00`, "Asia/Bangkok").toISOString(),
-                is_closed: false,
-              }];
+                ? [{
+                    weekday: workingHour.Weekday,
+                    start_time: null,
+                    end_time: null,
+                    is_closed: true,
+                }]
+                : [{
+                    weekday: workingHour.Weekday,
+                    start_time: dayjs.tz(`2025-01-01T${data.start_time}:00`, "Asia/Bangkok").toISOString(),
+                    end_time: dayjs.tz(`2025-01-01T${data.end_time}:00`, "Asia/Bangkok").toISOString(),
+                    is_closed: false,
+                }];
 
             console.log(payload)
 

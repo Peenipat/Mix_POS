@@ -1,7 +1,7 @@
 // src/page/admin/ManageService.tsx
 import React, { useEffect, useState, useRef, FormEvent } from "react";
 import { DataTable } from "../../components/DataTable";
-import { useForm } from "react-hook-form";
+import { FieldError, useForm } from "react-hook-form";
 import type { Action, Column } from "../../components/DataTable";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAppSelector } from "../../store/hook";
@@ -25,15 +25,21 @@ interface Service {
 
 import { z } from "zod";
 import { CardViewIcon } from "../../components/icons/CardViewIcon";
+import { ServiceFormData, serviceFormSchema } from "../../schemas/serviceSchema";
 export const editServiceSchema = z.object({
-  name: z.string().min(1, "กรุณากรอกชื่อบริการ").max(100, "ชื่อผู้ใช้ต้องไม่เกิน 100 ตัวอักษร"),
-  price: z.number().nullable(),
-  duration: z.number().nullable()
+  name: z.string().min(1).max(100),
+  price: z.number({ required_error: "กรุณากรอกราคา" }).min(0),
+  duration: z.number({ required_error: "กรุณากรอกระยะเวลา" }).min(1),
+  file: z.any().optional().refine(
+    (val) => val === undefined || val instanceof FileList || val instanceof File,
+    { message: "รูปภาพไม่ถูกต้อง" }
+  ),
 });
 
-export type EditServiceFormData = z.infer<typeof editServiceSchema>;
+// ✅ ใช้ input แทน infer
+export type EditServiceFormData = z.input<typeof editServiceSchema>;
 
-export function ManageServiceOld() {
+export function ManageService() {
 
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
@@ -142,7 +148,7 @@ export function ManageServiceOld() {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-4 justify-between">
-        <button onClick={() => setIsCreateOpen(true)} className="btn btn-primary">
+        <button onClick={() => setIsCreateOpen(true)} className="bg-blue-600 text-white p-1.5 rounded-md">
           + เพิ่มบริการใหม่
         </button>
         <div className="flex gap-2">
@@ -280,153 +286,158 @@ function CreateServiceModal({
   const tenantId = me?.tenant_ids?.[0];
   const branchId = me?.branch_id;
 
+  // ✅ ทุก hook ต้องอยู่บนสุดก่อน return หรือเงื่อนไข
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
   const [errorUsers, setErrorUsers] = useState<string | null>(null);
-
-  const [selectedUserId, setSelectedUserId] = useState<number | "">();
-  const [serviceName, setServiceName] = useState<string>("");
-  const [servicePrice, setServicePrice] = useState<Number | undefined>();
-  const [serviceDuration, setServiceDuration] = useState<Number | undefined>();
-
-  // 3) สถานะ loading / error ของการสร้าง barber
   const [loadingCreate, setLoadingCreate] = useState<boolean>(false);
   const [errorCreate, setErrorCreate] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // 4) โหลด list ของ Users เมื่อ modal เปิด
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ServiceFormData>({
+    resolver: zodResolver(serviceFormSchema),
+    defaultValues: {
+      name: "",
+      price: "",
+      duration: "",
+      file: undefined,
+    },
+  });
+
+  const file = watch("file");
+
   useEffect(() => {
     if (!isOpen) return;
-
     setErrorUsers(null);
     setLoadingUsers(true);
-
-    // ดึง users ที่มีสิทธิ์เป็น “barber” หรือ “staff” ได้ (ปรับตาม API จริง)
-
   }, [isOpen]);
 
-  // 5) รีเซ็ตฟอร์มเมื่อเปิด modal ใหม่
-  // useEffect(() => {
-  //   if (isOpen) {
-  //     setSelectedUserId("");
-  //     setPhoneNumber("");
-  //     setErrorCreate(null);
-  //     setLoadingCreate(false);
-  //   }
-  // }, [isOpen]);
+  useEffect(() => {
+    if (file && file instanceof FileList && file.length > 0) {
+      const objectUrl = URL.createObjectURL(file[0]);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  }, [file]);
 
-  // 6) ฟังก์ชัน submit
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setErrorCreate(null);
-
-    if (!tenantId || !branchId) {
-      setErrorCreate("Cannot determine tenant or branch. Please try again later.");
-      return;
-    }
-    if (!serviceName.trim()) {
-      setErrorCreate("กรุณากรอกชื่อบริการ.");
-      return;
-    }
-    if (!servicePrice) {
-      setErrorCreate("กรุณากรอกราคา")
-    }
-    if (!serviceDuration) {
-      setErrorCreate("กรุณากรอกระยะเวลา")
-    }
-
+  const onValidSubmit = async (data: ServiceFormData) => {
     setLoadingCreate(true);
+    setErrorCreate(null);
     try {
+      const file = data.file[0];
+      const formData = new FormData();
+      formData.append("name", data.name.trim());
+      formData.append("price", data.price);
+      formData.append("duration", data.duration);
+      formData.append("file", file);
+
       const res = await axios.post<{ status: string }>(
         `/barberbooking/tenants/${tenantId}/branch/${branchId}/services`,
-        {
-          name: serviceName.trim(),
-          price: servicePrice,
-          duration: serviceDuration,
-        }
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
-      if (res.data.status !== "success") {
-        throw new Error(res.data.status);
-      }
-      onCreate(); // ให้ parent รีเฟรชลิสต์ใหม่
-      onClose();  // ปิด modal
+
+      if (res.data.status !== "success") throw new Error(res.data.status);
+
+      onCreate();
+      onClose();
+      reset();
     } catch (err: any) {
-      setErrorCreate(err.response?.data?.message || err.message || "Failed to create service.");
+      setErrorCreate(err.response?.data?.message || err.message || "เกิดข้อผิดพลาดในการสร้างบริการ");
     } finally {
       setLoadingCreate(false);
     }
   };
 
-  // 7) ระหว่างรอโหลด me
   if (statusMe === "loading") return null;
   if (statusMe === "succeeded" && !me) return null;
   if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="เพิ่มบริการใหม่">
-      <form onSubmit={handleSubmit}>
-
-        {/* 9) Input เบอร์โทร */}
+      <form onSubmit={handleSubmit(onValidSubmit)}>
         <div className="mb-4">
-          <label htmlFor="phone" className="block text-gray-700 dark:text-gray-200 mb-1">
-            ชื่อบริการ
-          </label>
+          <label className="block text-gray-700 dark:text-gray-200 mb-1">รูปภาพโปรไฟล์</label>
           <input
-            id="name"
-            type="text"
-            value={serviceName}
-            onChange={(e) => setServiceName(e.target.value)}
-            placeholder="กรุณากรอกชื่อบริการ"
-            className="w-full input input-bordered"
+            type="file"
+            accept="image/*"
+            {...register("file")}
+            className="file-input file-input-bordered w-full"
           />
+          {errors.file && (
+            <p className="text-red-600 text-sm mt-1">
+              {(errors.file as FieldError).message}
+            </p>
+          )}
+
+          {previewUrl && (
+            <div className="mt-3">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-20 w-24 object-cover rounded-md border object-top"
+              />
+            </div>
+          )}
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="phone" className="block text-gray-700 dark:text-gray-200 mb-1">
-            ราคา
-          </label>
-          <input
-            id="price"
-            type="number"
-            value={Number(servicePrice)}
-            onChange={(e) => setServicePrice(Number(e.target.value))}
-            placeholder="กรุณากรอกราคา"
-            className="w-full input input-bordered"
-          />
+
+
+        {/* ✅ ชื่อบริการ + ราคา */}
+        <div className="flex gap-3">
+          <div className="mb-4 w-full">
+            <label className="block text-gray-700 dark:text-gray-200 mb-1">ชื่อบริการ</label>
+            <input
+              type="text"
+              {...register("name")}
+              placeholder="กรุณากรอกชื่อบริการ"
+              className="w-full input input-bordered"
+            />
+
+            {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>}
+          </div>
+
+          <div className="mb-4 w-full">
+            <label className="block text-gray-700 dark:text-gray-200 mb-1">ราคา</label>
+            <input
+              type="number"
+              {...register("price")}
+              placeholder="กรุณากรอกราคา"
+              className="w-full input input-bordered"
+            />
+            {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price.message}</p>}
+          </div>
         </div>
 
+        {/* ✅ ระยะเวลา */}
         <div className="mb-4">
-          <label htmlFor="phone" className="block text-gray-700 dark:text-gray-200 mb-1">
-            ระยะเวลาโดยประมาณ (นาที)
-          </label>
+          <label className="block text-gray-700 dark:text-gray-200 mb-1">ระยะเวลาโดยประมาณ (นาที)</label>
           <input
-            id="duration"
             type="number"
-            value={Number(serviceDuration)}
-            onChange={(e) => setServiceDuration(Number(e.target.value))}
+            {...register("duration")}
             placeholder="กรุณากรอกระยะเวลา"
             className="w-full input input-bordered"
           />
+          {errors.duration && <p className="text-red-600 text-sm mt-1">{errors.duration.message}</p>}
         </div>
 
         {errorCreate && <p className="text-sm text-red-600 mb-4">{errorCreate}</p>}
 
         <div className="flex justify-end space-x-2 mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost"
-            disabled={loadingCreate}
-          >
+          <button type="button" onClick={onClose} className="btn btn-ghost" disabled={loadingCreate}>
             ยกเลิก
           </button>
-          <button
-            type="submit"
-            className={`btn btn-primary ${loadingCreate ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={loadingCreate}
-          >
+          <button type="submit" className="btn btn-primary" disabled={loadingCreate}>
             {loadingCreate ? "กำลังบันทึก..." : "ยืนยัน"}
           </button>
         </div>
       </form>
+
     </Modal>
   );
 }
@@ -453,137 +464,170 @@ function EditServiceModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<EditServiceFormData>({
     resolver: zodResolver(editServiceSchema),
     defaultValues: {
       name: "",
-      price: null,
-      duration: null,
+      price: 0,          // ✅ number
+      duration: 0,       // ✅ number
+      file: undefined,
     },
   });
+
+
 
   useEffect(() => {
     if (isOpen && service) {
       reset({
-        name: service.name,
-        price: service.price,
-        duration: service.duration,
+        name: service.name ?? "",
+        price: service.price ?? 0,
+        duration: service.duration ?? 0,
+        file: undefined,
       });
     }
   }, [isOpen, service, reset]);
 
+
+
+
+  const onSubmit = async (data: EditServiceFormData) => {
+    const formData = new FormData();
+    formData.append("name", data.name);
+    formData.append("price", data.price.toString());
+    formData.append("duration", data.duration.toString());
+
+    if (data.file instanceof FileList && data.file.length > 0) {
+      formData.append("file", data.file[0]);
+    }
+
+    const res = await axios.put(
+      `/barberbooking/tenants/${tenantId}/branch/${branchId}/services/${service?.id}`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    if (res.data.status !== "success") throw new Error(res.data.status);
+
+    onEdit(res.data.data); 
+    onClose();
+  };
+
+
+
+  const file = watch("file");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (file && file instanceof FileList && file.length > 0) {
+      const objectUrl = URL.createObjectURL(file[0]);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    } else if (service?.Img_path && service?.Img_name) {
+      setPreviewUrl(`https://test-img-upload-xs-peenipat.s3.ap-southeast-1.amazonaws.com/${service.Img_path}/${service.Img_name}`);
+    }
+  }, [file, service]);
   if (statusMe === "loading") return null;
   if (statusMe === "succeeded" && !me) return null;
   if (!isOpen || !service) return null;
 
-
-  const onSubmit = async (data: EditServiceFormData) => {
-    if (!tenantId || !branchId) {
-      return;
-    }
-
-    try {
-      const res = await axios.put<{ status: string }>(
-        `/barberbooking/tenants/${tenantId}/branch/${branchId}/services/${Number(service.id)}`,
-        {
-          name: data.name,
-          price: data.price,
-          duration: data.duration
-        }
-      );
-      if (res.data.status !== "success") {
-        throw new Error(res.data.status);
-      }
-      const updatedService: Service = {
-        ...service,
-        name: data.name,
-        price: data.price,
-        duration: data.duration,
-      };
-      onEdit(updatedService)
-      onClose();
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="แก้ไขข้อมูลบริการ">
-      <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Username */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* ชื่อบริการ */}
         <div className="mb-4">
           <label className="block text-gray-700 dark:text-gray-200 mb-1">
+            รูปภาพประกอบบริการ
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            {...register("file")}
+            className="file-input file-input-bordered w-full"
+          />
+          {previewUrl && (
+            <div className="mt-3">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-20 w-24 object-cover rounded-md border object-top"
+              />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             ชื่อบริการ
           </label>
           <input
+            id="name"
             type="text"
+            placeholder="กรุณากรอกชื่อบริการ"
             {...register("name")}
-            className={`w-full input input-bordered ${errors.name ? "border-red-500" : ""
-              }`}
+            className={`mt-1 w-full input input-bordered rounded-md shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 ${errors.name ? "border-red-500 ring-red-300" : "focus:ring-primary"}`}
           />
           {errors.name && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.name.message}
-            </p>
+            <p className="text-red-600 text-xs mt-1">{errors.name.message}</p>
           )}
         </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 dark:text-gray-200 mb-1">
-            ราคา
+        {/* ราคา */}
+        <div>
+          <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+            ราคา (บาท)
           </label>
           <input
+            id="price"
             type="number"
-            {...register("price")}
-            className={`w-full input input-bordered ${errors.price ? "border-red-500" : ""
-              }`}
+            placeholder="กรุณากรอกราคา"
+            {...register("price", { valueAsNumber: true })}
+            className={`mt-1 w-full input input-bordered rounded-md shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 ${errors.price ? "border-red-500 ring-red-300" : "focus:ring-primary"}`}
           />
           {errors.price && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.price.message}
-            </p>
+            <p className="text-red-600 text-xs mt-1">{errors.price.message}</p>
           )}
         </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 dark:text-gray-200 mb-1">
+        {/* ระยะเวลา */}
+        <div>
+          <label htmlFor="duration" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             ระยะเวลาโดยประมาณ (นาที)
           </label>
           <input
+            id="duration"
             type="number"
-            {...register("duration")}
             placeholder="กรุณากรอกระยะเวลา"
-            className={`w-full input input-bordered ${errors.duration ? "border-red-500" : ""
-              }`}
+            {...register("duration", { valueAsNumber: true })}
+            className={`mt-1 w-full input input-bordered rounded-md shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 ${errors.duration ? "border-red-500 ring-red-300" : "focus:ring-primary"}`}
           />
           {errors.duration && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.duration.message}
-            </p>
+            <p className="text-red-600 text-xs mt-1">{errors.duration.message}</p>
           )}
         </div>
 
-        <div className="flex justify-end space-x-2 mt-6">
+        {/* ปุ่ม */}
+        <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-ghost"
             disabled={isSubmitting}
+            className="btn btn-outline"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
-            className={`btn btn-primary ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
             disabled={isSubmitting}
+            className={`btn btn-primary ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isSubmitting ? "กำลังบันทึกข้อมูล…" : "ยืนยัน"}
           </button>
         </div>
       </form>
     </Modal>
+
   );
 }
 

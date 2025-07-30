@@ -213,10 +213,11 @@ export default function Home() {
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
           ></iframe>
+          <h1 className='text-red-500 text-2xl text-center mt-5'>ตอนนี้ยังเป็น Version ที่ยังไม่สมบูรณ์บาง function อาจจะใช้งานไม่ได้</h1>
         </div>
 
         {/* ขวา */}
-        <div className="border-2 h-full w-1/2 rounded-lg overflow-auto">
+        {/* <div className="border-2 h-full w-1/2 rounded-lg overflow-auto">
           <div className="">
             <Stepper
               step={currentStep}
@@ -294,7 +295,6 @@ export default function Home() {
                 {errors.date && <p className="text-red-500">{errors.date.message}</p>}
 
                 <label className="">เลือกเวลา</label>
-                {/* <TimeSelector setValue={setValue} date={watch('date')} disabled={!watch("date")} /> */}
                 {errors.time && <p className="text-red-500">{errors.time.message}</p>}
                 <label className="block ">ข้อความถึงช่าง</label>
                 <input
@@ -338,7 +338,7 @@ export default function Home() {
 
             </Stepper>
           </div>
-        </div>
+        </div> */}
 
       </main>
     </div>

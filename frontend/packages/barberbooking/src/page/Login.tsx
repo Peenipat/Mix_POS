@@ -28,12 +28,13 @@ export default function Login() {
     setIsModalOpen(false)
   }
   const handleOpen = () => {
-    setIsModalOpen(true)
+    // setIsModalOpen(true)
   }
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
@@ -67,11 +68,25 @@ export default function Login() {
     }
   }, [statusLogin, errorLogin, statusMe, errorMe, dispatch]);
 
+  const loginAs = (role: 'admin' | 'barber') => {
+    const account = {
+      email: import.meta.env[`VITE_${role.toUpperCase()}_EMAIL`],
+      password: import.meta.env[`VITE_${role.toUpperCase()}_PASSWORD`],
+    };
+
+    setValue('email', account.email || '');
+    setValue('password', account.password || '');
+
+    handleSubmit(onSubmit)(); 
+  };
+
+
   return (
     <div className="grid grid-cols-2 min-h-screen mx-auto">
       {/* ฝั่งซ้าย: Login Form */}
       <div className="flex items-center justify-center bg-gray-100 px-12">
         <div className="w-full max-w-md">
+          <h1 className='text-red-500 text-2xl text-center'>ตอนนี้ยังเป็น Version ที่ยังไม่สมบูรณ์บาง function อาจจะใช้งานไม่ได้</h1>
           <h1 className="text-5xl font-bold mb-8 text-center text-gray-800">Login</h1>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <input
@@ -107,10 +122,23 @@ export default function Login() {
               </button>
             </div>
           </form>
+
+          <div className='flex gap-5 justify-center mt-5'>
+          <button type="button" className='p-2 bg-green-500 text-white rounded-md' onClick={() => navigate("/")}>
+             กลับหน้าหลัก
+            </button>
+            <button type="button" className='p-2 bg-green-500 text-white rounded-md' onClick={() => loginAs('barber')}>
+              ทดสอบในมุม ช่าง
+            </button>
+
+            <button type="button" className='p-2 bg-green-500 text-white rounded-md' onClick={() => loginAs('admin')}>
+              ทดสอบในมุม แอดมิน
+            </button>
+          </div>
+
         </div>
       </div>
 
-      {/* ฝั่งขวา: รูป + overlay */}
       <div className="relative overflow-hidden">
         <img src="" alt="Login" className="w-full h-full object-cover" />
         <div className="absolute bottom-0 left-0 w-full flex justify-center">
@@ -118,6 +146,7 @@ export default function Login() {
           <img src="" alt="dde" />
         </div>
       </div>
+
 
       <Modal isOpen={isModalOpen} onClose={handleClose} title={isRegisterForm ? "ลงทะเบียน" : "เข้าสู่ระบบ"} blurBackground>
         <div className='p-12 pt-0'>

@@ -10,7 +10,7 @@ import (
 func SeedServices(db *gorm.DB) error {
     items := []bookingModels.Service{
         {Name: "Haircut",   Description:"ตัดผม", Duration: 30, Price: 200, Img_path:"service",Img_name:"service1.jpg",TenantID:	1,BranchID:	1},
-        {Name: "Shampoo",   Description:"ตัดผม", Duration: 15, Price: 100, Img_path:"service",Img_name:"service2.jpg",TenantID:	1,BranchID:	1},
+        {Name: "Shampoo",   Description:"ตัดผม", Duration: 30, Price: 100, Img_path:"service",Img_name:"service2.jpg",TenantID:	1,BranchID:	1},
         {Name: "Beard Trim",Description:"ตัดผม", Duration: 45, Price: 150, Img_path:"service",Img_name:"service3.jpg",TenantID:	1,BranchID:	1},
         {Name: "Beard Trim2",Description:"ตัดผม", Duration: 20, Price: 150, Img_path:"service",Img_name:"service4.jpg",TenantID: 1,BranchID: 2},
     }

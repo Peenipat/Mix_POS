@@ -467,6 +467,7 @@ export default function AppointmentsPage() {
                     onClose={handleClose}
                     title="ยืนยันการจองคิว"
                     blurBackground
+                    showAds={{ left: true, right: true, bottom: true }}
                 >
                     <div className="text-right text-red-600 font-semibold ">
                         ระบบจะล็อกคิวนี้ไว้ {formatTime(countdown)} นาที

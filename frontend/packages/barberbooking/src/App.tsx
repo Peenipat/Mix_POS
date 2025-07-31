@@ -72,7 +72,7 @@ export default function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="service" element={<ServicePage />} />
-        <Route path="barbers" element={<BarberPage />} />
+        <Route path="front/barbers" element={<BarberPage />} />
         <Route path="booking" element={<AppointmentsPage />} />
         <Route path="history" element={<HistoryPage />} />
       </Route>
@@ -142,11 +142,5 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-
-
-
-
-
-
   );
 }

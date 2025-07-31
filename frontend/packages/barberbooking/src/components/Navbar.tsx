@@ -21,7 +21,7 @@ export default function Navbar() {
   const mainMenu: MenuItem[] = [
     { name: "หน้าหลัก", href: "/" },
     { name: "บริการ", href: "/service" },
-    { name: "ข้อมูลช่างตัดผม", href: "/barbers" },
+    { name: "ข้อมูลช่างตัดผม", href: "/front/barbers" },
     { name: "จองคิว", href: "/booking" },
     { name: "ประวัติการจอง", href: "/history" },
     { name: "เข้าสู่ระบบ", href: "/login" },

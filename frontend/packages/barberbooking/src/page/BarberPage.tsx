@@ -15,8 +15,9 @@ import { AppointmentBrief, getAppointmentsByBranch } from "../api/appointment";
 import { AppointmentLock } from "../api/appointmentLock";
 
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import customParseFormat from "dayjs/plugin/customParseFormat"; // หากใช้ format พิเศษ
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import dayjs from 'dayjs';
+import Modal from "@object/shared/components/Modal";
 dayjs.extend(isSameOrBefore);
 dayjs.extend(customParseFormat);
 
@@ -47,6 +48,10 @@ export default function BarberPage() {
         loadBarbers();
     }, []);
     const [isModalOpen, setModalOpen] = useState(false);
+
+    const haddleClose=()=>{
+        setModalOpen(false)
+    }
 
 
     return (
@@ -102,26 +107,13 @@ export default function BarberPage() {
                                                 onClick={() => setModalOpen(true)}>
                                                 ดูคิวของช่าง
                                             </button>
-                                            {/* <BarberScheduleModal
-                                        isOpen={isModalOpen}
-                                        onClose={() => setModalOpen(false)}
-                                        slots={dummySlots}
-                                        barberName="สมชาย ศรีสุข"
-                                    /> */}
-
-                                            <BarberScheduleContainer
-                                                tenantId={1}
-                                                branchId={1}
-                                                barberName="123"
-                                                isOpen={isModalOpen}
-                                                onClose={() => setModalOpen(false)}
-                                            />
 
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
+                        <BarberScheduleModal isOpen={isModalOpen} onClose={haddleClose} barberName="123"/>
 
                     </div>) : (
                         <div>
@@ -251,7 +243,7 @@ export const TotalBarberSchedule = ({
         barberId: number,
         slot: string,
         appointments: AppointmentBrief[] | undefined,
-        selectedDate: string 
+        selectedDate: string
     ): "full" | "top" | "bottom" | null {
         if (!appointments) return null;
 
@@ -335,13 +327,13 @@ export const TotalBarberSchedule = ({
     const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
     useEffect(() => {
         async function fetchAppointment() {
-            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption,["CANCELLED"]);
+            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption, ["CANCELLED"]);
             setAppointmentList(appointments ?? []);
         }
         fetchAppointment();
     }, [selectedDate]);
 
-    function handdlesFilter(){
+    function handdlesFilter() {
         setSelectedOption("")
         setStartTime("")
         setEndTime("")
@@ -546,7 +538,6 @@ interface OpenDayEvent {
 interface BarberScheduleModalProps {
     isOpen: boolean;
     onClose: () => void;
-    slots: TimeSlot[];
     barberName: string;
 }
 
@@ -595,196 +586,13 @@ export async function fetchAvailableSlots(
 export function BarberScheduleModal({
     isOpen,
     onClose,
-    slots,
     barberName,
 }: BarberScheduleModalProps) {
     if (!isOpen) return null;
 
-    const events: OpenDayEvent[] = slots.map((slot) => {
-        const dateTime = new Date(`${slot.date}T${slot.time}`);
-        return {
-            title: slot.available ? "ว่าง" : "",
-            start: dateTime,
-            end: new Date(dateTime.getTime() + 30 * 60000),
-            status: slot.available ? "open" : "closed",
-        };
-    });
-
-    const minTime = events.length > 0
-        ? new Date(Math.min(...events.map((e) => e.start.getTime())))
-        : new Date(1970, 1, 1, 9, 0);
-
-    const maxTime = events.length > 0
-        ? new Date(Math.max(...events.map((e) => e.end.getTime())))
-        : new Date(1970, 1, 1, 17, 0);
-
-    const CustomAgendaDate = ({ date }: { date: Date }) => {
-        return (
-            <span>
-                {formatDate(date, "EEEEที่ d MMMM yyyy", { locale: th }).replace(
-                    `${date.getFullYear()}`,
-                    `${date.getFullYear() + 543}`
-                )}
-            </span>
-        );
-    };
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={onClose}
-        >
-            <div
-                className="bg-white rounded-lg w-full max-w-5xl mx-4 shadow-lg overflow-auto"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex justify-between items-center px-6 py-4 border-b text-black">
-                    <h3 className="text-xl font-semibold">
-                        ตารางงานของ {barberName}
-                    </h3>
-                    <button
-                        className="text-gray-500 hover:text-gray-700"
-                        onClick={onClose}
-                    >
-                        ✕
-                    </button>
-                </div>
-
-                {/* Calendar */}
-                <div className="p-6 max-h-[70vh] overflow-auto text-black">
-                    <Calendar
-                        localizer={localizer}
-                        events={events}
-                        startAccessor="start"
-                        endAccessor="end"
-                        style={{ height: 600 }}
-                        step={30}
-                        timeslots={1}
-                        scrollToTime={minTime}
-                        min={minTime}
-                        max={maxTime}
-                        defaultView="week"
-                        views={["week", "day"]}
-                        messages={{
-                            date: "วันที่",
-                            time: "เวลา",
-                            event: "เหตุการณ์",
-                            week: "สัปดาห์",
-                            day: "วัน",
-                            today: "วันนี้",
-                            previous: "ย้อนกลับ",
-                            next: "ถัดไป",
-                            showMore: (total) => `+ เพิ่มอีก ${total} รายการ`,
-                        }}
-                        formats={{
-                            monthHeaderFormat: (date) =>
-                                `${formatDate(date, "MMMM", { locale: th })} ${date.getFullYear() + 543}`,
-                            dayHeaderFormat: (date) =>
-                                `${formatDate(date, "EEEE d MMMM", { locale: th })} ${date.getFullYear() + 543}`,
-
-                            dayRangeHeaderFormat: ({ start, end }) =>
-                                `${formatDate(start, "d MMM", { locale: th })} – ${formatDate(end, "d MMM", { locale: th })}`,
-                            timeGutterFormat: (date) => formatDate(date, "HH:mm", { locale: th }),
-                            dayFormat: (date) =>
-                                `${formatDate(date, "dd", { locale: th })} ${formatDate(date, "EEE", { locale: th })}`,
-                            eventTimeRangeFormat: ({ start, end }, culture, localizer) => {
-                                const s = formatDate(start, "HH:mm");
-                                const e = formatDate(end, "HH:mm");
-                                return `${s} - ${e}`;
-                            },
-                            agendaDateFormat: (date) =>
-                                `${formatDate(date, "EEEEที่ d MMMM", { locale: th })} ${date.getFullYear() + 543}`,
-                            agendaHeaderFormat: ({ start, end }) =>
-                                `${formatDate(start, "d MMM", { locale: th })} – ${formatDate(end, "d MMM", { locale: th })}`,
-
-                        }}
-                        eventPropGetter={(event) => {
-                            const backgroundColor = event.status === "open" ? "#D1FAE5" : "#FECACA";
-                            const color = event.status === "open" ? "#065F46" : "#B91C1C";
-                            return {
-                                style: {
-                                    backgroundColor,
-                                    color,
-                                    border: "1px solid #ccc",
-                                    borderRadius: "4px",
-                                    height: "100%",
-                                    padding: "0",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                },
-                            };
-
-                        }}
-                    />
-                </div>
-
-                {/* Footer */}
-                <div className="flex justify-end px-6 py-4 border-t">
-                    <button
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                        onClick={onClose}
-                    >
-                        ปิด
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-export function BarberScheduleContainer({
-    tenantId,
-    branchId,
-    barberName,
-    isOpen,
-    onClose,
-}: {
-    tenantId: number;
-    branchId: number;
-    barberName: string;
-    isOpen: boolean;
-    onClose: () => void;
-}) {
-    const [slots, setSlots] = useState<TimeSlot[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    // useEffect(() => {
-    //     if (!isOpen) return;
-
-    //     const today = new Date();
-    //     const next7 = new Date();
-    //     next7.setDate(today.getDate() + 6);
-
-    //     const startDate = format(today, "yyyy-MM-dd");
-    //     const endDate = format(next7, "yyyy-MM-dd");
-
-    //     setLoading(true);
-    //     fetchAvailableSlots(tenantId, branchId, startDate, endDate)
-    //         .then(setSlots)
-    //         .catch(console.error)
-    //         .finally(() => setLoading(false));
-    // }, [isOpen, tenantId, branchId]);
-    useEffect(() => {
-        if (isOpen) {
-            const mockSlots: TimeSlot[] = [
-                { id: "1", date: "2025-07-01", time: "09:00", available: false },
-                { id: "2", date: "2025-07-01", time: "09:30", available: false },
-                { id: "3", date: "2025-07-01", time: "10:00", available: false },
-                { id: "4", date: "2025-07-02", time: "13:00", available: false },
-                { id: "5", date: "2025-07-03", time: "15:30", available: false },
-            ];
-            setSlots(mockSlots);
-        }
-    }, [isOpen]);
-
-    return (
-        <BarberScheduleModal
-            isOpen={isOpen}
-            onClose={onClose}
-            slots={slots}
-            barberName={barberName}
-        />
+        <Modal isOpen={isOpen} onClose={onClose} blurBackground showAds={{ left: true, right: true, bottom: true }}>
+            hello world {barberName}
+        </Modal>
     );
 }

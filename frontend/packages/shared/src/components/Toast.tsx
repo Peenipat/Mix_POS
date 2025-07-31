@@ -115,17 +115,17 @@ export const Toast = ({
                     <button
                         type="button"
                         onClick={() => {
-                            if (disableClose) return; // <<< ถ้าห้ามปิด → ไม่ทำอะไรเลย
+                            if (disableClose) return; 
                             setVisible(false);
                             onClose?.();
                         }}
-                        disabled={disableClose} // <--- เพื่อ UX ให้ดูเหมือน disable ด้วย
+                        disabled={disableClose} 
                         className={twMerge(
                             "ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8",
                             "bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100",
                             "dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700",
                             COLORS[variant].ring,
-                            disableClose && "opacity-50 cursor-not-allowed" // <--- UI disabled
+                            disableClose && "opacity-50 cursor-not-allowed" 
                         )}
                         aria-label="Close"
                     >

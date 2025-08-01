@@ -369,9 +369,6 @@ export default function AppointmentsPage() {
         setFormData(data);        
         setIsConfirmStep(true);   
     };
-
-
-
     return (
         <div className="h-full">
             <div className="h-full w-full">
@@ -461,7 +458,6 @@ export default function AppointmentsPage() {
                 <button id="booking-mock" className="invisible">mock</button>
                 <button id="confirm-mock" className="invisible">mock</button>
                 <BookingModalExample isOpen={showModalTour} hide={isHideMock} hideForm={hideForm} hideConfirm={hideConfirm} onClose={handleCloseModalTour} step={step} />
-
                 <Modal
                     isOpen={isModalOpen}
                     onClose={handleClose}

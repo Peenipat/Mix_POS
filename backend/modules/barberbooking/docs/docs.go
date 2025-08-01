@@ -462,7 +462,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "number"
+                                "type": "number",
+                                "format": "float64"
                             }
                         }
                     },
@@ -1787,62 +1788,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/tenants/:tenant_id/branch/:branch_id/customers": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Customer"
-                ],
-                "summary": "ดึงรายชื่อลูกค้า",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Tenant",
-                        "name": "tenant_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success, message และ array ของ Customer ใน key ` + "`" + `data` + "`" + `",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid tenant ID หรือ Failed to fetch customer",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Permission denied",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/tenants/:tenant_id/branch/:branch_id/services": {
             "get": {
                 "description": "คืนรายการ Service ทั้งหมดในระบบ",
@@ -3073,6 +3018,105 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to update Barber",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branch/{branch_id}/customers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "คืนรายการ Customer ทั้งหมดของ Tenant และ Branch ที่ระบุ พร้อมรองรับการค้นหา เรียงลำดับ และแบ่งหน้า (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ BranchAdmin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customer"
+                ],
+                "summary": "ดึงรายชื่อลูกค้า",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัส Tenant",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัส Branch",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "หน้าที่ต้องการ (เริ่มจาก 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "จำนวนรายการต่อหน้า (ค่าเริ่มต้น 10)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ค้นหาจากชื่อลูกค้า (fuzzy match)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ค้นหาจากเบอร์โทรศัพท์",
+                        "name": "phone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "จัดเรียงตาม created_at หรือ updated_at (ค่าเริ่มต้น created_at)",
+                        "name": "sortBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ทิศทางการเรียง asc หรือ desc (ค่าเริ่มต้น desc)",
+                        "name": "sortOrder",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืนค่า status, message, รายการลูกค้าใน ` + "`" + `data` + "`" + ` และข้อมูลแบ่งหน้าใน ` + "`" + `meta.pagination` + "`" + `",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tenant/branch ID หรือ failed to fetch customers",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Permission denied",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4318,6 +4362,15 @@ const docTemplate = `{
                 "StatusPending": "รอดำเนินการ",
                 "StatusRescheduled": "เปลี่ยนเวลา"
             },
+            "x-enum-descriptions": [
+                "รอดำเนินการ",
+                "รับ",
+                "ยกเลิก",
+                "จบงาน",
+                "",
+                "กำลังให้บริการ",
+                "เปลี่ยนเวลา"
+            ],
             "x-enum-varnames": [
                 "StatusPending",
                 "StatusConfirmed",

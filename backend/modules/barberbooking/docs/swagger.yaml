@@ -125,6 +125,14 @@ definitions:
       StatusInService: กำลังให้บริการ
       StatusPending: รอดำเนินการ
       StatusRescheduled: เปลี่ยนเวลา
+    x-enum-descriptions:
+    - รอดำเนินการ
+    - รับ
+    - ยกเลิก
+    - จบงาน
+    - ""
+    - กำลังให้บริการ
+    - เปลี่ยนเวลา
     x-enum-varnames:
     - StatusPending
     - StatusConfirmed
@@ -900,6 +908,7 @@ paths:
           description: คืนค่า status success และ average rating ใน key `data`
           schema:
             additionalProperties:
+              format: float64
               type: number
             type: object
         "400":
@@ -1716,44 +1725,6 @@ paths:
       summary: สรุปปริมาณงานรายสาขา
       tags:
       - Workload
-  /tenants/:tenant_id/branch/:branch_id/customers:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการ Customer ทั้งหมดของ Tenant ที่ระบุ (ต้องมีสิทธิ์ SaaSSuperAdmin,
-        Tenant, TenantAdmin หรือ BranchAdmin)
-      parameters:
-      - description: รหัส Tenant
-        in: path
-        name: tenant_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success, message และ array ของ Customer ใน key
-            `data`
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid tenant ID หรือ Failed to fetch customer
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Permission denied
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงรายชื่อลูกค้า
-      tags:
-      - Customer
   /tenants/:tenant_id/branch/:branch_id/services:
     get:
       consumes:
@@ -2585,6 +2556,74 @@ paths:
       summary: แก้ไขข้อมูลช่างตัดผม
       tags:
       - Barber
+  /tenants/{tenant_id}/branch/{branch_id}/customers:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการ Customer ทั้งหมดของ Tenant และ Branch ที่ระบุ พร้อมรองรับการค้นหา
+        เรียงลำดับ และแบ่งหน้า (ต้องมีสิทธิ์ SaaSSuperAdmin, Tenant, TenantAdmin หรือ
+        BranchAdmin)
+      parameters:
+      - description: รหัส Tenant
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: รหัส Branch
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: หน้าที่ต้องการ (เริ่มจาก 1)
+        in: query
+        name: page
+        type: integer
+      - description: จำนวนรายการต่อหน้า (ค่าเริ่มต้น 10)
+        in: query
+        name: limit
+        type: integer
+      - description: ค้นหาจากชื่อลูกค้า (fuzzy match)
+        in: query
+        name: name
+        type: string
+      - description: ค้นหาจากเบอร์โทรศัพท์
+        in: query
+        name: phone
+        type: string
+      - description: จัดเรียงตาม created_at หรือ updated_at (ค่าเริ่มต้น created_at)
+        in: query
+        name: sortBy
+        type: string
+      - description: ทิศทางการเรียง asc หรือ desc (ค่าเริ่มต้น desc)
+        in: query
+        name: sortOrder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืนค่า status, message, รายการลูกค้าใน `data` และข้อมูลแบ่งหน้าใน
+            `meta.pagination`
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid tenant/branch ID หรือ failed to fetch customers
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ดึงรายชื่อลูกค้า
+      tags:
+      - Customer
   /tenants/{tenant_id}/branch/{branch_id}/customers/{cus_id}:
     get:
       consumes:

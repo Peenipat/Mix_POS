@@ -18,6 +18,7 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import dayjs from 'dayjs';
 import Modal from "@object/shared/components/Modal";
+import React from "react";
 dayjs.extend(isSameOrBefore);
 dayjs.extend(customParseFormat);
 
@@ -49,7 +50,7 @@ export default function BarberPage() {
     }, []);
     const [isModalOpen, setModalOpen] = useState(false);
 
-    const haddleClose=()=>{
+    const haddleClose = () => {
         setModalOpen(false)
     }
 
@@ -113,7 +114,7 @@ export default function BarberPage() {
                                 </div>
                             ))}
                         </div>
-                        <BarberScheduleModal isOpen={isModalOpen} onClose={haddleClose} barberName="123"/>
+                        <BarberScheduleModal isOpen={isModalOpen} onClose={haddleClose} barberName="123" />
 
                     </div>) : (
                         <div>
@@ -588,11 +589,130 @@ export function BarberScheduleModal({
     onClose,
     barberName,
 }: BarberScheduleModalProps) {
+    const timeSlots = ["09:00", "10:00", "11:00", "13:00"];
+
+    const dates = ["01/08/68", "02/08/68", "03/08/68", "04/08/68", "05/08/68", "06/08/68", "07/08/68"];
+
+    type TimeSlotStatus = "available" | "unavailable" | "booked";
+
+    type BarberScheduleMatrix = {
+        [time: string]: {
+            [date: string]: TimeSlotStatus;
+        };
+    };
+
+    const scheduleMatrix: BarberScheduleMatrix = {
+        "09:00": {
+            "01/08/68": "available",
+            "02/08/68": "booked",
+            "03/08/68": "available",
+            "04/08/68": "unavailable",
+            "05/08/68": "unavailable",
+            "06/08/68": "unavailable",
+            "07/08/68": "unavailable",
+        },
+        "10:00": {
+            "01/08/68": "available",
+            "02/08/68": "booked",
+            "03/08/68": "available",
+            "04/08/68": "unavailable",
+            "05/08/68": "unavailable",
+            "06/08/68": "unavailable",
+            "07/08/68": "unavailable",
+        },
+        "11:00": {
+            "01/08/68": "available",
+            "02/08/68": "booked",
+            "03/08/68": "available",
+            "04/08/68": "unavailable",
+            "05/08/68": "unavailable",
+            "06/08/68": "unavailable",
+            "07/08/68": "unavailable",
+        },
+        "13:00": {
+            "01/08/68": "available",
+            "02/08/68": "booked",
+            "03/08/68": "available",
+            "04/08/68": "unavailable",
+            "05/08/68": "unavailable",
+            "06/08/68": "unavailable",
+            "07/08/68": "unavailable",
+        },
+    };
+
+
     if (!isOpen) return null;
+    const today = format(new Date(), "yyyy-MM-dd")
+    const [selectedOption, setSelectedOption] = useState<"week" | "month" | "" | null>("");
+    const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+
+
+
+    const handleClickSlot = (time: string, date: string, status: TimeSlotStatus) => {
+        console.log(`คลิก: ${date} ${time} | สถานะ: ${status}`);
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} blurBackground showAds={{ left: true, right: true, bottom: true }}>
-            hello world {barberName}
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <label className="text-lg font-semibold">เลือกวันที่คุณว่าง</label>
+                </div>
+            </div>
+            <div className="w-full">
+                <div className="mb-6">
+                    <div className="overflow-x-auto">
+                        <div
+                            className="grid"
+                            style={{
+                                gridTemplateColumns: `100px repeat(${dates.length}, minmax(100px, 1fr))`,
+                            }}
+                        >
+                            {/* Header row */}
+                            <div className="bg-gray-200 font-bold border border-gray-300 px-4 py-2">เวลา</div>
+                            {dates.map((date) => (
+                                <div key={date} className="bg-gray-200 font-bold border border-gray-300 px-4 py-2 text-center">
+                                    {date}
+                                </div>
+                            ))}
+
+                            {/* Time rows */}
+                            {timeSlots.map((time) => (
+                                <React.Fragment key={time}>
+                                    {/* Time column */}
+                                    <div className="bg-gray-100 font-medium border border-gray-300 px-4 py-2 text-center">{time}</div>
+
+                                    {/* Status columns per day */}
+                                    {dates.map((date) => {
+                                        const status = scheduleMatrix[time]?.[date];
+                                        const baseStyle = "border border-gray-300 px-4 py-2 text-center cursor-pointer select-none transition";
+
+                                        let statusStyle = "";
+                                        if (status === "available") statusStyle = "bg-green-100 text-green-700 hover:bg-green-200";
+                                        else if (status === "booked") statusStyle = "bg-yellow-100 text-yellow-700 hover:bg-yellow-200";
+                                        else statusStyle = "bg-gray-100 text-gray-500 cursor-not-allowed";
+
+                                        return (
+                                            <div
+                                                key={`${time}-${date}`}
+                                                className={`${baseStyle} ${statusStyle}`}
+                                                onClick={() =>
+                                                    status !== "unavailable" && handleClickSlot(time, date, status)
+                                                }
+                                            >
+                                                {status === "available" && "ว่าง"}
+                                                {status === "booked" && "จองแล้ว"}
+                                                {status === "unavailable" && "ไม่ว่าง"}
+                                            </div>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </Modal>
     );
 }

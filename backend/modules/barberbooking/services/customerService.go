@@ -3,11 +3,12 @@ package barberBookingService
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"gorm.io/gorm"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
-	"gorm.io/gorm"
 )
 
 type customerService struct {
@@ -18,13 +19,60 @@ func NewCustomerService(db *gorm.DB) barberBookingPort.ICustomer {
 	return &customerService{db: db}
 }
 
-//  ดึงรายชื่อลูกค้าทั้งหมดของ tenant
-func (s *customerService) GetAllCustomers(ctx context.Context, tenantID uint, branchID uint) ([]barberBookingModels.Customer, error) {
+// ดึงรายชื่อลูกค้าทั้งหมดของ tenant
+func (s *customerService) GetCustomers(ctx context.Context, filter barberBookingPort.GetCustomersFilter) ([]barberBookingModels.Customer, int64, error) {
 	var customers []barberBookingModels.Customer
-	if err := s.db.WithContext(ctx).Where("tenant_id = ? AND branch_id = ?", tenantID,branchID).Find(&customers).Error; err != nil {
-		return nil, err
+	var total int64
+
+	db := s.db.WithContext(ctx).Model(&barberBookingModels.Customer{})
+
+	// เงื่อนไขหลัก
+	db = db.Where("tenant_id = ? AND branch_id = ?", filter.TenantID, filter.BranchID)
+
+	// Search
+	if filter.Name != "" && filter.Phone != "" && filter.Name == filter.Phone {
+		
+		db = db.Where("name ILIKE ? OR phone LIKE ?", "%"+filter.Name+"%", "%"+filter.Name+"%")
+	} else {
+		if filter.Name != "" {
+			db = db.Where("name ILIKE ?", "%"+filter.Name+"%")
+		}
+		if filter.Phone != "" {
+			db = db.Where("phone LIKE ?", "%"+filter.Phone+"%")
+		}
 	}
-	return customers, nil
+
+	// นับก่อนเพื่อ pagination
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Sort
+	sortBy := "created_at"
+	if filter.SortBy == "updated_at" {
+		sortBy = "updated_at"
+	}
+	sortOrder := "desc"
+	if filter.SortOrder == "asc" {
+		sortOrder = "asc"
+	}
+	db = db.Order(fmt.Sprintf("%s %s", sortBy, sortOrder))
+
+	// Pagination
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+	if filter.Limit <= 0 {
+		filter.Limit = 10
+	}
+	offset := (filter.Page - 1) * filter.Limit
+
+	// Fetch
+	if err := db.Offset(offset).Limit(filter.Limit).Find(&customers).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return customers, total, nil
 }
 
 // ดึงข้อมูลลูกค้ารายเดียว
@@ -70,7 +118,6 @@ func (s *customerService) CreateCustomer(ctx context.Context, customer *barberBo
 	return s.db.WithContext(ctx).Create(customer).Error
 }
 
-
 func validateCustomerInput(svc *barberBookingModels.Customer) error {
 	if len(svc.Name) < 2 || len(svc.Name) > 100 {
 		return errors.New("name must be 2 - 100 characters")
@@ -80,9 +127,10 @@ func validateCustomerInput(svc *barberBookingModels.Customer) error {
 	// }
 	return nil
 }
+
 // แก้ไขข้อมูลลูกค้า
 func (s *customerService) UpdateCustomer(ctx context.Context, tenantID, customerID uint, updateData *barberBookingModels.Customer) (*barberBookingModels.Customer, error) {
-	if err := validateCustomerInput(updateData); err != nil{
+	if err := validateCustomerInput(updateData); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +139,7 @@ func (s *customerService) UpdateCustomer(ctx context.Context, tenantID, customer
 	if err := s.db.WithContext(ctx).
 		Where("tenant_id = ? AND id = ?", tenantID, customerID).
 		First(&existing).Error; err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	// ถ้าเจอแล้ว → อัปเดต
@@ -105,7 +153,6 @@ func (s *customerService) UpdateCustomer(ctx context.Context, tenantID, customer
 	}
 	return &existing, nil
 }
-
 
 // ลบลูกค้า
 func (s *customerService) DeleteCustomer(ctx context.Context, tenantID, customerID uint) error {
@@ -135,35 +182,33 @@ func (s *customerService) FindCustomerByEmail(ctx context.Context, tenantID uint
 	return &customer, nil
 }
 
-
 func (s *customerService) GetPendingAndCancelledCount(
-    ctx context.Context,
-    tenantID uint,
-    branchID uint,
+	ctx context.Context,
+	tenantID uint,
+	branchID uint,
 	customerID uint,
-	
+
 ) ([]barberBookingPort.CountByCustomerStatus, error) {
-    // สร้าง slice เพื่อเก็บผลลัพธ์
-    var results []barberBookingPort.CountByCustomerStatus
+	// สร้าง slice เพื่อเก็บผลลัพธ์
+	var results []barberBookingPort.CountByCustomerStatus
 
-    // รายการสถานะที่สนใจ (PENDING และ CANCELLED)
-    statuses := []barberBookingModels.AppointmentStatus{
-        barberBookingModels.StatusPending,
-        barberBookingModels.StatusCancelled,
-    }
+	// รายการสถานะที่สนใจ (PENDING และ CANCELLED)
+	statuses := []barberBookingModels.AppointmentStatus{
+		barberBookingModels.StatusPending,
+		barberBookingModels.StatusCancelled,
+	}
 
-    err := s.db.WithContext(ctx).
-        Model(&barberBookingModels.Appointment{}).
-        Select("customer_id, status, COUNT(*) AS total").
-        Where("tenant_id = ? AND branch_id = ? AND customer_id = ? AND status IN ?", tenantID, branchID,customerID, statuses).
-        Group("customer_id, status").
-        Scan(&results).Error
+	err := s.db.WithContext(ctx).
+		Model(&barberBookingModels.Appointment{}).
+		Select("customer_id, status, COUNT(*) AS total").
+		Where("tenant_id = ? AND branch_id = ? AND customer_id = ? AND status IN ?", tenantID, branchID, customerID, statuses).
+		Group("customer_id, status").
+		Scan(&results).Error
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    // คืนผลลัพธ์ (ถ้าไม่มีแถวใด ๆ ก็จะคืน slice ว่าง)
-    return results, nil
+	// คืนผลลัพธ์ (ถ้าไม่มีแถวใด ๆ ก็จะคืน slice ว่าง)
+	return results, nil
 }
-

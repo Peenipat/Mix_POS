@@ -24,14 +24,14 @@ type MockCustomerService struct {
 	mock.Mock
 }
 
-// GetPendingAndCancelledCount implements barberBookingPort.ICustomer.
-func (m *MockCustomerService) GetPendingAndCancelledCount(ctx context.Context, tenantID uint, branchID uint,customerID uint) ([]barberBookingPort.CountByCustomerStatus, error) {
+// GetCustomers implements barberBookingPort.ICustomer.
+func (m *MockCustomerService) GetCustomers(ctx context.Context, filter barberBookingPort.GetCustomersFilter) ([]barberBookingModels.Customer, int64, error) {
 	panic("unimplemented")
 }
 
-func (m *MockCustomerService) GetAllCustomers(ctx context.Context, tenantID uint, branchID uint) ([]barberBookingModels.Customer, error) {
-	args := m.Called(ctx, tenantID)
-	return args.Get(0).([]barberBookingModels.Customer), args.Error(1)
+// GetPendingAndCancelledCount implements barberBookingPort.ICustomer.
+func (m *MockCustomerService) GetPendingAndCancelledCount(ctx context.Context, tenantID uint, branchID uint, customerID uint) ([]barberBookingPort.CountByCustomerStatus, error) {
+	panic("unimplemented")
 }
 
 func (m *MockCustomerService) GetCustomerByID(ctx context.Context, tenantID, customerID uint) (*barberBookingModels.Customer, error) {

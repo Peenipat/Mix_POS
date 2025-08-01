@@ -27,7 +27,7 @@ const crumbsMap: Record<string, string> = {
   contact:"ติดต่อผู้พัฒนา",
   calendar: "ปฏิทินการนัดหมาย",
   tax: "คำนวณภาษี",
-  feedback: "รีวิวลูกค้า",
+  feedback: "รีวิวจากลูกค้า",
   inventory: "จัดการสต๊อกสินค้า",
   branch: "ระบบจัดการสาขา",
   layout: "จัดการหน้าเว็บไซต์",
@@ -52,7 +52,7 @@ const groupedMenu: MenuGroup[] = [
       { to: "customer", label: "ข้อมูลลูกค้า" },
       { to: "appointments", label: "การนัดหมาย" },
       { to: "calendar", label: "ปฏิทินการนัดหมาย",status: "comingsoon" },
-      { to: "feedback", label: "รีวิวลูกค้า" ,status: "comingsoon" }
+      { to: "feedback", label: "รีวิวจากลูกค้า" ,status: "comingsoon" }
     ],
   },
   {
@@ -130,39 +130,17 @@ export default function AdminLayout() {
 
   return (
     <>
-      {/* Top Navbar */}
-      <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <div className="px-3 py-3 lg:px-5 lg:pl-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center justify-start">
-              <Link to="/" className="flex ml-2 md:ml-6">
-                <span className="font-bai self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">
-                  ระบบหลังบ้าน
-                </span>
-              </Link>
-            </div>
-            <div className="flex items-center">
-              <button
-                onClick={handleLogout}
-                className="text-gray-700 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+      
       {/* Sidebar */}
       <aside
         id="logo-sidebar"
-        className="fixed top-0 left-0 z-40 w-64 h-screen pt-16 transition-transform -translate-x-full bg-[#1f2937] border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
+        className="fixed top-0 left-0 z-40 w-64 h-screen pt-3 transition-transform -translate-x-full bg-[#1f2937] border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
         aria-label="Sidebar"
       >
-        <div className="h-full px-1 pb-4 overflow-y-auto">
-          <ul className="space-y-4 font-medium text-white">
+        <div className="h-full px-1 pb-2 overflow-y-auto">
+          <ul className="space-y-2 font-medium text-white">
             <li>
-              <Link to="dashboard" className="block p-2 rounded-lg hover:bg-gray-700 font-bold">
+              <Link to="dashboard" className="block px-2  rounded-lg hover:bg-gray-700 font-bold">
                 หน้าหลัก
               </Link>
             </li>
@@ -201,8 +179,8 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="p-4 sm:ml-64 pt-20 bg-gray-100 dark:bg-gray-900 min-h-screen">
-        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+      <div className="p-3 sm:ml-64  bg-gray-100 dark:bg-gray-900 min-h-screen">
+        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
           <nav className="flex mb-4" aria-label="Breadcrumb">
             <ol className="inline-flex items-center space-x-1 md:space-x-2">
               {segments.length === 0 || segments[0] !== "dashboard" ? (

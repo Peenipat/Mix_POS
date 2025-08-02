@@ -73,3 +73,15 @@ func (t TimeOnly) ToTime(baseDate time.Time) time.Time {
 		baseDate.Location(),
 	)
 }
+
+func ParseUintQuery(c *fiber.Ctx, key string) (uint, error) {
+	val := c.Query(key)
+	if val == "" {
+		return 0, fiber.NewError(fiber.StatusBadRequest, "Missing "+key)
+	}
+	u64, err := strconv.ParseUint(val, 10, 64)
+	if err != nil {
+		return 0, fiber.NewError(fiber.StatusBadRequest, "Invalid "+key)
+	}
+	return uint(u64), nil
+}

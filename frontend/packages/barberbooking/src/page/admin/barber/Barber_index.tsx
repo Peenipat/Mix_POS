@@ -15,7 +15,7 @@ import { Card } from "@object/shared/components/Card";
 import { TableCellsIcon } from "../../../components/icons/TableCellsIcon";
 import { GridViewIcon } from "../../../components/icons/GridViewIcon"
 import { useNavigate } from "react-router-dom";
-
+import { getBarbers } from "../../../api/barber";
 export function ManageBarber() {
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
@@ -50,22 +50,19 @@ export function ManageBarber() {
 
   const loadBarbers = useCallback(async () => {
     if (!tenantId || !branchId) return;
+
     setLoadingBarbers(true);
     setErrorBarbers(null);
+
     try {
-      const res = await axios.get<{ status: string; data: Barber[] }>(
-        `/barberbooking/branches/${branchId}/barbers`
-      );
-      if (res.data.status !== "success") {
-        throw new Error(res.data.status);
-      }
-      setBarbers(res.data.data);
+      const barbers = await getBarbers(branchId);
+      setBarbers(barbers);
     } catch (err: any) {
       setErrorBarbers(err.response?.data?.message || err.message || "Failed to load barbers");
     } finally {
       setLoadingBarbers(false);
     }
-  }, [branchId]);
+  }, [tenantId, branchId]);
 
   useEffect(() => {
     if (

@@ -82,10 +82,10 @@ export function ManageCustomer() {
     onClick: (row) => handleCustomerDetail(row.id),
     className: "text-blue-600",
   };
-
-
-
-
+  const handleSearch = () => {
+    setPagination((prev) => ({ ...prev, page: 1 }));
+    setQuery(searchTerm);
+  };
 
   return (
     <div>
@@ -97,12 +97,15 @@ export function ManageCustomer() {
           placeholder="ค้นหาชื่อ / เบอร์โทร"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <button
-          onClick={() => {
-            setPagination((prev) => ({ ...prev, page: 1 })); 
-            setQuery(searchTerm); 
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleSearch();
+            }
           }}
+        />
+
+        <button
+          onClick={handleSearch}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           ค้นหา

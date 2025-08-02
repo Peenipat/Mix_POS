@@ -268,90 +268,6 @@
                 }
             }
         },
-        "/branches/{branch_id}/appointments": {
-            "get": {
-                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้ เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Appointment"
-                ],
-                "summary": "ดึงการนัดหมายทั้งหมดของช่างในสาขา",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัสสาขา (Branch ID)",
-                        "name": "branch_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15",
-                        "name": "start",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20",
-                        "name": "end",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)",
-                        "name": "filter",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)",
-                        "name": "exclude_status",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืน status success และรายการการนัดหมาย",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "ไม่พบข้อมูล",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/branches/{branch_id}/barbers": {
             "get": {
                 "security": [
@@ -733,121 +649,6 @@
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/tenants/:tenant_id/appointments": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "คืนรายการ Appointment ของ Tenant ที่ระบุ โดยรองรับการกรองตาม branch_id, barber_id, customer_id, status, ช่วงวัน (RFC3339), pagination (limit, offset) และการจัดเรียง (sort_by)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Appointment"
-                ],
-                "summary": "ดึงรายการนัดหมายของ Tenant",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "รหัส Tenant",
-                        "name": "tenant_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "กรองตาม Branch ID",
-                        "name": "branch_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "กรองตาม Barber ID",
-                        "name": "barber_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "กรองตาม Customer ID",
-                        "name": "customer_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "กรองตามสถานะ Appointment",
-                        "name": "status",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "กรองวันที่เริ่มต้น (RFC3339)",
-                        "name": "start_date",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "กรองวันที่สิ้นสุด (RFC3339)",
-                        "name": "end_date",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "จำนวนรายการสูงสุด (pagination)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "เลื่อนข้ามรายการ (pagination)",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "จัดเรียงผลลัพธ์ เช่น start_time desc",
-                        "name": "sort_by",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "คืนค่า status success และ array ของ Appointment ใน key `data`",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/barberBookingModels.Appointment"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid query parameters",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3298,6 +3099,145 @@
                     },
                     "500": {
                         "description": "Failed to create service",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{tenant_id}/branches/{branch_id}/appointments": {
+            "get": {
+                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองช่วงเวลา, สถานะ, ลูกค้า, และใช้ pagination ได้",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายทั้งหมดของช่างในสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา (Branch ID)",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสผู้เช่า (Tenant ID)",
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันที่เริ่มต้น (รูปแบบ: yyyy-MM-dd)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันที่สิ้นสุด (รูปแบบ: yyyy-MM-dd)",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ประเภทการกรองช่วงเวลา: week (สัปดาห์นี้), month (เดือนนี้)",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "สถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)",
+                        "name": "exclude_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "สถานะการนัดหมาย เช่น WAITING, COMPLETED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสช่าง",
+                        "name": "barber_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "รหัสบริการ",
+                        "name": "service_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "วันที่สร้างการนัดหมาย (yyyy-MM-dd)",
+                        "name": "created_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ชื่อลูกค้า",
+                        "name": "cus_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เบอร์โทรลูกค้า",
+                        "name": "phone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "หน้าปัจจุบัน (เริ่มที่ 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "จำนวนรายการต่อหน้า",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "พารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "ไม่พบข้อมูล",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "ข้อผิดพลาดภายในเซิร์ฟเวอร์",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

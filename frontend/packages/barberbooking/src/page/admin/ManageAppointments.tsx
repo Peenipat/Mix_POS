@@ -1,36 +1,80 @@
 // src/pages/admin/ManageAppointments.tsx
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { DataTable } from "../../components/DataTable";
 import type { Action, Column } from "../../components/DataTable";
 import { useAppSelector } from "../../store/hook";
 import { getAppointmentsByBranch } from "../../api/appointment"; // <-- import api ใหม่
 import type { AppointmentBrief } from "../../api/appointment";   // <-- import type ใหม่
 import dayjs from "dayjs";
+import { getBarbers } from "../../api/barber";
+import { Barber } from "../../types/barber";
 
 export function ManageAppointments() {
   const me = useAppSelector((state) => state.auth.me);
+  const statusMe = useAppSelector((state) => state.auth.statusMe);
   const branchId = me?.branch_id;
+  const tenantId = me?.tenant_ids[0]
+  const didFetchBarbers = useRef(false);
+
+
 
   const [appointments, setAppointments] = useState<AppointmentBrief[]>([]);
-  const [loadingAppts, setLoadingAppts] = useState<boolean>(false);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
+  const [loadingAppts, setLoadingAppts] = useState(false);
   const [errorAppts, setErrorAppts] = useState<string | null>(null);
-  const didFetchAppts = useRef(false);
 
+  // filters
+
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
+  const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [createdStart, setCreatedStart] = useState<string | null>(null);
+  const [createdEnd, setCreatedEnd] = useState<string | null>(null);
+
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [currentPage,setCurrentPage] = useState(1)
+
+  const [loadingBarbers, setLoadingBarbers] = useState<boolean>(false);
+  const [errorBarbers, setErrorBarbers] = useState<string | null>(null);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const loadBarbers = useCallback(async () => {
+    if (!tenantId || !branchId) return;
+
+    setLoadingBarbers(true);
+    setErrorBarbers(null);
+
+    try {
+      const barbers = await getBarbers(branchId);
+      setBarbers(barbers);
+    } catch (err: any) {
+      setErrorBarbers(err.response?.data?.message || err.message || "Failed to load barbers");
+    } finally {
+      setLoadingBarbers(false);
+    }
+  }, [tenantId, branchId]);
 
   useEffect(() => {
-    if (!branchId || didFetchAppts.current) return;
-    didFetchAppts.current = true;
+    if (!branchId || !tenantId) return;
 
     const loadAppointments = async () => {
       setLoadingAppts(true);
       setErrorAppts(null);
       try {
-        const data = await getAppointmentsByBranch(branchId);
-        setAppointments(data);
+        const { data, total, page, limit } = await getAppointmentsByBranch(branchId!, tenantId!, {
+          page: pagination.page,
+          limit: pagination.limit,
+          search: searchTerm,
+          status: selectedStatuses,
+          barberId: selectedBarberId || undefined,
+          serviceId: selectedServiceId || undefined,
+          createdStart: createdStart || undefined,
+          createdEnd: createdEnd || undefined,
+        });
+
+        setAppointments(data ?? []);
+        setPagination({ total, page, limit });
       } catch (err: any) {
         setErrorAppts(err.message || "Failed to load appointments");
       } finally {
@@ -39,8 +83,31 @@ export function ManageAppointments() {
     };
 
     loadAppointments();
-  }, [branchId]);
+  }, [
+    branchId,
+    tenantId,
+    pagination.page,
+    pagination.limit,
+    searchTerm,
+    selectedStatuses,
+    selectedBarberId,
+    selectedServiceId,
+    createdStart,
+    createdEnd,
+  ]);
 
+  useEffect(() => {
+    if (
+      statusMe === "succeeded" &&
+      me &&
+      tenantId &&
+      branchId &&
+      !didFetchBarbers.current
+    ) {
+      didFetchBarbers.current = true;
+      loadBarbers();
+    }
+  }, [statusMe, me, tenantId, branchId, loadBarbers]);
   if (!branchId) {
     return <p className="text-red-500">Cannot determine branch information.</p>;
   }
@@ -69,7 +136,8 @@ export function ManageAppointments() {
   const columns: Column<AppointmentBrief>[] = [
     {
       header: "#",
-      accessor: (_row, rowIndex) => rowIndex + 1,
+      accessor: (_row, rowIndex) =>
+        (pagination.page - 1) * pagination.limit + rowIndex + 1,
     },
     {
       header: "ชื่อลูกค้า",
@@ -114,16 +182,10 @@ export function ManageAppointments() {
   };
 
 
-  const filteredData = appointments.filter((row) => {
-    const matchesSearch =
-      row.customer.name.includes(searchTerm) ||
-      row.customer.phone.includes(searchTerm) ||
-      row.barber.username.includes(searchTerm);
-
-    const matchesStatus = !statusFilter || row.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
 
   return (
@@ -135,23 +197,52 @@ export function ManageAppointments() {
         <input
           type="text"
           className="border border-gray-300 rounded px-3 py-2 w-full sm:w-64"
-          placeholder="ค้นหาชื่อลูกค้า / เบอร์โทร / ช่าง"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="ค้นหาชื่อลูกค้า / เบอร์โทร "
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleSearch();
+            }
+          }}
         />
 
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          ค้นหา
+        </button>
+
         <select
-          value={statusFilter || ""}
+          value={selectedStatuses[0] || ""}
           onChange={(e) =>
-            setStatusFilter(e.target.value === "" ? null : e.target.value)
+            setSelectedStatuses(e.target.value === "" ? [] : [e.target.value])
           }
           className="border border-gray-300 rounded px-3 py-2"
         >
-          <option value="">ทั้งหมด</option>
+          <option value="">-- สถานะทั้งหมด --</option>
           <option value="CONFIRMED">จองแล้ว</option>
           <option value="IN_SERVICE">กำลังให้บริการ</option>
           <option value="COMPLETED">เสร็จสิ้น</option>
           <option value="CANCELLED">ยกเลิกแล้ว</option>
+        </select>
+
+
+        <select
+          value={selectedBarberId ?? ""}
+          onChange={(e) => {
+            const val = e.target.value;
+            setSelectedBarberId(val === "" ? null : Number(val));
+          }}
+          className="border border-gray-300 rounded px-3 py-2"
+        >
+          <option value="">-- ช่างทั้งหมด --</option>
+          {barbers.map((barber) => (
+            <option key={barber.id} value={barber.id}>
+              {barber.username}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -161,10 +252,12 @@ export function ManageAppointments() {
         actions={[viewAction, cancelAction]}
         showEdit={false}
         showDelete={false}
-        page={currentPage}
-        perPage={10}
-        total={appointments.length}
-        onPageChange={(p) => setCurrentPage(p)}
+        page={pagination.page}
+        perPage={pagination.limit}
+        total={pagination.total}
+        onPageChange={(p) => {
+          setPagination((prev) => ({ ...prev, page: p }));
+        }}
       />
     </div>
   );

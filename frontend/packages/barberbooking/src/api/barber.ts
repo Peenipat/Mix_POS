@@ -1,4 +1,5 @@
 import api from "../lib/axios";
+import { Barber } from "../types/barber";
 
 export interface BarberDetail {
   id: number;
@@ -37,4 +38,16 @@ export async function updateBarber(tenantId: number, barberId: number, formData:
   });
 
   return resp.data;
+}
+
+export async function getBarbers(branchId: number): Promise<Barber[]> {
+  const res = await api.get<{ status: string; data: Barber[] }>(
+    `/barberbooking/branches/${branchId}/barbers`
+  );
+
+  if (res.data.status !== "success") {
+    throw new Error(res.data.status);
+  }
+
+  return res.data.data;
 }

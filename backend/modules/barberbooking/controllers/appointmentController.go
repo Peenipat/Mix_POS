@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	helperFunc "myapp/modules/barberbooking"
-	barberBookingDto "myapp/modules/barberbooking/dto"
 	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingPort "myapp/modules/barberbooking/port"
 	coreModels "myapp/modules/core/models"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // AppointmentController handles endpoints related to appointments
@@ -373,116 +374,6 @@ func (ctrl *AppointmentController) GetAppointmentByID(c *fiber.Ctx) error {
 	})
 }
 
-// GET /tenants/:tenant_id/appointments
-// ListAppointments godoc
-// @Summary      ดึงรายการนัดหมายของ Tenant
-// @Description  คืนรายการ Appointment ของ Tenant ที่ระบุ โดยรองรับการกรองตาม branch_id, barber_id, customer_id, status, ช่วงวัน (RFC3339), pagination (limit, offset) และการจัดเรียง (sort_by)
-// @Tags         Appointment
-// @Accept       json
-// @Produce      json
-// @Param        tenant_id    path      uint     true   "รหัส Tenant"
-// @Param        branch_id    query     uint     false  "กรองตาม Branch ID"
-// @Param        barber_id    query     uint     false  "กรองตาม Barber ID"
-// @Param        customer_id  query     uint     false  "กรองตาม Customer ID"
-// @Param        status       query     string   false  "กรองตามสถานะ Appointment"
-// @Param        start_date   query     string   false  "กรองวันที่เริ่มต้น (RFC3339)"
-// @Param        end_date     query     string   false  "กรองวันที่สิ้นสุด (RFC3339)"
-// @Param        limit        query     int      false  "จำนวนรายการสูงสุด (pagination)"
-// @Param        offset       query     int      false  "เลื่อนข้ามรายการ (pagination)"
-// @Param        sort_by      query     string   false  "จัดเรียงผลลัพธ์ เช่น start_time desc"
-// @Success      200          {object}  map[string][]barberBookingModels.Appointment  "คืนค่า status success และ array ของ Appointment ใน key `data`"
-// @Failure      400          {object}  map[string]string                            "Invalid query parameters"
-// @Failure      500          {object}  map[string]string                            "Internal Server Error"
-// @Router       /tenants/:tenant_id/appointments [get]
-// @Security     ApiKeyAuth
-func (ctrl *AppointmentController) ListAppointments(c *fiber.Ctx) error {
-	// 1. Parse tenant_id
-	tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid tenant_id"})
-	}
-
-	// 2. Build filter
-	var f barberBookingDto.AppointmentFilter
-	f.TenantID = tenantID
-
-	if qs := c.Query("branch_id", ""); qs != "" {
-		if v, err := strconv.ParseUint(qs, 10, 64); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid branch_id"})
-		} else {
-			u := uint(v)
-			f.BranchID = &u
-		}
-	}
-	if qs := c.Query("barber_id", ""); qs != "" {
-		if v, err := strconv.ParseUint(qs, 10, 64); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid barber_id"})
-		} else {
-			u := uint(v)
-			f.BarberID = &u
-		}
-	}
-	if qs := c.Query("customer_id", ""); qs != "" {
-		if v, err := strconv.ParseUint(qs, 10, 64); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid customer_id"})
-		} else {
-			u := uint(v)
-			f.CustomerID = &u
-		}
-	}
-	if qs := c.Query("status", ""); qs != "" {
-		s := barberBookingModels.AppointmentStatus(qs)
-		f.Status = &s
-	}
-	if qs := c.Query("start_date", ""); qs != "" {
-		t, err := time.Parse(time.RFC3339, qs)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid start_date format. Expect RFC3339"})
-		}
-		f.StartDate = &t
-	}
-	if qs := c.Query("end_date", ""); qs != "" {
-		t, err := time.Parse(time.RFC3339, qs)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid end_date format. Expect RFC3339"})
-		}
-		f.EndDate = &t
-	}
-	if qs := c.Query("limit", ""); qs != "" {
-		if v, err := strconv.Atoi(qs); err != nil || v < 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid limit"})
-		} else {
-			f.Limit = &v
-		}
-	}
-	if qs := c.Query("offset", ""); qs != "" {
-		if v, err := strconv.Atoi(qs); err != nil || v < 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid offset"})
-		} else {
-			f.Offset = &v
-		}
-	}
-	if qs := c.Query("sort_by", ""); qs != "" {
-		f.SortBy = &qs
-	}
-
-	// 3. Call service for DTO
-	apptResp, err := ctrl.Service.ListAppointmentsResponse(context.Background(), f)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed to list appointments",
-			"error":   err.Error(),
-		})
-	}
-
-	// 4. Return slimmed-down DTO
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status": "success",
-		"data":   apptResp,
-	})
-}
-
 type CancelRequest struct {
 	ActorUserID     *uint `json:"actor_user_id,omitempty"`
 	ActorCustomerID *uint `json:"actor_customer_id,omitempty"`
@@ -732,21 +623,31 @@ func (ctrl *AppointmentController) DeleteAppointment(c *fiber.Ctx) error {
 }
 
 // @Summary      ดึงการนัดหมายทั้งหมดของช่างในสาขา
-// @Description  คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้ เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้
+// @Description  คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองช่วงเวลา, สถานะ, ลูกค้า, และใช้ pagination ได้
 // @Tags         Appointment
 // @Accept       json
 // @Produce      json
-// @Param        branch_id   path      uint     true   "รหัสสาขา (Branch ID)"
-// @Param        start       query     string   false  "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15"
-// @Param        end         query     string   false  "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20"
-// @Param        filter      query     string   false  "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)"
-// @Param        exclude_status query     string   false  "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)"
-// @Success      200         {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
-// @Failure      400         {object}  map[string]string        "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ"
-// @Failure      404         {object}  map[string]string        "ไม่พบข้อมูล"
-// @Failure      500         {object}  map[string]string        "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์"
-// @Router       /branches/{branch_id}/appointments [get]
-func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
+// @Param        branch_id       path      uint     true   "รหัสสาขา (Branch ID)"
+// @Param        tenant_id       path     uint     true   "รหัสผู้เช่า (Tenant ID)"
+// @Param        start           query     string   false  "วันที่เริ่มต้น (รูปแบบ: yyyy-MM-dd)"
+// @Param        end             query     string   false  "วันที่สิ้นสุด (รูปแบบ: yyyy-MM-dd)"
+// @Param        filter          query     string   false  "ประเภทการกรองช่วงเวลา: week (สัปดาห์นี้), month (เดือนนี้)"
+// @Param        exclude_status  query     string   false  "สถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)"
+// @Param        status          query     string   false  "สถานะการนัดหมาย เช่น WAITING, COMPLETED"
+// @Param        barber_id       query     uint     false  "รหัสช่าง"
+// @Param        service_id      query     uint     false  "รหัสบริการ"
+// @Param        created_date    query     string   false  "วันที่สร้างการนัดหมาย (yyyy-MM-dd)"
+// @Param        cus_name        query     string   false  "ชื่อลูกค้า"
+// @Param        phone           query     string   false  "เบอร์โทรลูกค้า"
+// @Param        page            query     int      false  "หน้าปัจจุบัน (เริ่มที่ 1)"
+// @Param        limit           query     int      false  "จำนวนรายการต่อหน้า"
+// @Success      200             {object}  map[string]interface{}  "คืน status success และรายการการนัดหมาย"
+// @Failure      400             {object}  map[string]string        "พารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ"
+// @Failure      404             {object}  map[string]string        "ไม่พบข้อมูล"
+// @Failure      500             {object}  map[string]string        "ข้อผิดพลาดภายในเซิร์ฟเวอร์"
+// @Router       /tenants/{tenant_id}/branches/{branch_id}/appointments [get]
+func (ctrl *AppointmentController) GetAppointments(c *fiber.Ctx) error {
+	// ── branch_id
 	branchID, err := helperFunc.ParseUintParam(c, "branch_id")
 	if err != nil || branchID == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -755,46 +656,84 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		})
 	}
 
-	filterType := c.Query("filter") 
-
-	var startTime *time.Time
-	var endTime *time.Time
-	layout := "2006-01-02"
-
-	if startStr := c.Query("start"); startStr != "" {
-		t, err := time.Parse(layout, startStr)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"status":  "error",
-				"message": "Invalid start_time format (yyyy-MM-dd)",
-			})
-		}
-		startTime = &t
+	// ── tenant_id (บังคับ)
+	tenantID, err := helperFunc.ParseUintParam(c, "tenant_id")
+	if err != nil || tenantID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Missing tenant_id",
+		})
 	}
 
-	if endStr := c.Query("end"); endStr != "" {
-		t, err := time.Parse(layout, endStr)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"status":  "error",
-				"message": "Invalid end_time format (yyyy-MM-dd)",
-			})
-		}
-		t = t.Add(23*time.Hour + 59*time.Minute + 59*time.Second + 999*time.Millisecond)
-		endTime = &t
-	}
+	// ── ตัวกรองเพิ่มเติม
+	search := c.Query("search")
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 
-	rawStatuses := c.Query("exclude_status") // ตัวอย่าง: "CANCELLED,NO_SHOW"
-	var excludeStatuses []barberBookingModels.AppointmentStatus
+	// ── filter: status (support หลายค่า)
+	var statuses []barberBookingModels.AppointmentStatus
+	rawStatuses := c.Query("status") // ex. "BOOKED,COMPLETED"
 	if rawStatuses != "" {
 		for _, s := range strings.Split(rawStatuses, ",") {
 			status := barberBookingModels.AppointmentStatus(strings.ToUpper(strings.TrimSpace(s)))
-			excludeStatuses = append(excludeStatuses, status)
+			statuses = append(statuses, status)
 		}
 	}
 
-	// เรียก service พร้อมส่ง filterType เพิ่ม
-	appts, err := ctrl.Service.GetAppointmentsByBranch(c.Context(), branchID, startTime, endTime, filterType,excludeStatuses)
+	// ── filter: barber_id
+	var barberID *uint
+	if bid, err := helperFunc.ParseUintQuery(c, "barber_id"); err == nil && bid > 0 {
+		barberID = &bid
+	}
+
+	// ── filter: service_id
+	var serviceID *uint
+	if sid, err := helperFunc.ParseUintQuery(c, "service_id"); err == nil && sid > 0 {
+		serviceID = &sid
+	}
+
+	// ── created_date range
+	var createdStart, createdEnd *time.Time
+	layout := "2006-01-02"
+
+	if val := c.Query("created_start"); val != "" {
+		t, err := time.Parse(layout, val)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid created_start format (yyyy-MM-dd)",
+			})
+		}
+		createdStart = &t
+	}
+	if val := c.Query("created_end"); val != "" {
+		t, err := time.Parse(layout, val)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Invalid created_end format (yyyy-MM-dd)",
+			})
+		}
+		t = t.Add(23*time.Hour + 59*time.Minute + 59*time.Second + 999*time.Millisecond)
+		createdEnd = &t
+	}
+
+	// ── สร้าง filter object
+	filter := barberBookingPort.GetAppointmentsFilter{
+		TenantID:  &tenantID,
+		BranchID:  &branchID,
+		Search:    search,
+		Statuses:  statuses,
+		BarberID:  barberID,
+		ServiceID: serviceID,
+		StartDate: createdStart,
+		EndDate:   createdEnd,
+		Page:      page,
+		Limit:     limit,
+	}
+
+	// ── เรียก service ใหม่
+	data, total, err := ctrl.Service.GetAppointments(c.Context(), filter)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -802,12 +741,22 @@ func (ctrl *AppointmentController) GetAppointmentsByBranch(c *fiber.Ctx) error {
 		})
 	}
 
+	if data == nil {
+		data = []barberBookingPort.AppointmentBrief{}
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "success",
-		"data":   appts,
+		"data":   data,
+		"meta": fiber.Map{
+			"pagination": fiber.Map{
+				"total": total,
+				"page":  page,
+				"limit": limit,
+			},
+		},
 	})
 }
-
 
 // GetAppointmentsByBarber ดึงการนัดหมายทั้งหมดของช่างในช่วงเวลาหรือสถานะที่กำหนด
 // @Summary      ดึงการนัดหมายทั้งหมดของช่าง
@@ -926,8 +875,3 @@ func (ctrl *AppointmentController) GetAppointmentsByPhone(c *fiber.Ctx) error {
 		"data":   appts,
 	})
 }
-
-
-
-
-

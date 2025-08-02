@@ -1,9 +1,10 @@
 package barberBookingPort
+
 import (
-	"time"
 	"context"
-	barberBookingModels "myapp/modules/barberbooking/models"
 	barberBookingDto "myapp/modules/barberbooking/dto"
+	barberBookingModels "myapp/modules/barberbooking/models"
+	"time"
 )
 
 type IAppointment interface {
@@ -13,21 +14,16 @@ type IAppointment interface {
 	UpdateAppointment(ctx context.Context, id uint, tenantID uint, input *barberBookingModels.Appointment) (*barberBookingModels.Appointment, error)
 	GetAppointmentByID(ctx context.Context, id uint) (*barberBookingModels.Appointment, error)
 	ListAppointments(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]barberBookingModels.Appointment, error)
-	ListAppointmentsResponse(ctx context.Context, filter barberBookingDto.AppointmentFilter) ([]AppointmentResponse, error)
-	CancelAppointment(ctx context.Context,appointmentID uint,actorUserID *uint,actorCustomerID *uint,) error
-	RescheduleAppointment( ctx context.Context,appointmentID uint,newStartTime time.Time,actorUserID *uint, actorCustomerID *uint,) error
+	CancelAppointment(ctx context.Context, appointmentID uint, actorUserID *uint, actorCustomerID *uint) error
+	RescheduleAppointment(ctx context.Context, appointmentID uint, newStartTime time.Time, actorUserID *uint, actorCustomerID *uint) error
 	CalculateAppointmentEndTime(ctx context.Context, serviceID uint, startTime time.Time) (time.Time, error)
 	DeleteAppointment(ctx context.Context, appointmentID uint) error
 	GetUpcomingAppointmentsByCustomer(ctx context.Context, customerID uint) (*barberBookingModels.Appointment, error)
-	GetAppointmentsByBranch(
+	GetAppointments(
 		ctx context.Context,
-		branchID uint,
-		start *time.Time,
-		end *time.Time,
-		filterType string, 
-		excludeStatus []barberBookingModels.AppointmentStatus,
-	) ([]AppointmentBrief, error)
-	GetAppointmentsByBarber(ctx context.Context,barberID uint,filter AppointmentFilter,) ([]AppointmentBrief, error)
+		filter GetAppointmentsFilter,
+	) ([]AppointmentBrief, int64, error)
+	GetAppointmentsByBarber(ctx context.Context, barberID uint, filter AppointmentFilter) ([]AppointmentBrief, error)
 	GetAppointmentsByPhone(
 		ctx context.Context,
 		phone string,
@@ -37,68 +33,35 @@ type IAppointment interface {
 // CreateAppointmentRequest is the payload for creating a new appointment
 // swagger:model CreateAppointmentRequest
 // example:
-// {
-//   "branch_id": 1,
-//   "service_id": 2,
-//   "barber_id": 3,
-//   "customer_id": 4,
-//   "start_time": "2025-05-30T10:00:00Z",
-//   "notes": "Please be on time"
-// }
+//
+//	{
+//	  "branch_id": 1,
+//	  "service_id": 2,
+//	  "barber_id": 3,
+//	  "customer_id": 4,
+//	  "start_time": "2025-05-30T10:00:00Z",
+//	  "notes": "Please be on time"
+//	}
 type CustomerInput struct {
-    Name  string `json:"name" example:"John"`
-    Phone string `json:"phone" example:"0123456789"`
+	Name  string `json:"name" example:"John"`
+	Phone string `json:"phone" example:"0123456789"`
 }
 
 type CreateAppointmentRequest struct {
-    BranchID   uint   `json:"branch_id" example:"1"`
-    ServiceID  uint   `json:"service_id" example:"2"`
-    BarberID   *uint  `json:"barber_id,omitempty" example:"3"`
-    CustomerID uint   `json:"customer_id" example:"4"`
-    StartTime  string `json:"start_time" example:"2025-05-30T10:00:00Z"`
-    Notes      string `json:"notes,omitempty" example:"Preferred barber: John"`
-    Customer   *CustomerInput  `json:"customer,omitempty"`
+	BranchID   uint           `json:"branch_id" example:"1"`
+	ServiceID  uint           `json:"service_id" example:"2"`
+	BarberID   *uint          `json:"barber_id,omitempty" example:"3"`
+	CustomerID uint           `json:"customer_id" example:"4"`
+	StartTime  string         `json:"start_time" example:"2025-05-30T10:00:00Z"`
+	Notes      string         `json:"notes,omitempty" example:"Preferred barber: John"`
+	Customer   *CustomerInput `json:"customer,omitempty"`
 }
-
-type AppointmentResponse struct {
-    ID        uint             `json:"id"`
-    BranchID  uint             `json:"branch_id"`
-
-    // ข้างล่างนี้ embed เฉพาะ field สำคัญของ Service
-    Service struct {
-        ID       uint   `json:"id"`
-        Name     string `json:"name"`
-        Duration int    `json:"duration"`
-        Price    float64 `json:"price"`
-    } `json:"service"`
-
-    Barber struct {
-        ID       uint   `json:"id"`
-        Username string `json:"username"`
-        Email    string `json:"email"`
-    } `json:"barber"`
-
-    Customer struct {
-        ID    uint   `json:"id"`
-        Name  string `json:"Name"`
-        Phone string `json:"Phone"`
-        Email string `json:"email"`
-    } `json:"customer"`
-
-    TenantID  uint   `json:"tenant_id"`
-    StartTime string `json:"start_time"` // ส่ง as ISO string
-    EndTime   string `json:"end_time"`   // ส่ง as ISO string
-
-    Status string `json:"status"`
-    Notes  string `json:"notes"`
-}
-
 
 type ServiceBrief struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Duration    int     `json:"duration"`
-	Price       int     `json:"price"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Duration    int    `json:"duration"`
+	Price       int    `json:"price"`
 }
 
 type BarberBrief struct {
@@ -114,9 +77,21 @@ type AppointmentFilter struct {
 	Start    *time.Time
 	End      *time.Time
 	Status   []barberBookingModels.AppointmentStatus
-	TimeMode string                                 
+	TimeMode string
 }
 
+type GetAppointmentsFilter struct {
+	TenantID  *uint
+	BranchID  *uint
+	Search    string
+	Statuses  []barberBookingModels.AppointmentStatus
+	BarberID  *uint
+	ServiceID *uint
+	StartDate *time.Time
+	EndDate   *time.Time
+	Page      int
+	Limit     int
+}
 
 type AppointmentBrief struct {
 	ID         uint          `json:"id"`

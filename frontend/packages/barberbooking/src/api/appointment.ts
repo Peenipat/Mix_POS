@@ -61,28 +61,68 @@ export type AppointmentBrief = {
   status: string;
 };
 
+export type GetAppointmentsOptions = {
+  start?: string;
+  end?: string;
+  filter?: "" | "week" | "month";
+  excludeStatus?: string[];
+  search?: string;
+  status?: string[];
+  barberId?: number;
+  serviceId?: number;
+  createdStart?: string;
+  createdEnd?: string;
+  page?: number;
+  limit?: number;
+};
+
 export async function getAppointmentsByBranch(
   branchId: number,
-  start?: string,
-  end?: string,
-  filter?: "" | "week" | "month" | null,
-  excludeStatus?: string[] 
-): Promise<AppointmentBrief[]> {
-  const params: Record<string, string> = {};
+  tenantId: number,
+  options: GetAppointmentsOptions
+): Promise<{ data: AppointmentBrief[]; total: number; page: number; limit: number }> {
+  const {
+    start,
+    end,
+    filter,
+    excludeStatus,
+    search,
+    status,
+    barberId,
+    serviceId,
+    createdStart,
+    createdEnd,
+    page = 1,
+    limit = 10,
+  } = options;
+
+  const params: Record<string, string> = {
+    tenant_id: String(tenantId),
+    page: String(page),
+    limit: String(limit),
+  };
 
   if (start) params.start = start;
   if (end) params.end = end;
   if (filter) params.filter = filter;
-
+  if (search) params.search = search;
+  if (barberId) params.barber_id = String(barberId);
+  if (serviceId) params.service_id = String(serviceId);
+  if (createdStart) params.created_start = createdStart;
+  if (createdEnd) params.created_end = createdEnd;
   if (excludeStatus && excludeStatus.length > 0) {
-    params.exclude_status = excludeStatus.join(","); 
+    params.exclude_status = excludeStatus.join(",");
+  }
+  if (status && status.length > 0) {
+    params.status = status.join(",");
   }
 
-  const resp = await api.get(`/barberbooking/branches/${branchId}/appointments`, {
+  const resp = await api.get(`/barberbooking/tenants/${tenantId}/branches/${branchId}/appointments`, {
     params,
   });
 
   const rawData = resp.data.data;
+  const pagination = resp.data.meta?.pagination || { total: 0, page, limit };
 
   const transformed: AppointmentBrief[] = rawData.map((a: any) => {
     const startDate = new Date(a.start_time);
@@ -104,7 +144,12 @@ export async function getAppointmentsByBranch(
     };
   });
 
-  return transformed;
+  return {
+    data: transformed,
+    total: pagination.total,
+    page: pagination.page,
+    limit: pagination.limit,
+  };
 }
 
 export type GetAppointmentsByBarberQuery = {
@@ -197,5 +242,5 @@ export async function updateAppointmentStatus(
     payload
   );
 
-  return resp.data.data; 
+  return resp.data.data;
 }

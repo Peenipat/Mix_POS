@@ -719,64 +719,6 @@ paths:
       summary: ดึงการนัดหมายทั้งหมดของช่าง
       tags:
       - Appointment
-  /branches/{branch_id}/appointments:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้
-        เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้
-      parameters:
-      - description: รหัสสาขา (Branch ID)
-        in: path
-        name: branch_id
-        required: true
-        type: integer
-      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15'
-        in: query
-        name: start
-        type: string
-      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20'
-        in: query
-        name: end
-        type: string
-      - description: 'ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)'
-        in: query
-        name: filter
-        type: string
-      - description: รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย
-          ,)
-        in: query
-        name: exclude_status
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืน status success และรายการการนัดหมาย
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: ไม่พบข้อมูล
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: ดึงการนัดหมายทั้งหมดของช่างในสาขา
-      tags:
-      - Appointment
   /branches/{branch_id}/barbers:
     get:
       consumes:
@@ -1043,83 +985,6 @@ paths:
       summary: แก้ไขบริการ
       tags:
       - Service
-  /tenants/:tenant_id/appointments:
-    get:
-      consumes:
-      - application/json
-      description: คืนรายการ Appointment ของ Tenant ที่ระบุ โดยรองรับการกรองตาม branch_id,
-        barber_id, customer_id, status, ช่วงวัน (RFC3339), pagination (limit, offset)
-        และการจัดเรียง (sort_by)
-      parameters:
-      - description: รหัส Tenant
-        in: path
-        name: tenant_id
-        required: true
-        type: integer
-      - description: กรองตาม Branch ID
-        in: query
-        name: branch_id
-        type: integer
-      - description: กรองตาม Barber ID
-        in: query
-        name: barber_id
-        type: integer
-      - description: กรองตาม Customer ID
-        in: query
-        name: customer_id
-        type: integer
-      - description: กรองตามสถานะ Appointment
-        in: query
-        name: status
-        type: string
-      - description: กรองวันที่เริ่มต้น (RFC3339)
-        in: query
-        name: start_date
-        type: string
-      - description: กรองวันที่สิ้นสุด (RFC3339)
-        in: query
-        name: end_date
-        type: string
-      - description: จำนวนรายการสูงสุด (pagination)
-        in: query
-        name: limit
-        type: integer
-      - description: เลื่อนข้ามรายการ (pagination)
-        in: query
-        name: offset
-        type: integer
-      - description: จัดเรียงผลลัพธ์ เช่น start_time desc
-        in: query
-        name: sort_by
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: คืนค่า status success และ array ของ Appointment ใน key `data`
-          schema:
-            additionalProperties:
-              items:
-                $ref: '#/definitions/barberBookingModels.Appointment'
-              type: array
-            type: object
-        "400":
-          description: Invalid query parameters
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - ApiKeyAuth: []
-      summary: ดึงรายการนัดหมายของ Tenant
-      tags:
-      - Appointment
   /tenants/:tenant_id/appointments/:appointment_id:
     delete:
       consumes:
@@ -2750,6 +2615,100 @@ paths:
       summary: สร้างบริการใหม่
       tags:
       - Service
+  /tenants/{tenant_id}/branches/{branch_id}/appointments:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองช่วงเวลา,
+        สถานะ, ลูกค้า, และใช้ pagination ได้
+      parameters:
+      - description: รหัสสาขา (Branch ID)
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: รหัสผู้เช่า (Tenant ID)
+        in: path
+        name: tenant_id
+        required: true
+        type: integer
+      - description: 'วันที่เริ่มต้น (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: start
+        type: string
+      - description: 'วันที่สิ้นสุด (รูปแบบ: yyyy-MM-dd)'
+        in: query
+        name: end
+        type: string
+      - description: 'ประเภทการกรองช่วงเวลา: week (สัปดาห์นี้), month (เดือนนี้)'
+        in: query
+        name: filter
+        type: string
+      - description: สถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)
+        in: query
+        name: exclude_status
+        type: string
+      - description: สถานะการนัดหมาย เช่น WAITING, COMPLETED
+        in: query
+        name: status
+        type: string
+      - description: รหัสช่าง
+        in: query
+        name: barber_id
+        type: integer
+      - description: รหัสบริการ
+        in: query
+        name: service_id
+        type: integer
+      - description: วันที่สร้างการนัดหมาย (yyyy-MM-dd)
+        in: query
+        name: created_date
+        type: string
+      - description: ชื่อลูกค้า
+        in: query
+        name: cus_name
+        type: string
+      - description: เบอร์โทรลูกค้า
+        in: query
+        name: phone
+        type: string
+      - description: หน้าปัจจุบัน (เริ่มที่ 1)
+        in: query
+        name: page
+        type: integer
+      - description: จำนวนรายการต่อหน้า
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืน status success และรายการการนัดหมาย
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: พารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: ไม่พบข้อมูล
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: ข้อผิดพลาดภายในเซิร์ฟเวอร์
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงการนัดหมายทั้งหมดของช่างในสาขา
+      tags:
+      - Appointment
   /tenants/{tenant_id}/branches/{branch_id}/available-slots:
     get:
       description: ดึงช่วงเวลาที่สามารถนัดหมายได้ของสาขาในช่วงวันที่กำหนด

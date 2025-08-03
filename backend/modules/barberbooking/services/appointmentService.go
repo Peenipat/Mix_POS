@@ -821,6 +821,143 @@ func (s *appointmentService) CalculateAppointmentEndTime(ctx context.Context, se
 	return endTime, nil
 }
 
+func (s *appointmentService) GetAppointmentsByBranch(
+	ctx context.Context,
+	branchID uint,
+	start *time.Time,
+	end *time.Time,
+	filterType string,
+	excludeStatus []barberBookingModels.AppointmentStatus,
+) ([]barberBookingPort.AppointmentBrief, error) {
+	// 1. Validate barber ในสาขานั้น
+	var barberIDs []uint
+	if err := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Barber{}).
+		Where("branch_id = ? AND deleted_at IS NULL", branchID).
+		Pluck("id", &barberIDs).Error; err != nil {
+		return nil, fmt.Errorf("failed to get barbers: %w", err)
+	}
+	if len(barberIDs) == 0 {
+		return []barberBookingPort.AppointmentBrief{}, nil
+	}
+
+	// 2. คำนวณช่วงเวลาจาก filterType
+	now := time.Now()
+	var startTime, endTime *time.Time
+
+	switch filterType {
+	case "week":
+		// ISO: week starts on Monday
+		weekday := int(now.Weekday())
+		if weekday == 0 { // Sunday (0)
+			weekday = 7
+		}
+		monday := now.AddDate(0, 0, -weekday+1)
+		sunday := monday.AddDate(0, 0, 6).Truncate(24 * time.Hour).Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+
+		startTime = ptr(monday.Truncate(24 * time.Hour))
+		endTime = ptr(sunday)
+	case "month":
+		first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		last := first.AddDate(0, 1, -1).Truncate(24 * time.Hour).Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+
+		startTime = ptr(first)
+		endTime = ptr(last)
+	default:
+		// ถ้ามี start / end ที่ client กำหนดไว้ ก็ใช้แทน
+		startTime = start
+		endTime = end
+	}
+
+	// 3. Query appointment
+	var appointments []barberBookingModels.Appointment
+
+	q := s.DB.WithContext(ctx).
+		Model(&barberBookingModels.Appointment{}).
+		Where("barber_id IN ?", barberIDs).
+		Select("id", "branch_id", "service_id", "barber_id", "customer_id", "start_time", "end_time", "status").
+		Preload("Service", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "description", "duration", "price")
+		}).
+		Preload("Barber.User", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "username")
+		}).
+		Order("start_time ASC")
+
+	if len(excludeStatus) > 0 {
+		q = q.Where("status NOT IN ?", excludeStatus)
+	}
+
+	if startTime != nil {
+		q = q.Where("start_time >= ?", *startTime)
+	}
+	if endTime != nil {
+		q = q.Where("end_time <= ?", *endTime)
+	}
+
+	if err := q.Find(&appointments).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch appointments: %w", err)
+	}
+
+	// 4. Load customers แยก
+	customerMap := make(map[uint]barberBookingModels.Customer)
+	customerIDs := make([]uint, 0)
+	for _, a := range appointments {
+		if a.CustomerID > 0 {
+			customerIDs = append(customerIDs, a.CustomerID)
+		}
+	}
+	if len(customerIDs) > 0 {
+		var customers []barberBookingModels.Customer
+		if err := s.DB.WithContext(ctx).
+			Where("id IN ?", customerIDs).
+			Select("id", "name", "phone").
+			Find(&customers).Error; err != nil {
+			return nil, fmt.Errorf("failed to fetch customers: %w", err)
+		}
+		for _, c := range customers {
+			customerMap[c.ID] = c
+		}
+	}
+
+	// 5. Map เป็น AppointmentBrief
+	var result []barberBookingPort.AppointmentBrief
+	for _, a := range appointments {
+		c := customerMap[a.CustomerID]
+		result = append(result, barberBookingPort.AppointmentBrief{
+			ID:        a.ID,
+			BranchID:  a.BranchID,
+			ServiceID: a.ServiceID,
+			Service: barberBookingPort.ServiceBrief{
+				Name:        a.Service.Name,
+				Description: a.Service.Description,
+				Duration:    a.Service.Duration,
+				Price:       int(a.Service.Price),
+			},
+			BarberID: a.BarberID,
+			Barber: barberBookingPort.BarberBrief{
+				Username: a.Barber.User.Username,
+			},
+			CustomerID: a.CustomerID,
+			Customer: barberBookingPort.CustomerBrief{
+				Name:  c.Name,
+				Phone: c.Phone,
+			},
+			StartTime: a.StartTime,
+			EndTime:   a.EndTime,
+			Status:    string(a.Status),
+		})
+	}
+
+	return result, nil
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+
+
+
 func (s *appointmentService) GetAppointmentsByBarber(
 	ctx context.Context,
 	barberID uint,
@@ -947,6 +1084,8 @@ func (s *appointmentService) GetAppointmentsByBarber(
 
 	return result, nil
 }
+
+
 
 func (s *appointmentService) GetAppointmentsByPhone(
 	ctx context.Context,

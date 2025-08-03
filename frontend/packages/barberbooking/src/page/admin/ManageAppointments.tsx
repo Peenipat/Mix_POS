@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { DataTable } from "../../components/DataTable";
 import type { Action, Column } from "../../components/DataTable";
 import { useAppSelector } from "../../store/hook";
-import { getAppointmentsByBranch } from "../../api/appointment"; // <-- import api ใหม่
+import { getAppointments } from "../../api/appointment"; // <-- import api ใหม่
 import type { AppointmentBrief } from "../../api/appointment";   // <-- import type ใหม่
 import dayjs from "dayjs";
 import { getBarbers } from "../../api/barber";
@@ -62,7 +62,7 @@ export function ManageAppointments() {
       setLoadingAppts(true);
       setErrorAppts(null);
       try {
-        const { data, total, page, limit } = await getAppointmentsByBranch(branchId!, tenantId!, {
+        const { data, total, page, limit } = await getAppointments(branchId!, tenantId!, {
           page: pagination.page,
           limit: pagination.limit,
           search: searchTerm,

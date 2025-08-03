@@ -11,7 +11,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getWorkingHourRangeAxios } from "../components/TimeSelector"
 import { MdFilterAlt } from "react-icons/md";
-import { AppointmentBrief, getAppointmentsByBranch } from "../api/appointment";
+import { AppointmentBrief, getAppointments, getAppointmentsByBranch } from "../api/appointment";
 import { AppointmentLock } from "../api/appointmentLock";
 
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
@@ -143,6 +143,7 @@ export const TotalBarberSchedule = ({
     setSelectedDate: (date: string) => void;
 }) => {
     const [slotMap, setSlotMap] = useState<Record<string, string[]>>({});
+    console.log(slotMap)
     const today = format(new Date(), "yyyy-MM-dd")
     const [startTime, setStartTime] = useState<string>("");
     const [endTime, setEndTime] = useState<string>("");
@@ -150,24 +151,22 @@ export const TotalBarberSchedule = ({
 
     const fetchSlot = useCallback(async () => {
         try {
-            const result = await getWorkingHourRangeAxios(
-                1,
-                1,
-                new Date(selectedDate),
-                selectedOption
+            const selectedFilter =
+                selectedOption === "week" || selectedOption === "month"
                     ? {
-                        filter: selectedOption as "week" | "month",
+                        filter: selectedOption,
                         fromTime: startTime || undefined,
                         toTime: endTime || undefined,
                     }
-                    : undefined
-            );
+                    : undefined;
 
+            const result = await getWorkingHourRangeAxios(1, 1, new Date(selectedDate), selectedFilter);
+
+            console.log(result)
             if (!result) {
                 setSlotMap({});
                 return;
             }
-            console.log("🔍 result from API:", result);
 
             if (result.type === "range") {
                 const generatedMap: Record<string, string[]> = {};
@@ -326,13 +325,15 @@ export const TotalBarberSchedule = ({
     })();
 
     const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
-    // useEffect(() => {
-    //     async function fetchAppointment() {
-    //         const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption, ["CANCELLED"]);
-    //         setAppointmentList(appointments ?? []);
-    //     }
-    //     fetchAppointment();
-    // }, [selectedDate]);
+    useEffect(() => {
+        async function fetchAppointment() {
+            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption, ["CANCELLED"]);
+            setAppointmentList(appointments ?? []);
+        }
+        fetchAppointment();
+    }, [selectedDate]);
+
+    console.log(appointmentList)
 
     function handdlesFilter() {
         setSelectedOption("")
@@ -642,9 +643,6 @@ export function BarberScheduleModal({
 
 
     if (!isOpen) return null;
-    const today = format(new Date(), "yyyy-MM-dd")
-    const [selectedOption, setSelectedOption] = useState<"week" | "month" | "" | null>("");
-    const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
 
 

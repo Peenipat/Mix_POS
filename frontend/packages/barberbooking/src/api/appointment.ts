@@ -76,7 +76,7 @@ export type GetAppointmentsOptions = {
   limit?: number;
 };
 
-export async function getAppointmentsByBranch(
+export async function getAppointments(
   branchId: number,
   tenantId: number,
   options: GetAppointmentsOptions
@@ -243,4 +243,49 @@ export async function updateAppointmentStatus(
   );
 
   return resp.data.data;
+}
+export async function getAppointmentsByBranch(
+  branchId: number,
+  start?: string,
+  end?: string,
+  filter?: "" | "week" | "month" | null,
+  excludeStatus?: string[] 
+): Promise<AppointmentBrief[]> {
+  const params: Record<string, string> = {};
+
+  if (start) params.start = start;
+  if (end) params.end = end;
+  if (filter) params.filter = filter;
+
+  if (excludeStatus && excludeStatus.length > 0) {
+    params.exclude_status = excludeStatus.join(","); 
+  }
+
+  const resp = await api.get(`/barberbooking/branches/${branchId}/appointments`, {
+    params,
+  });
+
+  const rawData = resp.data.data;
+
+  const transformed: AppointmentBrief[] = rawData.map((a: any) => {
+    const startDate = new Date(a.start_time);
+    const endDate = new Date(a.end_time);
+
+    return {
+      id: a.id,
+      branch_id: a.branch_id,
+      service_id: a.service_id,
+      service: a.service,
+      barber_id: a.barber_id,
+      barber: a.barber,
+      customer_id: a.customer_id,
+      customer: a.customer,
+      status: a.status,
+      date: format(startDate, "yyyy-MM-dd"),
+      start: format(startDate, "HH:mm"),
+      end: format(endDate, "HH:mm"),
+    };
+  });
+
+  return transformed;
 }

@@ -24,6 +24,14 @@ type IAppointment interface {
 		filter GetAppointmentsFilter,
 	) ([]AppointmentBrief, int64, error)
 	GetAppointmentsByBarber(ctx context.Context, barberID uint, filter AppointmentFilter) ([]AppointmentBrief, error)
+	GetAppointmentsByBranch(
+		ctx context.Context,
+		branchID uint,
+		start *time.Time,
+		end *time.Time,
+		filterType string, 
+		excludeStatus []barberBookingModels.AppointmentStatus,
+	) ([]AppointmentBrief, error)
 	GetAppointmentsByPhone(
 		ctx context.Context,
 		phone string,
@@ -79,6 +87,8 @@ type AppointmentFilter struct {
 	Status   []barberBookingModels.AppointmentStatus
 	TimeMode string
 }
+
+
 
 type GetAppointmentsFilter struct {
 	TenantID  *uint

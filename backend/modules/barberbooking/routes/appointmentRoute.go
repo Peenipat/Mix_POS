@@ -10,6 +10,7 @@ import (
 
 func RegisterAppointmentRoute(router fiber.Router ,ctrl *barberBookingController.AppointmentController){
 	router.Get("/tenants/:tenant_id/branches/:branch_id/appointments",ctrl.GetAppointments)
+	router.Get("/branches/:branch_id/appointments",ctrl.GetAppointmentsByBranch)
 	router.Get("/barbers/:barber_id/appointments",ctrl.GetAppointmentsByBarber)
 	router.Get("/appointments/by-phone",ctrl.GetAppointmentsByPhone)
 	group := router.Group("/tenants/:tenant_id/appointments")

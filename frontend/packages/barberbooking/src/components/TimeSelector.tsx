@@ -17,8 +17,7 @@ export type WorkingHourResult =
     options?: { filter?: "week" | "month"; fromTime?: string; toTime?: string }
   ): Promise<WorkingHourResult> => {
     const yyyyMMdd = dayjs(date).format("YYYY-MM-DD");
-  
-    // ✅ แบบช่วงสัปดาห์/เดือน
+    console.log("🧪 filter options:", options);
     if (options?.filter) {
       try {
         const res = await axios.get<{
@@ -35,7 +34,6 @@ export type WorkingHourResult =
         const slotMap = res.data.data;
         const transformed: Record<string, { start: string; end: string } | []> = {};
   
-       
         
         for (const [date, slots] of Object.entries(slotMap)) {
           if (slots.length > 0) {
@@ -64,11 +62,11 @@ export type WorkingHourResult =
         work_date: string;
         start_time: string;
         end_time: string;
-        IsClosed: boolean;
+        is_closed: boolean;
       }[]>(`/barberbooking/tenants/${tenantId}/branches/${branchId}/working-day-overrides/date?start=${yyyyMMdd}&end=${yyyyMMdd}`);
   
       const override = overrideRes.data[0];
-      if (override && !override.IsClosed) {
+      if (override && !override.is_closed) {
         return {
           type: "single",
           date: yyyyMMdd,
@@ -84,18 +82,18 @@ export type WorkingHourResult =
       const workingHourRes = await axios.get<{
         status: string;
         data: {
-          Weekday: number;
+          week_day: number;
           start_time: string;
           end_time: string;
-          IsClosed: boolean;
+          is_closed: boolean;
         }[];
       }>(`/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}`);
   
       let weekday = dayjs(date).day();
       if (weekday === 0) weekday = 6;
   
-      const today = workingHourRes.data.data.find((item) => item.Weekday === weekday);
-      if (today && !today.IsClosed) {
+      const today = workingHourRes.data.data.find((item) => item.week_day === weekday);
+      if (today && !today.is_closed) {
         return {
           type: "single",
           date: yyyyMMdd,

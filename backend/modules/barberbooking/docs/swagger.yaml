@@ -285,8 +285,10 @@ definitions:
         $ref: '#/definitions/barberbooking.TimeOnly'
       id:
         type: integer
-      isClosed:
+      is_closed:
         type: boolean
+      reason:
+        type: string
       start_time:
         $ref: '#/definitions/barberbooking.TimeOnly'
       updated_at:
@@ -396,6 +398,8 @@ definitions:
         type: string
       is_closed:
         type: boolean
+      reason:
+        type: string
       start_time:
         type: string
       work_date:
@@ -717,6 +721,64 @@ paths:
               type: string
             type: object
       summary: ดึงการนัดหมายทั้งหมดของช่าง
+      tags:
+      - Appointment
+  /branches/{branch_id}/appointments:
+    get:
+      consumes:
+      - application/json
+      description: คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้
+        เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้
+      parameters:
+      - description: รหัสสาขา (Branch ID)
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: 'เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15'
+        in: query
+        name: start
+        type: string
+      - description: 'เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20'
+        in: query
+        name: end
+        type: string
+      - description: 'ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)'
+        in: query
+        name: filter
+        type: string
+      - description: รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย
+          ,)
+        in: query
+        name: exclude_status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: คืน status success และรายการการนัดหมาย
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: ไม่พบข้อมูล
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ดึงการนัดหมายทั้งหมดของช่างในสาขา
       tags:
       - Appointment
   /branches/{branch_id}/barbers:

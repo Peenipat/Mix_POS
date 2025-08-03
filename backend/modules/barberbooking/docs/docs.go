@@ -275,6 +275,90 @@ const docTemplate = `{
                 }
             }
         },
+        "/branches/{branch_id}/appointments": {
+            "get": {
+                "description": "คืนรายการการจองคิวของช่างทั้งหมดในสาขาที่กำหนด โดยสามารถกรองตามช่วงเวลาที่กำหนดได้ เช่น ช่วงเวลาเริ่มต้น/สิ้นสุด, หรือช่วงสัปดาห์นี้/เดือนนี้",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointment"
+                ],
+                "summary": "ดึงการนัดหมายทั้งหมดของช่างในสาขา",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "รหัสสาขา (Branch ID)",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่เริ่มต้นช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-15",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "เวลาที่สิ้นสุดช่วง (รูปแบบ: yyyy-MM-dd) เช่น 2025-07-20",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ประเภทการกรองเวลา: week (สัปดาห์นี้), month (เดือนนี้)",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "รายการสถานะที่ไม่ต้องการให้แสดง เช่น CANCELLED,NO_SHOW (คั่นด้วย ,)",
+                        "name": "exclude_status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "คืน status success และรายการการนัดหมาย",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "กรณีพารามิเตอร์ไม่ถูกต้อง เช่น วันที่ผิดรูปแบบ",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "ไม่พบข้อมูล",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/branches/{branch_id}/barbers": {
             "get": {
                 "security": [
@@ -4536,8 +4620,11 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "isClosed": {
+                "is_closed": {
                     "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
                 },
                 "start_time": {
                     "$ref": "#/definitions/barberbooking.TimeOnly"
@@ -4702,6 +4789,9 @@ const docTemplate = `{
                 },
                 "is_closed": {
                     "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
                 },
                 "start_time": {
                     "type": "string"

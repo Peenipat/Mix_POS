@@ -326,13 +326,13 @@ export const TotalBarberSchedule = ({
     })();
 
     const [appointmentList, setAppointmentList] = useState<AppointmentBrief[]>()
-    useEffect(() => {
-        async function fetchAppointment() {
-            const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption, ["CANCELLED"]);
-            setAppointmentList(appointments ?? []);
-        }
-        fetchAppointment();
-    }, [selectedDate]);
+    // useEffect(() => {
+    //     async function fetchAppointment() {
+    //         const appointments = await getAppointmentsByBranch(1, selectedDate, selectedDate, selectedOption, ["CANCELLED"]);
+    //         setAppointmentList(appointments ?? []);
+    //     }
+    //     fetchAppointment();
+    // }, [selectedDate]);
 
     function handdlesFilter() {
         setSelectedOption("")

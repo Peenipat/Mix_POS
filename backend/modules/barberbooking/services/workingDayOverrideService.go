@@ -70,6 +70,7 @@ func (s *WorkingDayOverrideService) Create(
 		StartTime: helperFunc.TimeOnly{Time: startTime},
 		EndTime:   helperFunc.TimeOnly{Time: endTime},
 		IsClosed: input.IsClosed,
+		Reason:    input.Reason,
 	}
 
 	if err := s.DB.WithContext(ctx).Create(newOverride).Error; err != nil {

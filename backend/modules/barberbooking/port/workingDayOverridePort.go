@@ -11,7 +11,8 @@ type WorkingDayOverrideInput struct {
 	WorkDate  string    `json:"work_date" validate:"required"`    
 	StartTime string    `json:"start_time" validate:"required"`    
 	EndTime   string    `json:"end_time" validate:"required"`  
-	IsClosed  bool		`json:"is_closed"`    
+	IsClosed  bool		`json:"is_closed"` 
+	Reason    string 	`json:"reason"`   
 }
 
 type WorkingDayOverrideFilter struct {

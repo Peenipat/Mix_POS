@@ -12,7 +12,7 @@ type WorkingDayOverride struct {
 	WorkDate  time.Time 			`gorm:"type:date;not null" json:"work_date"`
 	StartTime helperFunc.TimeOnly 	`gorm:"type:time;not null" json:"start_time"`
 	EndTime   helperFunc.TimeOnly 	`gorm:"type:time;not null" json:"end_time"`
-	IsClosed  bool           		`gorm:"not null json:is_closed"` 
+	IsClosed  bool           		`gorm:"not null" json:"is_closed"` 
 	Reason    string        		`gorm:"type:text" json:"reason"`
 	CreatedAt time.Time 			`gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time 			`gorm:"autoUpdateTime" json:"updated_at"`

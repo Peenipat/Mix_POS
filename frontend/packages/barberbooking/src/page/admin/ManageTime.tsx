@@ -15,21 +15,13 @@ import { editWorkingHourSchema, EditWorkingHourFormData } from "../../schemas/Wo
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { WorkingHour } from "../../api/workingHour";
+import { getWorkingHours } from "../../api/workingHour";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-type WorkingHour = {
-    id: number;
-    BranchID: number;
-    TenantID: number;
-    Weekday: number;
-    start_time: string;
-    end_time: string;
-    IsClosed: boolean;
-};
-
-interface OverrideDay {
+export interface OverrideDay {
     date: string;
     start_time: string;
     end_time: string;
@@ -48,63 +40,36 @@ export default function ManageTime() {
     const didFetchWorkHours = useRef(false);
 
     const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
-    const [loadingHours, setLoadingHours] = useState(false);
-    const [errorHours, setErrorHours] = useState<string | null>(null);
-    const [isClosedToggle, setIsClosedToggle] = useState(false);
-
-    const loadWorkingHours = useCallback(async () => {
-        if (!tenantId || !branchId) return;
-
-        setLoadingHours(true);
-        setErrorHours(null);
-
-        try {
-            const res = await axios.get<{ status: string; data: WorkingHour[] }>(
-                `/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}`
-            );
-
-            if (res.data.status !== "success") {
-                throw new Error(res.data.status);
-            }
-
-            setWorkingHours(res.data.data);
-        } catch (err: any) {
-            setErrorHours(err.response?.data?.message || err.message || "Failed to load working hours");
-        } finally {
-            setLoadingHours(false);
-        }
-    }, [tenantId, branchId]);
 
     useEffect(() => {
-        if (
-            statusMe === "succeeded" &&
-            me &&
-            tenantId &&
-            branchId &&
-            !didFetchWorkHours.current
-        ) {
-            didFetchWorkHours.current = true;
-            loadWorkingHours();
-        }
-    }, [statusMe, me, tenantId, branchId, loadWorkingHours]);
+        const fetchWorkingHours = async () => {
+            try {
+                if (tenantId !== undefined && branchId !== undefined) {
+                    const data = await getWorkingHours({ tenantId, branchId });
+                    setWorkingHours(data);
+                }
+
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchWorkingHours();
+    }, [tenantId, branchId]);
+
 
     const [selectedDay, setSelectedDay] = useState<WorkingHour | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [hours, setHours] = useState(workingHours);
 
     const handleEdit = (updated: WorkingHour) => {
         setWorkingHours((prev) =>
             prev.map((item) =>
-                item.Weekday === updated.Weekday ? updated : item
+                item.week_day === updated.week_day ? updated : item
             )
         );
     };
 
 
-    const [overrideDays, setOverrideDays] = useState<OverrideDay[]>([
-        { date: "2025-06-24", start_time: "10:00", end_time: "15:00", IsClosed: true },
-        { date: "2025-06-30", start_time: "09:00", end_time: "14:00", IsClosed: false },
-    ]);
+    const [overrideDays, setOverrideDays] = useState<OverrideDay[]>([]);
 
     const [newOverride, setNewOverride] = useState<OverrideDay>({
         date: "", start_time: "08:00", end_time: "17:00", IsClosed: true,
@@ -122,9 +87,9 @@ export default function ManageTime() {
                 <h2 className="text-xl font-semibold mb-2">เวลาทำการประจำสัปดาห์ </h2>
                 <div className="flex flex-wrap gap-3">
                     {workingHours
-                        .sort((a, b) => a.Weekday - b.Weekday)
+                        .sort((a, b) => a.week_day - b.week_day)
                         .map((day) => {
-                            const isClosed = day.IsClosed;
+                            const isClosed = day.is_closed;
                             const boxClass = isClosed
                                 ? "bg-red-100 text-red-700"
                                 : "bg-white text-gray-800";
@@ -151,7 +116,7 @@ export default function ManageTime() {
                                     <div
                                         className={`p-1 border rounded shadow-sm flex flex-col items-center justify-center text-center w-[120px] ${boxClass}`}
                                     >
-                                        <div className="font-semibold">{weekdays[day.Weekday]}</div>
+                                        <div className="font-semibold">{weekdays[day.week_day]}</div>
                                         <div className="text-sm">{timeDisplay}</div>
                                     </div>
                                 </div>
@@ -203,10 +168,10 @@ export default function ManageTime() {
                     <button className="bg-blue-500 text-white p-2 rounded-md" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
                 </div>
             </section>
-            <BranchCalendar />
+            <BranchCalendar workingHours={workingHours} />
 
 
-            <EditWorkingHourModal
+            <WorkingHourModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onEdit={handleEdit}
@@ -218,7 +183,7 @@ export default function ManageTime() {
     );
 }
 
-interface EditWorkingHourModalProps {
+interface WorkingHourModalProps {
     isOpen: boolean;
     onClose: () => void;
     onEdit: (updated: WorkingHour) => void;
@@ -227,14 +192,14 @@ interface EditWorkingHourModalProps {
     branchId: number | null;
 }
 
-export function EditWorkingHourModal({
+export function WorkingHourModal({
     isOpen,
     onClose,
     onEdit,
     workingHour,
     tenantId,
     branchId,
-}: EditWorkingHourModalProps) {
+}: WorkingHourModalProps) {
     const {
         register,
         handleSubmit,
@@ -248,8 +213,6 @@ export function EditWorkingHourModal({
         },
     });
 
-    console.log(workingHour)
-
     useEffect(() => {
         if (isOpen && workingHour) {
             const validStart = workingHour.start_time ? new Date(workingHour.start_time) : null;
@@ -262,9 +225,9 @@ export function EditWorkingHourModal({
         }
     }, [isOpen, workingHour, reset]);
 
-    const [isClosed, setIsClosed] = useState<boolean>(workingHour?.IsClosed ?? false);
+    const [isClosed, setIsClosed] = useState<boolean>(workingHour?.is_closed ?? false);
     useEffect(() => {
-        setIsClosed(workingHour?.IsClosed ?? false);
+        setIsClosed(workingHour?.is_closed ?? false);
     }, [workingHour]);
 
 
@@ -274,13 +237,13 @@ export function EditWorkingHourModal({
         try {
             const payload = isClosed
                 ? [{
-                    weekday: workingHour.Weekday,
+                    weekday: workingHour.week_day,
                     start_time: null,
                     end_time: null,
                     is_closed: true,
                 }]
                 : [{
-                    weekday: workingHour.Weekday,
+                    weekday: workingHour.week_day,
                     start_time: dayjs.tz(`2025-01-01T${data.start_time}:00`, "Asia/Bangkok").toISOString(),
                     end_time: dayjs.tz(`2025-01-01T${data.end_time}:00`, "Asia/Bangkok").toISOString(),
                     is_closed: false,
@@ -299,7 +262,7 @@ export function EditWorkingHourModal({
                 ...workingHour,
                 start_time: payload[0].start_time ?? "",
                 end_time: payload[0].end_time ?? "",
-                IsClosed: isClosed,
+                is_closed: isClosed,
             });
             onClose();
         } catch (err) {
@@ -309,7 +272,6 @@ export function EditWorkingHourModal({
 
 
     if (!isOpen || !workingHour) return null;
-    console.log("📆 Working day selected:", workingHour?.Weekday);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="แก้ไขเวลาเปิด-ปิด">

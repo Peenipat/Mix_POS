@@ -1,22 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Calendar, dateFnsLocalizer, Event, SlotInfo } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
+import { format, parse, startOfWeek, getDay, addDays, set } from "date-fns";
 import { format as formatDate } from "date-fns";
 import { th } from "date-fns/locale/th";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import Modal from "@object/shared/components/Modal";
-import Toggle from "@object/shared/components/Toggle";
-import { z } from "zod";
-
+import { getWorkingDayOverridesByDateRange } from "../../../api/workingDayOverride";
+import { startOfMonth, endOfMonth } from "date-fns";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { OverrideDay } from "../ManageTime";
+import { useAppSelector } from "../../../store/hook";
+import { WorkingHour } from "../../../api/workingHour";
 
 const locales = { th };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales, locale: th });
 
-type OpenStatus = "open" | "closed";
+type OpenStatus = "open" | "closed" | "weekly_closed";
 
 export interface OpenDayEvent extends Event {
   title: string;
@@ -25,40 +24,80 @@ export interface OpenDayEvent extends Event {
   status: OpenStatus;
 }
 
-const mockOpenDays: OpenDayEvent[] = [
-  {
-    title: "เปิดทำการ",
-    start: new Date(2025, 5, 24, 0, 0),
-    end: new Date(2025, 5, 25, 0, 0), 
-    status: "open",
-  },
-  {
-    title: "หยุด",
-    start: new Date(2025, 5, 29, 0, 0),
-    end: new Date(2025, 5, 30, 0, 0), 
-    status: "closed",
-  },
-  {
-    title: "เปิดชั่วคราว 10:00–14:00",
-    start: new Date(2025, 5, 26, 10, 0),
-    end: new Date(2025, 5, 26, 14, 0),
-    status: "open",
-  },
-];
 
 
+export default function BranchCalendar({ workingHours }: { workingHours: WorkingHour[] }) {
+  const me = useAppSelector((state) => state.auth.me);
+  const statusMe = useAppSelector((state) => state.auth.statusMe);
 
-export default function BranchCalendar() {
+  const tenantId = me?.tenant_ids?.[0];
+  const branchId = Number(me?.branch_id);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [eventList, setEventList] = useState<OpenDayEvent[]>(mockOpenDays);
+  const [eventList, setEventList] = useState<OpenDayEvent[]>([]);
+  const closedDays = workingHours.filter((w) => w.is_closed === true);
+  const overrideDates = eventList.map((e) => formatDate(e.start, "yyyy-MM-dd"));
+
+ const weeklyClosedEvents: OpenDayEvent[] = closedDays.map((item) => {
+  const today = new Date();
+  const currentMonthStart = startOfMonth(today);
+  const currentMonthEnd = endOfMonth(today);
+
+  const allDates: OpenDayEvent[] = [];
+
+  for (
+    let d = new Date(currentMonthStart);
+    d <= currentMonthEnd;
+    d.setDate(d.getDate() + 1)
+  ) {
+    const day = d.getDay();
+    const dateStr = formatDate(d, "yyyy-MM-dd");
+
+    const isOverrideExists = overrideDates.includes(dateStr);
+    if (day === item.week_day && !isOverrideExists) {
+      const date = new Date(d);
+      const start = new Date(date.setHours(0, 0, 0, 0));
+      const end = new Date(date.setHours(23, 59, 59, 999));
+
+      allDates.push({
+        title: "หยุดประจำสัปดาห์",
+        start,
+        end,
+        status: "weekly_closed",
+      });
+    }
+  }
+
+  return allDates;
+}).flat();
+
+  const allEvents = [...eventList, ...weeklyClosedEvents];
+
+
 
   const events = useMemo(() => {
-    return eventList.map((e) => ({
-      ...e,
-      title: e.status === "open" ? e.title : "🚫 หยุดทำการ",
-    }));
-  }, [eventList]);
+    return allEvents.map((e) => {
+      if (e.status === "open") {
+        const startTime = formatDate(e.start, "HH:mm");
+        const endTime = formatDate(e.end, "HH:mm");
+        return {
+          ...e,
+          title: `เปิดกรณีพิเศษ\n(${startTime} - ${endTime})`,
+        };
+      } else if (e.status === "weekly_closed") {
+        return {
+          ...e,
+          title: "หยุดประจำสัปดาห์",
+        };
+      } else {
+        return {
+          ...e,
+          title: "หยุดกรณีพิเศษ",
+        };
+      }
+    });
+  }, [eventList, closedDays]);
+
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
     setSelectedDate(slotInfo.start);
@@ -69,6 +108,42 @@ export default function BranchCalendar() {
     setEventList((prev) => [...prev, event]);
   };
 
+  function handleEditSuccess(updated: WorkingHour): void {
+    throw new Error("Function not implemented.");
+  }
+
+  useEffect(() => {
+    if (!tenantId || !branchId) return;
+
+    const today = selectedDate || new Date(); // เดือนที่กำลังดูอยู่
+    const start = formatDate(startOfMonth(today), "yyyy-MM-dd");
+    const end = formatDate(endOfMonth(today), "yyyy-MM-dd");
+
+    getWorkingDayOverridesByDateRange({
+      tenantId,
+      branchId,
+      start,
+      end,
+    }).then((data) => {
+      const events: OpenDayEvent[] = data.map((item) => {
+        const date = new Date(item.work_date);
+        const [startHour, startMin] = item.start_time.split(":").map(Number);
+        const [endHour, endMin] = item.end_time.split(":").map(Number);
+
+        return {
+          title: item.is_closed ? "หยุดกรณีพิเศษ" : "เปิดกรณีพิเศษ",
+          start: new Date(date.setHours(startHour, startMin)),
+          end: new Date(date.setHours(endHour, endMin)),
+          status: item.is_closed ? "closed" : "open",
+        };
+      });
+
+      setEventList(events);
+    });
+  }, [tenantId, branchId, selectedDate]);
+
+
+
   return (
     <div className="p-6 max-w-full mx-auto">
       <h1 className="text-2xl font-bold mb-4">ปฏิทินเปิด-ปิดร้าน</h1>
@@ -77,6 +152,7 @@ export default function BranchCalendar() {
         selectable
         localizer={localizer}
         events={events}
+        onNavigate={(date) => setSelectedDate(date)}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 600 }}
@@ -95,165 +171,137 @@ export default function BranchCalendar() {
           dayHeaderFormat: (date) => `${formatDate(date, "EEEE d MMMM", { locale: th })} ${date.getFullYear() + 543}`,
           dayRangeHeaderFormat: ({ start, end }) =>
             `${formatDate(start, "d MMM", { locale: th })} – ${formatDate(end, "d MMM", { locale: th })}`,
-          timeGutterFormat: (date) => formatDate(date, "HH:mm", { locale: th }), 
+          timeGutterFormat: (date) => formatDate(date, "HH:mm", { locale: th }),
         }}
         onSelectSlot={handleSelectSlot}
-        eventPropGetter={(event: OpenDayEvent) => {
-          const backgroundColor = event.status === "open" ? "#D1FAE5" : "#FECACA";
-          const color = event.status === "open" ? "#065F46" : "#B91C1C";
+        eventPropGetter={(event) => {
+          let backgroundColor = "#D1FAE5"; // open
+          if (event.status === "closed") backgroundColor = "#FECACA";
+          if (event.status === "weekly_closed") backgroundColor = "#E5E7EB"; 
+
           return {
             style: {
               backgroundColor,
-              color,
-              border: "1px solid #ccc",
-              borderRadius: "4px",
+              borderRadius: "6px",
               padding: "4px",
+              border: "1px solid #ccc",
             },
           };
         }}
+        components={{
+          event: CustomEvent,
+        }}
       />
-
-
-      <AddWorkingDayModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onAdd={handleAdd}
-        date={selectedDate}
-      />
+      {selectedDate && (
+        <WorkingHourModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onEdit={handleEditSuccess}
+          workingHour={undefined}
+          branchId={branchId}
+          tenantId={null} />
+      )}
     </div>
   );
 }
 
-const normalDaySchema = z.object({
-  start_time: z.string().min(1, "กรุณาระบุเวลาเปิด"),
-  end_time: z.string().min(1, "กรุณาระบุเวลาปิด"),
-});
-const closedDaySchema = z.object({});
-
-type FormData = {
-  start_time?: string;
-  end_time?: string;
-};
-
-interface AddWorkingDayModalProps {
+interface WorkingHourModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (event: OpenDayEvent) => void;
-  date: Date | null;
+  onEdit: (updated: WorkingHour) => void;
+  workingHour: WorkingHour | undefined;
+  tenantId: number | null;
+  branchId: number | null;
 }
 
-export function AddWorkingDayModal({
+export function WorkingHourModal({
   isOpen,
   onClose,
-  onAdd,
-  date,
-}: AddWorkingDayModalProps) {
-  const [isClosed, setIsClosed] = useState(false);
+  onEdit,
+  workingHour,
+  tenantId,
+  branchId,
+}: WorkingHourModalProps) {
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting, errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(isClosed ? closedDaySchema : normalDaySchema),
-    defaultValues: {
-      start_time: "",
-      end_time: "",
-    },
+  if (!isOpen || !workingHour) return null;
+  const [overrideDays, setOverrideDays] = useState<OverrideDay[]>([]);
+
+  const [newOverride, setNewOverride] = useState<OverrideDay>({
+    date: "", start_time: "08:00", end_time: "17:00", IsClosed: true,
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      reset({ start_time: "", end_time: "" });
-      setIsClosed(false);
-    }
-  }, [isOpen, reset]);
-
-  const onSubmit = (data: FormData) => {
-    if (!date) return;
-
-    const dateClone = new Date(date); // ป้องกัน setHours เปลี่ยนค่า date ต้นฉบับ
-
-    const startDate = isClosed
-      ? new Date(dateClone.setHours(0, 0, 0, 0))
-      : new Date(`${format(date, "yyyy-MM-dd")}T${data.start_time}:00`);
-
-    const endDate = isClosed
-      ? new Date(dateClone.setHours(23, 59, 59, 999))
-      : new Date(`${format(date, "yyyy-MM-dd")}T${data.end_time}:00`);
-
-    const event: OpenDayEvent = {
-      title: isClosed
-        ? "หยุดทำการ"
-        : `เปิดทำการ ${data.start_time}–${data.end_time}`,
-      start: startDate,
-      end: endDate,
-      status: isClosed ? "closed" : "open",
-      allDay: isClosed,
-    };
-
-    onAdd(event);
-    onClose();
+  const handleAddOverride = () => {
+    setOverrideDays([...overrideDays, newOverride]);
+    setNewOverride({ date: "", start_time: "08:00", end_time: "17:00", IsClosed: true, });
   };
 
-  if (!isOpen || !date) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="แก้ไขเวลาเปิด-ปิด">
+      <section>
+        <h2 className="text-xl font-semibold mb-2">เพิ่มเวลาเปิด - ปิด กรณีพิเศษ</h2>
+        <div className="space-y-4">
+          <input
+            type="date"
+            className="input input-bordered w-full max-w-xs"
+            value={newOverride.date}
+            onChange={(e) => setNewOverride({ ...newOverride, date: e.target.value })}
+          />
+          <div className="flex space-x-4">
+            <div>
+              <label className="block text-sm font-medium">เวลาเปิด</label>
+              <input
+                type="time"
+                className="input input-bordered"
+                value={newOverride.start_time}
+                onChange={(e) => setNewOverride({ ...newOverride, start_time: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">เวลาปิด</label>
+              <input
+                type="time"
+                className="input input-bordered"
+                value={newOverride.end_time}
+                onChange={(e) => setNewOverride({ ...newOverride, end_time: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">
+                หมายเหตุ
+              </label>
+              <input
+                type="text"
+                placeholder="หมายเหตุ"
+                className={`w-full input input-bordered`}
+              />
+            </div>
+          </div>
+          <button className="bg-blue-500 text-white p-2 rounded-md" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
+        </div>
+      </section>
+    </Modal>
+  );
+}
+type Props = {
+  event: OpenDayEvent;
+};
+export function CustomEvent({ event }: Props) {
+  if (event.status === "weekly_closed") {
+    return <span className="text-gray-600 font-medium">หยุดประจำสัปดาห์</span>;
+  }
+
+  const isOpen = event.status === "open";
+  const start = formatDate(event.start, "HH:mm");
+  const end = formatDate(event.end, "HH:mm");
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="เพิ่มเวลาเปิด - ปิด กรณีพิเศษ">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {!isClosed && (
-          <>
-            <div>
-              <label className="block mb-1">เวลาเปิด</label>
-              <input
-                type="time"
-                {...register("start_time")}
-                className="input input-bordered w-full"
-              />
-              {errors.start_time && (
-                <p className="text-red-500 text-sm">{errors.start_time.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block mb-1">เวลาปิด</label>
-              <input
-                type="time"
-                {...register("end_time")}
-                className="input input-bordered w-full"
-              />
-              {errors.end_time && (
-                <p className="text-red-500 text-sm">{errors.end_time.message}</p>
-              )}
-            </div>
-          </>
-        )}
-
-        <div>
-          <Toggle
-            checked={isClosed}
-            onChange={(checked) => {
-              setIsClosed(checked);
-              reset(); // รีเซ็ตค่า form ทุกครั้งที่สลับ toggle
-            }}
-            label=" วันหยุดทั้งวัน"
-          />
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost"
-            disabled={isSubmitting}
-          >
-            ยกเลิก
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? "กำลังบันทึก..." : "ยืนยัน"}
-          </button>
-        </div>
-      </form>
-    </Modal>
+    <div className="flex flex-col">
+      <span className={isOpen ? "text-green-900 font-semibold" : "text-red-800 font-semibold"}>
+        {isOpen ? "เปิดกรณีพิเศษ" : "หยุดกรณีพิเศษ"}
+      </span>
+      {isOpen && (
+        <span className="text-xs text-gray-700">{`(${start} - ${end})`}</span>
+      )}
+    </div>
   );
 }

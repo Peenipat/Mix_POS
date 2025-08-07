@@ -5,7 +5,7 @@ import { format as formatDate } from "date-fns";
 import { th } from "date-fns/locale/th";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import Modal from "@object/shared/components/Modal";
-import { getWorkingDayOverridesByDateRange } from "../../../api/workingDayOverride";
+import { getWorkingDayOverridesByDateRange, WorkingDayOverride } from "../../../api/workingDayOverride";
 import { startOfMonth, endOfMonth } from "date-fns";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { OverrideDay } from "../ManageTime";
@@ -30,50 +30,49 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
 
-  const tenantId = me?.tenant_ids?.[0];
+  const tenantId = Number(me?.tenant_ids?.[0]);
   const branchId = Number(me?.branch_id);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [eventList, setEventList] = useState<OpenDayEvent[]>([]);
   const closedDays = workingHours.filter((w) => w.is_closed === true);
   const overrideDates = eventList.map((e) => formatDate(e.start, "yyyy-MM-dd"));
+  const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
- const weeklyClosedEvents: OpenDayEvent[] = closedDays.map((item) => {
-  const today = new Date();
-  const currentMonthStart = startOfMonth(today);
-  const currentMonthEnd = endOfMonth(today);
+  const weeklyClosedEvents: OpenDayEvent[] = closedDays.map((item) => {
+    const today = new Date();
+    const currentMonthStart = startOfMonth(currentViewDate);
+    const currentMonthEnd = endOfMonth(currentViewDate);
 
-  const allDates: OpenDayEvent[] = [];
+    const allDates: OpenDayEvent[] = [];
 
-  for (
-    let d = new Date(currentMonthStart);
-    d <= currentMonthEnd;
-    d.setDate(d.getDate() + 1)
-  ) {
-    const day = d.getDay();
-    const dateStr = formatDate(d, "yyyy-MM-dd");
+    for (
+      let d = new Date(currentMonthStart);
+      d <= currentMonthEnd;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const day = d.getDay();
+      const dateStr = formatDate(d, "yyyy-MM-dd");
 
-    const isOverrideExists = overrideDates.includes(dateStr);
-    if (day === item.week_day && !isOverrideExists) {
-      const date = new Date(d);
-      const start = new Date(date.setHours(0, 0, 0, 0));
-      const end = new Date(date.setHours(23, 59, 59, 999));
+      const isOverrideExists = overrideDates.includes(dateStr);
+      if (day === item.week_day && !isOverrideExists) {
+        const date = new Date(d);
+        const start = new Date(date.setHours(0, 0, 0, 0));
+        const end = new Date(date.setHours(23, 59, 59, 999));
 
-      allDates.push({
-        title: "หยุดประจำสัปดาห์",
-        start,
-        end,
-        status: "weekly_closed",
-      });
+        allDates.push({
+          title: "หยุดประจำสัปดาห์",
+          start,
+          end,
+          status: "weekly_closed",
+        });
+      }
     }
-  }
 
-  return allDates;
-}).flat();
+    return allDates;
+  }).flat();
 
   const allEvents = [...eventList, ...weeklyClosedEvents];
-
-
 
   const events = useMemo(() => {
     return allEvents.map((e) => {
@@ -100,22 +99,22 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
 
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (slotInfo.start < today) {
+
+      return;
+    }
+
     setSelectedDate(slotInfo.start);
     setModalOpen(true);
   };
 
-  const handleAdd = (event: OpenDayEvent) => {
-    setEventList((prev) => [...prev, event]);
-  };
-
-  function handleEditSuccess(updated: WorkingHour): void {
-    throw new Error("Function not implemented.");
-  }
-
   useEffect(() => {
     if (!tenantId || !branchId) return;
 
-    const today = selectedDate || new Date(); // เดือนที่กำลังดูอยู่
+    const today = selectedDate || new Date();
     const start = formatDate(startOfMonth(today), "yyyy-MM-dd");
     const end = formatDate(endOfMonth(today), "yyyy-MM-dd");
 
@@ -140,7 +139,7 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
 
       setEventList(events);
     });
-  }, [tenantId, branchId, selectedDate]);
+  }, [tenantId, branchId, currentViewDate]);
 
 
 
@@ -152,7 +151,10 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
         selectable
         localizer={localizer}
         events={events}
-        onNavigate={(date) => setSelectedDate(date)}
+        onNavigate={(date) => {
+          setSelectedDate(date);
+          setCurrentViewDate(date);
+        }}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 600 }}
@@ -177,7 +179,7 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
         eventPropGetter={(event) => {
           let backgroundColor = "#D1FAE5"; // open
           if (event.status === "closed") backgroundColor = "#FECACA";
-          if (event.status === "weekly_closed") backgroundColor = "#E5E7EB"; 
+          if (event.status === "weekly_closed") backgroundColor = "#E5E7EB";
 
           return {
             style: {
@@ -188,6 +190,25 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
             },
           };
         }}
+        view="month"
+        dayPropGetter={(date) => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const isPast = date < today;
+
+          return isPast
+            ? {
+              style: {
+                backgroundColor: "#e5e7eb",
+                color: "#9ca3af",           
+                cursor: "not-allowed",
+                pointerEvents: "none",     
+                filter: "grayscale(0.6)",  
+              },
+            }
+            : {};
+        }}
+
         components={{
           event: CustomEvent,
         }}
@@ -196,10 +217,10 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
         <WorkingHourModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          onEdit={handleEditSuccess}
-          workingHour={undefined}
+          onEdit={() => console.log("ss")}
           branchId={branchId}
-          tenantId={null} />
+          tenantId={tenantId}
+          selectedDate={selectedDate} />
       )}
     </div>
   );
@@ -209,44 +230,103 @@ interface WorkingHourModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEdit: (updated: WorkingHour) => void;
-  workingHour: WorkingHour | undefined;
-  tenantId: number | null;
-  branchId: number | null;
+  tenantId: number;
+  branchId: number;
+  selectedDate: Date;
 }
 
 export function WorkingHourModal({
   isOpen,
   onClose,
-  onEdit,
-  workingHour,
   tenantId,
   branchId,
+  selectedDate
 }: WorkingHourModalProps) {
 
-  if (!isOpen || !workingHour) return null;
-  const [overrideDays, setOverrideDays] = useState<OverrideDay[]>([]);
+  if (!isOpen) return null;
+  const [overrideDays, setOverrideDays] = useState<WorkingDayOverride[]>([]);
 
   const [newOverride, setNewOverride] = useState<OverrideDay>({
-    date: "", start_time: "08:00", end_time: "17:00", IsClosed: true,
+    date: format(selectedDate, "yyyy-MM-dd"),
+    start_time: "08:00",
+    end_time: "17:00",
+    IsClosed: false,
+    reason: "",
   });
 
-  const handleAddOverride = () => {
-    setOverrideDays([...overrideDays, newOverride]);
-    setNewOverride({ date: "", start_time: "08:00", end_time: "17:00", IsClosed: true, });
-  };
+
+  useEffect(() => {
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+    getWorkingDayOverridesByDateRange({
+      tenantId,
+      branchId,
+      start: dateStr,
+      end: dateStr,
+    }).then((data) => {
+      const matched = data.find(item => item.work_date.slice(0, 10) === dateStr);
+      if (matched) {
+        setNewOverride({
+          date: matched.work_date,
+          start_time: matched.start_time,
+          end_time: matched.end_time,
+          IsClosed: matched.is_closed,
+          reason: matched.reason,
+        });
+      } else {
+        setNewOverride({
+          date: dateStr,
+          start_time: "",
+          end_time: "",
+          IsClosed: true,
+          reason: "",
+        });
+      }
+      setOverrideDays(data);
+    });
+  }, [tenantId, branchId, selectedDate]);
+
+
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="แก้ไขเวลาเปิด-ปิด">
-      <section>
-        <h2 className="text-xl font-semibold mb-2">เพิ่มเวลาเปิด - ปิด กรณีพิเศษ</h2>
-        <div className="space-y-4">
-          <input
-            type="date"
-            className="input input-bordered w-full max-w-xs"
-            value={newOverride.date}
-            onChange={(e) => setNewOverride({ ...newOverride, date: e.target.value })}
-          />
-          <div className="flex space-x-4">
+    <Modal isOpen={isOpen} onClose={onClose} title={overrideDays.length === 0
+      ? "เพิ่มเวลาเปิด - ปิด กรณีพิเศษ"
+      : "แก้เวลาเปิด - ปิด กรณีพิเศษ"} size="md">
+      <div className="w-full p-3">
+
+
+        <div className="flex flex-col space-y-4">
+          <div>
+            <input
+              type="date"
+              className="input input-bordered w-full"
+              value={newOverride.date}
+              onChange={(e) => setNewOverride({ ...newOverride, date: e.target.value })}
+            />
+          </div>
+
+          <div className="flex gap-6">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={!newOverride.IsClosed}
+                onChange={() => setNewOverride({ ...newOverride, IsClosed: false })}
+                className="w-4 h-4 text-green-600 border-gray-300"
+              />
+              <span className="ml-2">เปิดร้าน</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={newOverride.IsClosed}
+                onChange={() => setNewOverride({ ...newOverride, IsClosed: true })}
+                className="w-4 h-4 text-red-600 border-gray-300"
+              />
+              <span className="ml-2">ปิดร้าน</span>
+            </label>
+          </div>
+          <div className="flex gap-3">
             <div>
               <label className="block text-sm font-medium">เวลาเปิด</label>
               <input
@@ -272,13 +352,22 @@ export function WorkingHourModal({
               <input
                 type="text"
                 placeholder="หมายเหตุ"
+                value={newOverride.reason}
+                onChange={(e) => setNewOverride({ ...newOverride, reason: e.target.value })}
                 className={`w-full input input-bordered`}
               />
             </div>
           </div>
-          <button className="bg-blue-500 text-white p-2 rounded-md" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
+          <div className="w-full flex gap-3">
+            <button className="bg-green-500 text-white p-2 rounded-md w-full" onClick={() => console.log("d")}>
+              {overrideDays.length === 0
+                ? "เพิ่มเวลากรณีพิเศษ"
+                : "แก้เวลากรณีพิเศษ"}</button>
+                {overrideDays.length !== 0 ? <button className="bg-red-500 text-white p-2 rounded-md  w-full" onClick={() => console.log("d")}>เปลี่ยนเป็นเวลาปกติ</button> :""}
+            
+          </div>
         </div>
-      </section>
+      </div>
     </Modal>
   );
 }

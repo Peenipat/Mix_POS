@@ -17,6 +17,7 @@ interface ModalProps {
     right?: boolean;
     bottom?: boolean;
   };
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 export default function Modal({
@@ -28,6 +29,7 @@ export default function Modal({
   blurBackground = false,
   closeButtonPosition = "right",
   showAds = {},
+  size = "md",
 }: ModalProps) {
   if (!isOpen) return null;
 
@@ -43,6 +45,14 @@ export default function Modal({
 
     return () => clearTimeout(timeout);
   }, [isOpen]);
+  const sizeClassMap: Record<NonNullable<ModalProps["size"]>, string> = {
+    xs: "max-w-xs",
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-3xl",
+    xl: "max-w-5xl",
+  };
+
 
   return (
     <div
@@ -86,7 +96,7 @@ export default function Modal({
       )}
 
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl mx-1 mt-10 relative max-h-[90vh] flex flex-col z-60"
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full mx-1 mt-10 relative max-h-[90vh] flex flex-col z-60 ${sizeClassMap[size]}`}
         onClick={(e) => e.stopPropagation()}
         id={`modal-${modalName || "debug-undefined"}`}
       >
@@ -94,7 +104,7 @@ export default function Modal({
         <div className="mt-2 dark:border-gray-700 relative">
           <button
             onClick={onClose}
-            className={`absolute top-4 ${closeButtonPosition === "left" ? "left-4" : "right-4"
+            className={`absolute top-0 ${closeButtonPosition === "left" ? "left-4" : "right-4"
               } text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl font-bold focus:outline-none`}
             aria-label="Close modal"
             id={`close-${modalName || "debug-undefined"}`}

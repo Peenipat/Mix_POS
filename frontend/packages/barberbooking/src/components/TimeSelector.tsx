@@ -8,106 +8,116 @@ import axios from "../lib/axios";
 export type WorkingHourResult =
   | { type: "single"; date: string; start: string; end: string }
   | { type: "range"; data: Record<string, { start: string; end: string } | []> }
+  | { type: "closed"; date: string; reason?: string }
   | null;
 
-  export const getWorkingHourRangeAxios = async (
-    tenantId: number,
-    branchId: number,
-    date: Date,
-    options?: { filter?: "week" | "month"; fromTime?: string; toTime?: string }
-  ): Promise<WorkingHourResult> => {
-    const yyyyMMdd = dayjs(date).format("YYYY-MM-DD");
-    console.log("🧪 filter options:", options);
-    if (options?.filter) {
-      try {
-        const res = await axios.get<{
-          status: string;
-          data: Record<string, string[]>;
-        }>(`/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}/slots`, {
-          params: {
-            filter: options.filter,
-            from_time: options.fromTime,
-            to_time: options.toTime,
-          },
-        });
-  
-        const slotMap = res.data.data;
-        const transformed: Record<string, { start: string; end: string } | []> = {};
-  
-        
-        for (const [date, slots] of Object.entries(slotMap)) {
-          if (slots.length > 0) {
-            transformed[date] = {
-              start: slots[0],
-              end: slots[slots.length - 1],
-            };
-          } else {
-            transformed[date] = []; 
-          }
-        }
-  
-        if (Object.keys(transformed).length === 0) return null;
-  
-        return { type: "range", data: transformed };
-      } catch (err: any) {
-        console.error("Failed to load range slots:", err.message);
-        return null;
-      }
-    }
-  
+export const getWorkingHourRangeAxios = async (
+  tenantId: number,
+  branchId: number,
+  date: Date,
+  options?: { filter?: "week" | "month"; fromTime?: string; toTime?: string }
+): Promise<WorkingHourResult> => {
+  const yyyyMMdd = dayjs(date).format("YYYY-MM-DD");
+  if (options?.filter) {
     try {
-      const overrideRes = await axios.get<{
-        id: number;
-        branch_id: number;
-        work_date: string;
+      const res = await axios.get<{
+        status: string;
+        data: Record<string, string[]>;
+      }>(`/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}/slots`, {
+        params: {
+          filter: options.filter,
+          from_time: options.fromTime,
+          to_time: options.toTime,
+        },
+      });
+
+      const slotMap = res.data.data;
+      const transformed: Record<string, { start: string; end: string } | []> = {};
+
+
+      for (const [date, slots] of Object.entries(slotMap)) {
+        if (slots.length > 0) {
+          transformed[date] = {
+            start: slots[0],
+            end: slots[slots.length - 1],
+          };
+        } else {
+          transformed[date] = [];
+        }
+      }
+
+      if (Object.keys(transformed).length === 0) return null;
+
+      return { type: "range", data: transformed };
+    } catch (err: any) {
+      console.error("Failed to load range slots:", err.message);
+      return null;
+    }
+  }
+
+  try {
+    const overrideRes = await axios.get<{
+      id: number;
+      branch_id: number;
+      work_date: string;
+      start_time: string;
+      end_time: string;
+      is_closed: boolean;
+      reason: string ;
+    }[]>(`/barberbooking/tenants/${tenantId}/branches/${branchId}/working-day-overrides/date?start=${yyyyMMdd}&end=${yyyyMMdd}`);
+
+    const override = overrideRes.data[0];
+    if (override) {
+      if (override.is_closed) {
+        return {
+          type: "closed",
+          date: yyyyMMdd,
+          reason: override.reason, 
+        };
+      }
+
+      // ร้านเปิด (override เฉพาะวัน)
+      return {
+        type: "single",
+        date: yyyyMMdd,
+        start: override.start_time,
+        end: override.end_time,
+      };
+    }
+  } catch (err: any) {
+    console.warn("override API error:", err.message);
+  }
+
+  try {
+    const workingHourRes = await axios.get<{
+      status: string;
+      data: {
+        week_day: number;
         start_time: string;
         end_time: string;
         is_closed: boolean;
-      }[]>(`/barberbooking/tenants/${tenantId}/branches/${branchId}/working-day-overrides/date?start=${yyyyMMdd}&end=${yyyyMMdd}`);
-  
-      const override = overrideRes.data[0];
-      if (override && !override.is_closed) {
-        return {
-          type: "single",
-          date: yyyyMMdd,
-          start: override.start_time,
-          end: override.end_time,
-        };
-      }
-    } catch (err: any) {
-      console.warn("override API error:", err.message);
+      }[];
+    }>(`/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}`);
+
+    let weekday = dayjs(date).day();
+    if (weekday === 0) weekday = 6;
+
+    const today = workingHourRes.data.data.find((item) => item.week_day === weekday);
+    if (today && !today.is_closed) {
+      return {
+        type: "single",
+        date: yyyyMMdd,
+        start: dayjs(today.start_time).format("HH:mm"),
+        end: dayjs(today.end_time).format("HH:mm"),
+      };
     }
-  
-    try {
-      const workingHourRes = await axios.get<{
-        status: string;
-        data: {
-          week_day: number;
-          start_time: string;
-          end_time: string;
-          is_closed: boolean;
-        }[];
-      }>(`/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}`);
-  
-      let weekday = dayjs(date).day();
-      if (weekday === 0) weekday = 6;
-  
-      const today = workingHourRes.data.data.find((item) => item.week_day === weekday);
-      if (today && !today.is_closed) {
-        return {
-          type: "single",
-          date: yyyyMMdd,
-          start: dayjs(today.start_time).format("HH:mm"),
-          end: dayjs(today.end_time).format("HH:mm"),
-        };
-      }
-    } catch (err: any) {
-      console.error(" Failed to load default working hours:", err.message);
-    }
-  
-    return null;
-  };
-  
+  } catch (err: any) {
+    console.error(" Failed to load default working hours:", err.message);
+  }
+
+  return null;
+};
+
 
 
 type Props = {

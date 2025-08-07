@@ -148,6 +148,7 @@ export const TotalBarberSchedule = ({
     const [startTime, setStartTime] = useState<string>("");
     const [endTime, setEndTime] = useState<string>("");
     const [selectedOption, setSelectedOption] = useState<"week" | "month" | "" | null>("");
+    const [reason, setReason] = useState<string | undefined>("")
 
     const fetchSlot = useCallback(async () => {
         try {
@@ -168,6 +169,9 @@ export const TotalBarberSchedule = ({
                 return;
             }
 
+            if (result.type === "closed") {
+                setReason(result.reason)
+            }
             if (result.type === "range") {
                 const generatedMap: Record<string, string[]> = {};
 
@@ -199,7 +203,7 @@ export const TotalBarberSchedule = ({
                 setSlotMap({ [result.date]: generated });
             }
         } catch (err) {
-            console.error("❌ Failed to fetch slots:", err);
+            console.error("Failed to fetch slots:", err);
             setSlotMap({});
         }
     }, [selectedDate, selectedOption, startTime, endTime]);
@@ -213,19 +217,23 @@ export const TotalBarberSchedule = ({
     function generateTimeSlots(start: string, end: string): string[] {
         const slots: string[] = [];
         const [startHour, startMinute] = start.split(":").map(Number);
-        const [endHour, endMinute] = end.split(":").map(Number);
+        const [endHour, endMinute] = end === "00:00" ? [24, 0] : end.split(":").map(Number); // 👈
+
         let current = new Date();
         current.setHours(startHour, startMinute, 0, 0);
         const endTime = new Date();
         endTime.setHours(endHour, endMinute, 0, 0);
-        while (current <= endTime) {
+
+        while (current <= endTime) { 
             const hour = current.getHours().toString().padStart(2, "0");
             const minute = current.getMinutes().toString().padStart(2, "0");
             slots.push(`${hour}:${minute}`);
             current.setMinutes(current.getMinutes() + 30);
         }
+
         return slots;
     }
+
 
     function addMinutes(time: string, mins: number): string {
         const [h, m] = time.split(":").map(Number);
@@ -333,7 +341,6 @@ export const TotalBarberSchedule = ({
         fetchAppointment();
     }, [selectedDate]);
 
-    console.log(appointmentList)
 
     function handdlesFilter() {
         setSelectedOption("")
@@ -423,7 +430,8 @@ export const TotalBarberSchedule = ({
                 <div className="w-full">
                     {Object.entries(slotMap).length === 0 ? (
                         <div className="text-center text-red-500 font-semibold py-6">
-                            ไม่พบเวลาทำงานในช่วงนี้
+                            ไม่พบเวลาทำงานในช่วงนี้ <br />
+                            {!!reason && `สาเหตุ : ${reason}`}
                         </div>
                     ) : (
                         Object.entries(slotMap).map(([date, times]) => (

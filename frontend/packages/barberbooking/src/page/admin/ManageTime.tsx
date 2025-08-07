@@ -17,6 +17,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { WorkingHour } from "../../api/workingHour";
 import { getWorkingHours } from "../../api/workingHour";
+import { createWorkingDayOverride, WorkingDayOverrideInput } from "../../api/workingDayOverride";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -26,6 +27,7 @@ export interface OverrideDay {
     start_time: string;
     end_time: string;
     IsClosed: boolean;
+    reason:string
 }
 
 const weekdays = [
@@ -69,16 +71,46 @@ export default function ManageTime() {
     };
 
 
-    const [overrideDays, setOverrideDays] = useState<OverrideDay[]>([]);
 
-    const [newOverride, setNewOverride] = useState<OverrideDay>({
-        date: "", start_time: "08:00", end_time: "17:00", IsClosed: true,
+    const [newOverride, setNewOverride] = useState({
+        date: "",
+        start_time: "",
+        end_time: "",
+        reason: "",
     });
 
-    const handleAddOverride = () => {
-        setOverrideDays([...overrideDays, newOverride]);
-        setNewOverride({ date: "", start_time: "08:00", end_time: "17:00", IsClosed: true, });
+    const handleAddOverride = async () => {
+
+        try {
+            const input: WorkingDayOverrideInput = {
+                branch_id: 1,
+                work_date: newOverride.date,
+                start_time: isClosed ? "00:00" : newOverride.start_time,
+                end_time: isClosed ? "00:00" : newOverride.end_time,
+                is_closed: isClosed,
+                reason: newOverride.reason.trim(),
+            };
+
+            const response = await createWorkingDayOverride(input);
+
+            alert("เพิ่มข้อมูลวันทำการสำเร็จแล้ว!");
+            console.log("response:", response);
+
+            setNewOverride({
+                date: "",
+                start_time: "",
+                end_time: "",
+                reason: "",
+            });
+            setIsClosed(false);
+        } catch (error) {
+            console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
+            alert("ไม่สามารถเพิ่มวันทำการได้ โปรดลองใหม่");
+        }
     };
+
+
+    const [isClosed, setIsClosed] = useState(false)
 
     return (
         <div className="max-w-full mx-auto p-3">
@@ -128,6 +160,7 @@ export default function ManageTime() {
             {/* Add Override Form */}
             <section>
                 <h2 className="text-xl font-semibold mb-2">เพิ่มเวลาเปิด - ปิด กรณีพิเศษ</h2>
+
                 <div className="space-y-4">
                     <input
                         type="date"
@@ -135,36 +168,69 @@ export default function ManageTime() {
                         value={newOverride.date}
                         onChange={(e) => setNewOverride({ ...newOverride, date: e.target.value })}
                     />
-                    <div className="flex space-x-4">
-                        <div>
-                            <label className="block text-sm font-medium">เวลาเปิด</label>
-                            <input
-                                type="time"
-                                className="input input-bordered"
-                                value={newOverride.start_time}
-                                onChange={(e) => setNewOverride({ ...newOverride, start_time: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium">เวลาปิด</label>
-                            <input
-                                type="time"
-                                className="input input-bordered"
-                                value={newOverride.end_time}
-                                onChange={(e) => setNewOverride({ ...newOverride, end_time: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium">
-                                หมายเหตุ
+
+                    <div className="flex flex-col">
+                        <div className="flex gap-6">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={!isClosed}
+                                    onChange={() => setIsClosed(false)}
+                                    className="w-4 h-4 text-green-600 border-gray-300"
+                                />
+                                <span className="ml-2">เปิดร้าน</span>
                             </label>
-                            <input
-                                type="text"
-                                placeholder="หมายเหตุ"
-                                className={`w-full input input-bordered`}
-                            />
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={isClosed}
+                                    onChange={() => setIsClosed(true)}
+                                    className="w-4 h-4 text-red-600 border-gray-300"
+                                />
+                                <span className="ml-2">ปิดร้าน</span>
+                            </label>
+                        </div>
+
+
+                        <div className="flex space-x-4">
+
+                            {!isClosed && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium">เวลาเปิด</label>
+                                        <input
+                                            type="time"
+                                            className="input input-bordered"
+                                            value={newOverride.start_time}
+                                            onChange={(e) => setNewOverride({ ...newOverride, start_time: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium">เวลาปิด</label>
+                                        <input
+                                            type="time"
+                                            className="input input-bordered"
+                                            value={newOverride.end_time}
+                                            onChange={(e) => setNewOverride({ ...newOverride, end_time: e.target.value })}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            <div>
+                                <label className="block text-sm font-medium">
+                                    หมายเหตุ
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="หมายเหตุ"
+                                    className={`w-full input input-bordered`}
+                                    value={newOverride.reason}
+                                    onChange={(e) => setNewOverride({ ...newOverride, reason: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
+
                     <button className="bg-blue-500 text-white p-2 rounded-md" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
                 </div>
             </section>

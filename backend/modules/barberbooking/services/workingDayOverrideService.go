@@ -37,6 +37,7 @@ func (s *WorkingDayOverrideService) Create(
 	input barberBookingPort.WorkingDayOverrideInput,
 ) (*barberBookingModels.WorkingDayOverride, error) {
 
+	fmt.Println(input)
 	workDate, err := time.Parse("2006-01-02", input.WorkDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid work_date format (expected YYYY-MM-DD): %w", err)

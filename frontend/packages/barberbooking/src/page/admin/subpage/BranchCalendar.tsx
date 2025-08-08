@@ -5,7 +5,7 @@ import { format as formatDate } from "date-fns";
 import { th } from "date-fns/locale/th";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import Modal from "@object/shared/components/Modal";
-import { getWorkingDayOverridesByDateRange, WorkingDayOverride } from "../../../api/workingDayOverride";
+import { deleteWorkingDayOverride, getWorkingDayOverridesByDateRange, WorkingDayOverride, WorkingDayOverrideInput, updateWorkingDayOverride, createWorkingDayOverride } from "../../../api/workingDayOverride";
 import { startOfMonth, endOfMonth } from "date-fns";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { OverrideDay } from "../ManageTime";
@@ -26,7 +26,17 @@ export interface OpenDayEvent extends Event {
 
 
 
-export default function BranchCalendar({ workingHours }: { workingHours: WorkingHour[] }) {
+export default function BranchCalendar(
+  {
+    workingHours,
+    eventList,
+    setEventList,
+  }: {
+    workingHours: WorkingHour[];
+    eventList: OpenDayEvent[];
+    setEventList: React.Dispatch<React.SetStateAction<OpenDayEvent[]>>;
+  }
+) {
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
 
@@ -34,7 +44,6 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
   const branchId = Number(me?.branch_id);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [eventList, setEventList] = useState<OpenDayEvent[]>([]);
   const closedDays = workingHours.filter((w) => w.is_closed === true);
   const overrideDates = eventList.map((e) => formatDate(e.start, "yyyy-MM-dd"));
   const [currentViewDate, setCurrentViewDate] = useState(new Date());
@@ -141,6 +150,31 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
     });
   }, [tenantId, branchId, currentViewDate]);
 
+  const handleDelete = async (id: number) => {
+    const confirm = window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบวันเปิด-ปิดกรณีพิเศษนี้?");
+    if (!confirm) return;
+
+    try {
+      await deleteWorkingDayOverride(id)
+      if (!selectedDate) return;
+
+      setEventList((prev) =>
+        prev.filter((e) => {
+          const eventDate = formatDate(e.start, "yyyy-MM-dd");
+          const selectedDateStr = formatDate(selectedDate, "yyyy-MM-dd");
+
+          const matched = e.status === "open" || e.status === "closed";
+          return !(matched && eventDate === selectedDateStr);
+        })
+      );
+      setModalOpen(false)
+
+    } catch (err: any) {
+      console.error(err);
+      alert("เกิดข้อผิดพลาดในการลบ");
+    }
+  };
+
 
 
   return (
@@ -194,16 +228,17 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
         dayPropGetter={(date) => {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
+
           const isPast = date < today;
 
           return isPast
             ? {
+              className: "rbc-day-past",
               style: {
-                backgroundColor: "#e5e7eb",
-                color: "#9ca3af",           
+                backgroundColor: "#f3f4f6", 
                 cursor: "not-allowed",
-                pointerEvents: "none",     
-                filter: "grayscale(0.6)",  
+                pointerEvents: "none",
+                filter: "grayscale(0.4)",
               },
             }
             : {};
@@ -220,7 +255,9 @@ export default function BranchCalendar({ workingHours }: { workingHours: Working
           onEdit={() => console.log("ss")}
           branchId={branchId}
           tenantId={tenantId}
-          selectedDate={selectedDate} />
+          selectedDate={selectedDate}
+          handleDelete={handleDelete}
+          setEventList={setEventList}  />
       )}
     </div>
   );
@@ -233,6 +270,8 @@ interface WorkingHourModalProps {
   tenantId: number;
   branchId: number;
   selectedDate: Date;
+  handleDelete: Function
+  setEventList: React.Dispatch<React.SetStateAction<OpenDayEvent[]>>; 
 }
 
 export function WorkingHourModal({
@@ -240,13 +279,17 @@ export function WorkingHourModal({
   onClose,
   tenantId,
   branchId,
-  selectedDate
+  selectedDate,
+  handleDelete,
+  setEventList
+
 }: WorkingHourModalProps) {
 
   if (!isOpen) return null;
   const [overrideDays, setOverrideDays] = useState<WorkingDayOverride[]>([]);
 
   const [newOverride, setNewOverride] = useState<OverrideDay>({
+    id: 0,
     date: format(selectedDate, "yyyy-MM-dd"),
     start_time: "08:00",
     end_time: "17:00",
@@ -255,37 +298,146 @@ export function WorkingHourModal({
   });
 
 
-  useEffect(() => {
-
+  const fetchWorkingDayOverrides = async () => {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-    getWorkingDayOverridesByDateRange({
+    const data = await getWorkingDayOverridesByDateRange({
       tenantId,
       branchId,
       start: dateStr,
       end: dateStr,
-    }).then((data) => {
-      const matched = data.find(item => item.work_date.slice(0, 10) === dateStr);
-      if (matched) {
-        setNewOverride({
-          date: matched.work_date,
-          start_time: matched.start_time,
-          end_time: matched.end_time,
-          IsClosed: matched.is_closed,
-          reason: matched.reason,
-        });
-      } else {
-        setNewOverride({
-          date: dateStr,
-          start_time: "",
-          end_time: "",
-          IsClosed: true,
-          reason: "",
-        });
-      }
-      setOverrideDays(data);
     });
+
+    const matched = data.find(item => item.work_date.slice(0, 10) === dateStr);
+    if (matched) {
+      setNewOverride({
+        id: matched.id,
+        date: matched.work_date.slice(0, 10),
+        start_time: matched.start_time,
+        end_time: matched.end_time,
+        IsClosed: matched.is_closed,
+        reason: matched.reason,
+      });
+    } else {
+      setNewOverride({
+        id: 0,
+        date: dateStr,
+        start_time: "",
+        end_time: "",
+        IsClosed: true,
+        reason: "",
+      });
+    }
+
+    setOverrideDays(data);
+  };
+
+
+
+  useEffect(() => {
+    if (tenantId && branchId && selectedDate) {
+      fetchWorkingDayOverrides();
+    }
   }, [tenantId, branchId, selectedDate]);
+
+  const handleupdateOverride = async () => {
+    try {
+      const input: WorkingDayOverrideInput = {
+        branch_id: 1,
+        work_date: newOverride.date,
+        start_time: newOverride.start_time,
+        end_time: newOverride.end_time,
+        is_closed: newOverride.IsClosed,
+        reason: newOverride.reason.trim(),
+      };
+  
+      await updateWorkingDayOverride(newOverride.id, input);
+  
+      const [startHour, startMin] = input.start_time.split(":").map(Number);
+      const [endHour, endMin] = input.end_time.split(":").map(Number);
+      const eventDate = new Date(input.work_date);
+  
+      const updatedEvent: OpenDayEvent = {
+        title: input.is_closed ? "หยุดกรณีพิเศษ" : "เปิดกรณีพิเศษ",
+        start: new Date(eventDate.setHours(startHour, startMin)),
+        end: new Date(eventDate.setHours(endHour, endMin)),
+        status: input.is_closed ? "closed" : "open",
+      };
+  
+      setEventList((prev) => {
+        const newList = prev.filter((e) => {
+          const dateStr = formatDate(e.start, "yyyy-MM-dd");
+          return dateStr !== input.work_date;
+        });
+        return [...newList, updatedEvent];
+      });
+  
+      alert("แก้ข้อมูลวันทำการสำเร็จแล้ว!");
+  
+      setNewOverride({
+        id: 0,
+        date: "",
+        start_time: "",
+        end_time: "",
+        IsClosed: true,
+        reason: "",
+      });
+  
+      onClose();
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
+      alert("ไม่สามารถเพิ่มวันทำการได้ โปรดลองใหม่");
+    }
+  };
+  
+  const handleAddOverride = async () => {
+    try {
+      const input: WorkingDayOverrideInput = {
+        branch_id: 1,
+        work_date: newOverride.date,
+        start_time: newOverride.IsClosed ? "00:00" : newOverride.start_time,
+        end_time: newOverride.IsClosed ? "00:00" : newOverride.end_time,
+        is_closed: newOverride.IsClosed,
+        reason: newOverride.reason.trim(),
+      };
+  
+      const response = await createWorkingDayOverride(input);
+  
+      const [startHour, startMin] = input.start_time.split(":").map(Number);
+      const [endHour, endMin] = input.end_time.split(":").map(Number);
+      const eventDate = new Date(input.work_date);
+  
+      const newEvent: OpenDayEvent = {
+        title: input.is_closed ? "หยุดกรณีพิเศษ" : "เปิดกรณีพิเศษ",
+        start: new Date(eventDate.setHours(startHour, startMin)),
+        end: new Date(eventDate.setHours(endHour, endMin)),
+        status: input.is_closed ? "closed" : "open",
+      };
+  
+      setEventList((prev) => {
+        const dateStr = input.work_date;
+        const filtered = prev.filter((e) => formatDate(e.start, "yyyy-MM-dd") !== dateStr);
+        return [...filtered, newEvent];
+      });
+  
+      alert("เพิ่มข้อมูลวันทำการสำเร็จแล้ว!");
+      console.log("response:", response);
+  
+      setNewOverride({
+        id: 0,
+        date: "",
+        start_time: "",
+        end_time: "",
+        IsClosed: true,
+        reason: "",
+      });
+      onClose();
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
+      alert("ไม่สามารถเพิ่มวันทำการได้ โปรดลองใหม่");
+    }
+  };
+  
 
 
 
@@ -359,12 +511,13 @@ export function WorkingHourModal({
             </div>
           </div>
           <div className="w-full flex gap-3">
-            <button className="bg-green-500 text-white p-2 rounded-md w-full" onClick={() => console.log("d")}>
+            <button className="bg-green-500 text-white p-2 rounded-md w-full"
+              onClick={overrideDays.length === 0 ? handleAddOverride : handleupdateOverride}>
               {overrideDays.length === 0
                 ? "เพิ่มเวลากรณีพิเศษ"
                 : "แก้เวลากรณีพิเศษ"}</button>
-                {overrideDays.length !== 0 ? <button className="bg-red-500 text-white p-2 rounded-md  w-full" onClick={() => console.log("d")}>เปลี่ยนเป็นเวลาปกติ</button> :""}
-            
+            {overrideDays.length !== 0 ? <button className="bg-red-500 text-white p-2 rounded-md  w-full" onClick={() => handleDelete(newOverride.id)}>เปลี่ยนเป็นเวลาปกติ</button> : ""}
+
           </div>
         </div>
       </div>

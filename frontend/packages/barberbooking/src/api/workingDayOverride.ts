@@ -33,6 +33,17 @@ export async function createWorkingDayOverride(
   return resp.data;
 }
 
+export async function updateWorkingDayOverride(
+  id: number,
+  input: WorkingDayOverrideInput
+): Promise<WorkingDayOverrideResponse> {
+  const resp = await api.put<WorkingDayOverrideResponse>(
+    `/barberbooking/working-day-overrides/${id}`,
+    input
+  );
+  return resp.data;
+}
+
 export type WorkingDayOverride = {
   id: number;
   branch_id: number;
@@ -64,4 +75,19 @@ export async function getWorkingDayOverridesByDateRange(params: {
   );
 
   return resp.data;
+}
+
+
+export async function deleteWorkingDayOverride(id: number): Promise<void> {
+  try {
+    await api.delete(`/barberbooking/working-day-overrides/${id}`);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw new Error("ไม่พบข้อมูลวัน override ที่ต้องการลบ");
+    }
+    if (error.response?.status === 400) {
+      throw new Error("ID ที่ส่งไม่ถูกต้อง");
+    }
+    throw new Error(error.response?.data?.error || "ไม่สามารถลบวัน override ได้");
+  }
 }

@@ -134,7 +134,7 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside
         id="logo-sidebar"
-        className="fixed top-0 left-0 z-40 w-64 h-screen pt-3 transition-transform -translate-x-full bg-[#1f2937] border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
+        className="fixed top-0 left-0 z-40 min-w-64 max-w-68 h-screen pt-3 transition-transform -translate-x-full bg-[#1f2937] border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
         aria-label="Sidebar"
       >
         <div className="h-full px-1 pb-2 overflow-y-auto">

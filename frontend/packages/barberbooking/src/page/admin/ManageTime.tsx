@@ -1,10 +1,10 @@
 // pages/ManageTime.tsx
 
 import { useCallback, useState, useEffect, useRef } from "react";
-import { format, parseISO } from "date-fns";
+import { format, formatDate, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import axios from "../../lib/axios";
-import BranchCalendar from "./subpage/BranchCalendar";
+import BranchCalendar, { OpenDayEvent } from "./subpage/BranchCalendar";
 import { useAppSelector } from "../../store/hook";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import Modal from "@object/shared/components/Modal";
@@ -23,11 +23,12 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export interface OverrideDay {
+    id: number
     date: string;
     start_time: string;
     end_time: string;
     IsClosed: boolean;
-    reason:string
+    reason: string
 }
 
 const weekdays = [
@@ -40,6 +41,8 @@ export default function ManageTime() {
     const tenantId = me?.tenant_ids?.[0];
     const branchId = Number(me?.branch_id);
     const didFetchWorkHours = useRef(false);
+    const [eventList, setEventList] = useState<OpenDayEvent[]>([]);
+
 
     const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
 
@@ -80,7 +83,6 @@ export default function ManageTime() {
     });
 
     const handleAddOverride = async () => {
-
         try {
             const input: WorkingDayOverrideInput = {
                 branch_id: 1,
@@ -93,8 +95,26 @@ export default function ManageTime() {
 
             const response = await createWorkingDayOverride(input);
 
+            // ✅ Generate OpenDayEvent
+            const [startHour, startMin] = input.start_time.split(":").map(Number);
+            const [endHour, endMin] = input.end_time.split(":").map(Number);
+            const eventDate = new Date(input.work_date);
+
+            const newEvent: OpenDayEvent = {
+                title: input.is_closed ? "หยุดกรณีพิเศษ" : "เปิดกรณีพิเศษ",
+                start: new Date(eventDate.setHours(startHour, startMin)),
+                end: new Date(eventDate.setHours(endHour, endMin)),
+                status: input.is_closed ? "closed" : "open",
+            };
+
+            // ✅ Update eventList
+            setEventList((prev) => {
+                const dateStr = input.work_date;
+                const filtered = prev.filter((e) => formatDate(e.start, "yyyy-MM-dd") !== dateStr);
+                return [...filtered, newEvent];
+            });
+
             alert("เพิ่มข้อมูลวันทำการสำเร็จแล้ว!");
-            console.log("response:", response);
 
             setNewOverride({
                 date: "",
@@ -234,7 +254,10 @@ export default function ManageTime() {
                     <button className="bg-blue-500 text-white p-2 rounded-md" onClick={handleAddOverride}>เพิ่มวันทำการ</button>
                 </div>
             </section>
-            <BranchCalendar workingHours={workingHours} />
+            <BranchCalendar
+                workingHours={workingHours}
+                eventList={eventList}
+                setEventList={setEventList} />
 
 
             <WorkingHourModal

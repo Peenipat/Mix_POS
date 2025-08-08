@@ -106,7 +106,7 @@ export default function App() {
 
         <Route path="inventory" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="tax" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
-        <Route path="layout" element={<ManagerWebIndex />} />
+        <Route path="layout" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="calendar" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="feedback" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />
         <Route path="report" element={<NotReady message="ขออภัยในความไม่สะดวก" />} />

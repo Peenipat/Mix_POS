@@ -16,6 +16,7 @@ import { TableCellsIcon } from "../../../components/icons/TableCellsIcon";
 import { GridViewIcon } from "../../../components/icons/GridViewIcon"
 import { useNavigate } from "react-router-dom";
 import { getBarbers } from "../../../api/barber";
+import { makeToast } from "../../../utils/makeToast";
 export function ManageBarber() {
   const me = useAppSelector((state) => state.auth.me);
   const statusMe = useAppSelector((state) => state.auth.statusMe);
@@ -170,7 +171,7 @@ export function ManageBarber() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {barbers.map((barber) => (
+              {barbers.map((barber: any) => (
                 <Card
                   key={barber.id}
                   onEdit={() => {
@@ -458,11 +459,18 @@ function DeleteBarberModal({
         `/barberbooking/barbers/${barber.id}`
       );
       if (res.data.status === "success") {
+        makeToast({
+          message: "ลบข้อมูลสำเร็จแล้ว!",
+          variant: "success",
+        });
         onDelete()
         onClose()
       }
     } catch (err: any) {
-      console.error(err);
+      makeToast({
+        message: "ไม่สามารถลบข้อมูลได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     }
   };
 

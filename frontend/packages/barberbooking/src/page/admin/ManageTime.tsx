@@ -18,6 +18,7 @@ import timezone from "dayjs/plugin/timezone";
 import { WorkingHour } from "../../api/workingHour";
 import { getWorkingHours } from "../../api/workingHour";
 import { createWorkingDayOverride, WorkingDayOverrideInput } from "../../api/workingDayOverride";
+import { makeToast } from "../../utils/makeToast";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -95,7 +96,6 @@ export default function ManageTime() {
 
             const response = await createWorkingDayOverride(input);
 
-            // ✅ Generate OpenDayEvent
             const [startHour, startMin] = input.start_time.split(":").map(Number);
             const [endHour, endMin] = input.end_time.split(":").map(Number);
             const eventDate = new Date(input.work_date);
@@ -107,14 +107,23 @@ export default function ManageTime() {
                 status: input.is_closed ? "closed" : "open",
             };
 
-            // ✅ Update eventList
             setEventList((prev) => {
                 const dateStr = input.work_date;
                 const filtered = prev.filter((e) => formatDate(e.start, "yyyy-MM-dd") !== dateStr);
                 return [...filtered, newEvent];
             });
 
-            alert("เพิ่มข้อมูลวันทำการสำเร็จแล้ว!");
+            if (response.status === "success") {
+                makeToast({
+                    message: "เพิ่มข้อมูลวันทำการสำเร็จแล้ว!",
+                    variant: "success",
+                });
+            } else {
+                makeToast({
+                    message: "เกิดข้อผิดพลาด: " + (response.message || "ไม่ทราบสาเหตุ"),
+                    variant: "error",
+                });
+            }
 
             setNewOverride({
                 date: "",
@@ -124,8 +133,10 @@ export default function ManageTime() {
             });
             setIsClosed(false);
         } catch (error) {
-            console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
-            alert("ไม่สามารถเพิ่มวันทำการได้ โปรดลองใหม่");
+            makeToast({
+                message: "ไม่สามารถเพิ่มวันทำการได้ โปรดลองอีกครั้งในภายหลัง",
+                variant: "error",
+            });
         }
     };
 
@@ -338,7 +349,6 @@ export function WorkingHourModal({
                     is_closed: false,
                 }];
 
-            console.log(payload)
 
             const res = await axios.put(
                 `/barberbooking/tenants/${tenantId}/workinghour/branches/${branchId}`,
@@ -346,6 +356,18 @@ export function WorkingHourModal({
             );
 
             if (res.data.status !== "success") throw new Error("Update failed");
+
+            if (res.data.status === "success") {
+                makeToast({
+                    message: "แก้ไขข้อมูลสำเร็จแล้ว!",
+                    variant: "success",
+                });
+            } else {
+                makeToast({
+                    message: "เกิดข้อผิดพลาด: " + (res.data.message || "ไม่ทราบสาเหตุ"),
+                    variant: "error",
+                });
+            }
 
             onEdit({
                 ...workingHour,
@@ -355,7 +377,10 @@ export function WorkingHourModal({
             });
             onClose();
         } catch (err) {
-            console.error("Failed to update working hour", err);
+            makeToast({
+                message: "ไม่สามารถแก้ไขข้อมูลได้ โปรดลองอีกครั้งในภายหลัง",
+                variant: "error",
+              });
         }
     };
 

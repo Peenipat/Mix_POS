@@ -32,11 +32,11 @@ export default function ToastManagement() {
                 {/* Error Preview */}
                 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-md flex items-center justify-center min-h-[150px]">
                     <Toast
-                         message={"ข้อความแจ้งเตือน"}
+                        message={"ข้อความแจ้งเตือน"}
                         variant="error"
                         useFixed={false}
                         showIcon
-                        duration={0} // ค้างไว้
+                        duration={0} 
                         disableClose={true}
                     />
                 </div>

@@ -118,78 +118,91 @@ export type AppointmentHistoryItem = {
 import { useEffect, useState } from "react";
 import { getAppointmentsByPhone } from "../../api/appointment";
 import { format } from "date-fns/format";
+
+
 export default function HistoryPage() {
-    const [phone,setPhone] = useState('')
+    const [phone, setPhone] = useState("");
     const [search, setSearch] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [onlyUpcoming, setOnlyUpcoming] = useState(false);
     const [appointments, setAppointments] = useState<AppointmentHistoryItem[]>([]);
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+
+    const totalPages = Math.ceil(filteredAppointments().length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedAppointments = filteredAppointments().slice(startIndex, endIndex);
+
     async function loadAppointmentsByPhone(phone: string) {
         try {
-            const raw = await getAppointmentsByPhone(phone)
+            const raw = await getAppointmentsByPhone(phone);
             const mapped = transformAppointments(raw);
             setAppointments(mapped);
+            setCurrentPage(1); // reset page
         } catch (err) {
             console.error("Failed to load appointments:", err);
             setAppointments([]);
         }
     }
 
-    const today = new Date().toISOString().split("T")[0];
     function translateStatus(status: string): string {
         switch (status.toUpperCase()) {
-            case "COMPLETED":
-                return "เสร็จสิ้น";
-            case "CONFIRMED":
-                return "ยืนยันแล้ว";
-            case "PENDING":
-                return "รอยืนยัน";
-            case "CANCELLED":
-                return "ยกเลิก";
-            case "NO_SHOW":
-                return "ไม่มา";
-            default:
-                return status;
+            case "COMPLETED": return "เสร็จสิ้น";
+            case "CONFIRMED": return "ยืนยันแล้ว";
+            case "PENDING": return "รอยืนยัน";
+            case "CANCELLED": return "ยกเลิก";
+            case "NO_SHOW": return "ไม่มา";
+            default: return status;
         }
     }
 
-
     function transformAppointments(raw: any[]): AppointmentHistoryItem[] {
         return raw.map((a) => {
-            const fullDateTimeStr = `${a.date}T${a.start}`; // "2025-07-27T10:30"
+            const fullDateTimeStr = `${a.date}T${a.start}`;
             const startDate = new Date(fullDateTimeStr);
-
             return {
                 id: a.id,
                 barberName: a.barber?.username || "ไม่ระบุ",
                 serviceName: a.service?.name || "ไม่ระบุ",
                 appointmentDate: format(startDate, "yyyy-MM-dd"),
                 appointmentTime: format(startDate, "HH:mm"),
-                branchName: a.branch?.name || "ไม่ระบุ", // ยังไม่มี? ใส่ "ไม่ระบุ"
+                branchName: a.branch?.name || "ไม่ระบุ",
                 status: translateStatus(a.status),
                 review: a.review
-                    ? {
-                        rating: a.review.rating,
-                        comment: a.review.comment,
-                    }
+                    ? { rating: a.review.rating, comment: a.review.comment }
                     : undefined,
             };
         });
     }
 
+    function filteredAppointments() {
+        return appointments.filter((appt) => {
+            const matchesSearch =
+                appt.barberName.includes(search) || appt.serviceName.includes(search);
+            const matchesDate =
+                (!startDate || appt.appointmentDate >= startDate) &&
+                (!endDate || appt.appointmentDate <= endDate);
+            const matchesUpcoming =
+                !onlyUpcoming || new Date(appt.appointmentDate) >= new Date();
+
+            return matchesSearch && matchesDate && matchesUpcoming;
+        });
+    }
 
     useEffect(() => {
         if (phone.length >= 10) {
             loadAppointmentsByPhone(phone);
         }
     }, [phone]);
+
     return (
         <div className="p-4 space-y-4">
             <h2 className="text-xl font-bold">ประวัติการจองคิว</h2>
+
             <input
-                id="phone-box"
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -201,37 +214,50 @@ export default function HistoryPage() {
                 <input
                     type="text"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                        setSearch(e.target.value);
+                        setCurrentPage(1);
+                    }}
                     placeholder="ค้นหาช่างหรือบริการ"
                     className="input input-bordered"
                 />
                 <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setCurrentPage(1);
+                    }}
                     className="input input-bordered"
                 />
                 <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setCurrentPage(1);
+                    }}
                     className="input input-bordered"
                 />
                 <label className="flex items-center gap-1 text-sm">
                     <input
                         type="checkbox"
                         checked={onlyUpcoming}
-                        onChange={(e) => setOnlyUpcoming(e.target.checked)}
+                        onChange={(e) => {
+                            setOnlyUpcoming(e.target.checked);
+                            setCurrentPage(1);
+                        }}
                         className="checkbox"
                     />
                     แสดงเฉพาะคิวล่วงหน้า
                 </label>
             </div>
+
             <div className="grid gap-2 lg:grid-cols-2">
-                {appointments.length === 0 ? (
+                {paginatedAppointments.length === 0 ? (
                     <p className="text-gray-500 italic">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p>
                 ) : (
-                    appointments.map((appt) => (
+                    paginatedAppointments.map((appt) => (
                         <div
                             key={appt.id}
                             className="p-4 border rounded-md shadow-sm bg-white space-y-1"
@@ -240,7 +266,8 @@ export default function HistoryPage() {
                                 {appt.serviceName} กับ {appt.barberName}
                             </div>
                             <div className="text-sm text-gray-600">
-                                วันที่: {format(new Date(appt.appointmentDate), "dd-MM-yyyy")} เวลา: {appt.appointmentTime} <br />
+                                วันที่: {format(new Date(appt.appointmentDate), "dd-MM-yyyy")} เวลา: {appt.appointmentTime}
+                                <br />
                                 สาขา: {appt.branchName} | สถานะ: {appt.status}
                             </div>
                             {appt.review ? (
@@ -253,9 +280,37 @@ export default function HistoryPage() {
                         </div>
                     ))
                 )}
-
             </div>
 
+            {filteredAppointments().length > 0 && (
+                <div className="flex flex-col items-center mt-4 space-y-1">
+                    <p className="text-sm text-gray-600">
+                        ทั้งหมด {filteredAppointments().length} รายการ | กำลังแสดง{" "}
+                        {startIndex + 1}–{Math.min(endIndex, filteredAppointments().length)}
+                    </p>
+
+                    {totalPages > 1 && (
+                        <div className="flex gap-2">
+                            {Array.from({ length: totalPages }).map((_, idx) => {
+                                const page = idx + 1;
+                                return (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`px-3 py-1 rounded ${currentPage === page
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-gray-200"
+                                            }`}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
+

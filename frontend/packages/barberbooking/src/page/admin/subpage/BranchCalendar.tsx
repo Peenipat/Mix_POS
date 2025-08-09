@@ -11,6 +11,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { OverrideDay } from "../ManageTime";
 import { useAppSelector } from "../../../store/hook";
 import { WorkingHour } from "../../../api/workingHour";
+import { makeToast } from "../../../utils/makeToast";
 
 const locales = { th };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales, locale: th });
@@ -155,7 +156,7 @@ export default function BranchCalendar(
     if (!confirm) return;
 
     try {
-      await deleteWorkingDayOverride(id)
+      const res = await deleteWorkingDayOverride(id)
       if (!selectedDate) return;
 
       setEventList((prev) =>
@@ -168,10 +169,23 @@ export default function BranchCalendar(
         })
       );
       setModalOpen(false)
+      if (res.status === "success") {
+        makeToast({
+          message: "ลบข้อมูลวันทำการสำเร็จแล้ว!",
+          variant: "success",
+        });
+      } else {
+        makeToast({
+          message: "เกิดข้อผิดพลาด: " + (res.message || "ไม่ทราบสาเหตุ"),
+          variant: "error",
+        });
+      }
 
     } catch (err: any) {
-      console.error(err);
-      alert("เกิดข้อผิดพลาดในการลบ");
+      makeToast({
+        message: "ไม่สามารถลบวันทำการได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     }
   };
 
@@ -235,7 +249,7 @@ export default function BranchCalendar(
             ? {
               className: "rbc-day-past",
               style: {
-                backgroundColor: "#f3f4f6", 
+                backgroundColor: "#f3f4f6",
                 cursor: "not-allowed",
                 pointerEvents: "none",
                 filter: "grayscale(0.4)",
@@ -257,7 +271,7 @@ export default function BranchCalendar(
           tenantId={tenantId}
           selectedDate={selectedDate}
           handleDelete={handleDelete}
-          setEventList={setEventList}  />
+          setEventList={setEventList} />
       )}
     </div>
   );
@@ -271,7 +285,7 @@ interface WorkingHourModalProps {
   branchId: number;
   selectedDate: Date;
   handleDelete: Function
-  setEventList: React.Dispatch<React.SetStateAction<OpenDayEvent[]>>; 
+  setEventList: React.Dispatch<React.SetStateAction<OpenDayEvent[]>>;
 }
 
 export function WorkingHourModal({
@@ -350,20 +364,20 @@ export function WorkingHourModal({
         is_closed: newOverride.IsClosed,
         reason: newOverride.reason.trim(),
       };
-  
-      await updateWorkingDayOverride(newOverride.id, input);
-  
+
+      const response = await updateWorkingDayOverride(newOverride.id, input);
+
       const [startHour, startMin] = input.start_time.split(":").map(Number);
       const [endHour, endMin] = input.end_time.split(":").map(Number);
       const eventDate = new Date(input.work_date);
-  
+
       const updatedEvent: OpenDayEvent = {
         title: input.is_closed ? "หยุดกรณีพิเศษ" : "เปิดกรณีพิเศษ",
         start: new Date(eventDate.setHours(startHour, startMin)),
         end: new Date(eventDate.setHours(endHour, endMin)),
         status: input.is_closed ? "closed" : "open",
       };
-  
+
       setEventList((prev) => {
         const newList = prev.filter((e) => {
           const dateStr = formatDate(e.start, "yyyy-MM-dd");
@@ -371,9 +385,19 @@ export function WorkingHourModal({
         });
         return [...newList, updatedEvent];
       });
-  
-      alert("แก้ข้อมูลวันทำการสำเร็จแล้ว!");
-  
+
+      if (response.status === "success") {
+        makeToast({
+          message: "แก้ไขข้อมูลวันทำการสำเร็จแล้ว!",
+          variant: "success",
+        });
+      } else {
+        makeToast({
+          message: "เกิดข้อผิดพลาด: " + (response.message || "ไม่ทราบสาเหตุ"),
+          variant: "error",
+        });
+      }
+
       setNewOverride({
         id: 0,
         date: "",
@@ -382,14 +406,16 @@ export function WorkingHourModal({
         IsClosed: true,
         reason: "",
       });
-  
+
       onClose();
     } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
-      alert("ไม่สามารถเพิ่มวันทำการได้ โปรดลองใหม่");
+      makeToast({
+        message: "ไม่สามารถแก้ไขวันทำการได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     }
   };
-  
+
   const handleAddOverride = async () => {
     try {
       const input: WorkingDayOverrideInput = {
@@ -400,29 +426,39 @@ export function WorkingHourModal({
         is_closed: newOverride.IsClosed,
         reason: newOverride.reason.trim(),
       };
-  
+
       const response = await createWorkingDayOverride(input);
-  
+
       const [startHour, startMin] = input.start_time.split(":").map(Number);
       const [endHour, endMin] = input.end_time.split(":").map(Number);
       const eventDate = new Date(input.work_date);
-  
+
       const newEvent: OpenDayEvent = {
         title: input.is_closed ? "หยุดกรณีพิเศษ" : "เปิดกรณีพิเศษ",
         start: new Date(eventDate.setHours(startHour, startMin)),
         end: new Date(eventDate.setHours(endHour, endMin)),
         status: input.is_closed ? "closed" : "open",
       };
-  
+
       setEventList((prev) => {
         const dateStr = input.work_date;
         const filtered = prev.filter((e) => formatDate(e.start, "yyyy-MM-dd") !== dateStr);
         return [...filtered, newEvent];
       });
-  
-      alert("เพิ่มข้อมูลวันทำการสำเร็จแล้ว!");
-      console.log("response:", response);
-  
+
+      if (response.status === "success") {
+        makeToast({
+          message: "เพิ่มข้อมูลวันทำการสำเร็จแล้ว!",
+          variant: "success",
+        });
+      } else {
+        makeToast({
+          message: "เกิดข้อผิดพลาด: " + (response.message || "ไม่ทราบสาเหตุ"),
+          variant: "error",
+        });
+      }
+
+
       setNewOverride({
         id: 0,
         date: "",
@@ -433,11 +469,13 @@ export function WorkingHourModal({
       });
       onClose();
     } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
-      alert("ไม่สามารถเพิ่มวันทำการได้ โปรดลองใหม่");
+      makeToast({
+        message: "ไม่สามารถเพิ่มวันทำการได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     }
   };
-  
+
 
 
 

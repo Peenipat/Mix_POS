@@ -1,11 +1,11 @@
 package barberBookingController
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"errors"
-	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -56,6 +56,7 @@ func (ctrl *WorkingDayOverrideController) Create(c *fiber.Ctx) error {
 
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
 		"message": "สร้างวันเปิด/ปิดสำเร็จ",
+		"status":  "success",
 		"data":    override,
 	})
 }
@@ -102,9 +103,9 @@ func (ctrl *WorkingDayOverrideController) Update(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "อัปเดตข้อมูลเรียบร้อยแล้ว",
+		"status":  "success",
 	})
 }
-
 
 // @Summary        ดึงข้อมูล override ตาม ID
 // @Description    ใช้ดึงข้อมูลวันเปิด-ปิดเฉพาะกิจตาม ID
@@ -140,7 +141,7 @@ func (ctrl *WorkingDayOverrideController) GetByID(c *fiber.Ctx) error {
 // @Description  ใช้ลบ override เฉพาะวันจาก branch ที่ระบุ
 // @Tags         WorkingDayOverride
 // @Param        id   path      int  true  "WorkingDayOverride ID"
-// @Success      204  {string}  string  "No Content"
+// @Success      200  {object}  map[string]string
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
@@ -151,22 +152,28 @@ func (c *WorkingDayOverrideController) DeleteWorkingDayOverride(ctx *fiber.Ctx) 
 	id, err := strconv.Atoi(idParam)
 	if err != nil || id <= 0 {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid id parameter",
+			"status": "error",
+			"error":  "invalid id parameter",
 		})
 	}
 
 	if err := c.Service.Delete(ctx.Context(), uint(id)); err != nil {
 		if errors.Is(err, fiber.ErrNotFound) {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": err.Error(),
+				"status": "error",
+				"error":  err.Error(),
 			})
 		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"status": "error",
+			"error":  err.Error(),
 		})
 	}
 
-	return ctx.SendStatus(fiber.StatusNoContent)
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "success",
+		"message": "ลบวันเปิด-ปิดร้านสำเร็จ",
+	})
 }
 
 // GetOverridesByDateRange godoc
@@ -221,4 +228,3 @@ func (c *WorkingDayOverrideController) GetOverridesByDateRange(ctx *fiber.Ctx) e
 
 	return ctx.JSON(overrides)
 }
-

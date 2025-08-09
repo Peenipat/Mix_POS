@@ -659,7 +659,7 @@ export function BarberScheduleModal({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} blurBackground showAds={{ left: true, right: true, bottom: true }}>
+        <Modal isOpen={isOpen} onClose={onClose} blurBackground showAds={{ left: true, right: true, bottom: true }} size="xl">
             <div className="p-4 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-4 flex-wrap">
                     <label className="text-lg font-semibold">เลือกวันที่คุณว่าง</label>

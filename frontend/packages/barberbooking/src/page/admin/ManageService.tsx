@@ -26,6 +26,7 @@ interface Service {
 import { z } from "zod";
 import { CardViewIcon } from "../../components/icons/CardViewIcon";
 import { ServiceFormData, serviceFormSchema } from "../../schemas/serviceSchema";
+import { makeToast } from "../../utils/makeToast";
 export const editServiceSchema = z.object({
   name: z.string().min(1).max(100),
   price: z.number({ required_error: "กรุณากรอกราคา" }).min(0),
@@ -286,7 +287,6 @@ function CreateServiceModal({
   const tenantId = me?.tenant_ids?.[0];
   const branchId = me?.branch_id;
 
-  // ✅ ทุก hook ต้องอยู่บนสุดก่อน return หรือเงื่อนไข
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
   const [errorUsers, setErrorUsers] = useState<string | null>(null);
   const [loadingCreate, setLoadingCreate] = useState<boolean>(false);
@@ -344,11 +344,27 @@ function CreateServiceModal({
 
       if (res.data.status !== "success") throw new Error(res.data.status);
 
+      if (res.data.status === "success") {
+        makeToast({
+          message: "เพิ่มข้อมูลสำเร็จแล้ว!",
+          variant: "success",
+        });
+      } else {
+        makeToast({
+          message: "เกิดข้อผิดพลาด: " + ("ไม่ทราบสาเหตุ"),
+          variant: "error",
+        });
+      }
+
       onCreate();
       onClose();
       reset();
     } catch (err: any) {
-      setErrorCreate(err.response?.data?.message || err.message || "เกิดข้อผิดพลาดในการสร้างบริการ");
+      setErrorCreate(err.response?.data?.message || err.message || "เกิดข้อผิดพลาดในการเพิ่มข้อมูลบริการ");
+      makeToast({
+        message: "ไม่สามารถเพิ่มข้อมูลได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     } finally {
       setLoadingCreate(false);
     }
@@ -470,8 +486,8 @@ function EditServiceModal({
     resolver: zodResolver(editServiceSchema),
     defaultValues: {
       name: "",
-      price: 0,          // ✅ number
-      duration: 0,       // ✅ number
+      price: 0,
+      duration: 0,
       file: undefined,
     },
   });
@@ -510,7 +526,19 @@ function EditServiceModal({
 
     if (res.data.status !== "success") throw new Error(res.data.status);
 
-    onEdit(res.data.data); 
+    if (res.data.status === "success") {
+      makeToast({
+        message: "แก้ไขข้อมูลสำเร็จแล้ว!",
+        variant: "success",
+      });
+    } else {
+      makeToast({
+        message: "เกิดข้อผิดพลาด: " + (res.data.message || "ไม่ทราบสาเหตุ"),
+        variant: "error",
+      });
+    }
+
+    onEdit(res.data.data);
     onClose();
   };
 
@@ -666,11 +694,25 @@ function DeleteServiceModal({
         `/barberbooking/services/${Number(service.id)}`
       );
       if (res.data.status === "success") {
+
+        makeToast({
+          message: "ลบข้อมูลสำเร็จแล้ว!",
+          variant: "success",
+        });
         onDelete()
         onClose()
+
+      } else {
+        makeToast({
+          message: "เกิดข้อผิดพลาด: " + ("ไม่ทราบสาเหตุ"),
+          variant: "error",
+        });
       }
     } catch (err: any) {
-      console.error(err);
+      makeToast({
+        message: "ไม่สามารถลบข้อมูลได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     }
   };
 

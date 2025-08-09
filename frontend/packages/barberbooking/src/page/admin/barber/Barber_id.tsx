@@ -8,6 +8,7 @@ import { editBarberSchema } from "../../../schemas/barberSchema";
 import type { BarberDetail } from "../../../api/barber"
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { makeToast } from "../../../utils/makeToast";
 
 const BarberDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,7 +72,6 @@ const BarberDetail = () => {
   }, [barber]);
 
   const onSubmit = async (data: EditBarberFormData) => {
-    console.log("data : ",data)
     try {
       const formData = new FormData();
 
@@ -88,12 +88,25 @@ const BarberDetail = () => {
       formData.append("role_user", data.roleUser ?? "");
 
       if (barber?.tenant_id) {
-        await updateBarber(Number(barber?.tenant_id), Number(id), formData);
+        const res = await updateBarber(Number(barber?.tenant_id), Number(id), formData);
+        console.log(res)
+        if (res.status === "success") {
+          makeToast({
+            message: "แก้ไขข้อมูลสำเร็จแล้ว!",
+            variant: "success",
+          });
+        } else {
+          makeToast({
+            message: "เกิดข้อผิดพลาด: " + ("ไม่ทราบสาเหตุ"),
+            variant: "error",
+          });
+        }
       }
-
-
     } catch (err) {
-      console.error("อัปเดตล้มเหลว", err);
+      makeToast({
+        message: "ไม่สามารถแก้ไขข้อมูลได้ โปรดลองอีกครั้งในภายหลัง",
+        variant: "error",
+      });
     }
   };
 

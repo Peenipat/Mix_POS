@@ -21,6 +21,7 @@ export type WorkingDayOverrideResponse = {
     created_at: string;
     updated_at: string;
   };
+  status: string
 };
 
 export async function createWorkingDayOverride(
@@ -78,9 +79,17 @@ export async function getWorkingDayOverridesByDateRange(params: {
 }
 
 
-export async function deleteWorkingDayOverride(id: number): Promise<void> {
+export type DeleteWorkingDayOverrideResponse = {
+  status: string;
+  message: string;
+};
+
+export async function deleteWorkingDayOverride(id: number): Promise<DeleteWorkingDayOverrideResponse> {
   try {
-    await api.delete(`/barberbooking/working-day-overrides/${id}`);
+    const resp = await api.delete<DeleteWorkingDayOverrideResponse>(
+      `/barberbooking/working-day-overrides/${id}`
+    );
+    return resp.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       throw new Error("ไม่พบข้อมูลวัน override ที่ต้องการลบ");

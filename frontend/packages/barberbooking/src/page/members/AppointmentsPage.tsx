@@ -12,6 +12,7 @@ import { useForm, Controller } from "react-hook-form";
 import { AppointmentBrief, bookAppointment } from "../../api/appointment";
 import { AppointmentLock, AppointmentLockResponse, createAppointmentLock, getAppointmentLocks, releaseAppointmentLock } from "../../api/appointmentLock";
 import { format } from "date-fns";
+import { makeToast } from "../../utils/makeToast";
 
 
 export const mockAppointments: AppointmentBrief[] = [];
@@ -351,7 +352,10 @@ export default function AppointmentsPage() {
             const result = await bookAppointment(1, payload);
 
             if (result.status === "success") {
-                console.log("จองสำเร็จ:", result);
+                makeToast({
+                    message: "จองสำเร็จแล้ว!",
+                    variant: "success",
+                  });
                 handleClose();
             } else {
                 console.error("จองไม่สำเร็จ:", result);
@@ -464,6 +468,7 @@ export default function AppointmentsPage() {
                     title="ยืนยันการจองคิว"
                     blurBackground
                     showAds={{ left: true, right: true, bottom: true }}
+                    size="lg"
                 >
                     <div className="text-right text-red-600 font-semibold ">
                         ระบบจะล็อกคิวนี้ไว้ {formatTime(countdown)} นาที
@@ -743,6 +748,7 @@ const BookingModalExample = ({ isOpen, hide, onClose, step, hideForm, hideConfir
                 title={step === 1 ? "กรอกรายละเอียดจองคิว" : "ชำระเงินและตรวจสอบข้อมูล"}
                 blurBackground
                 modalName={"booking-form"}
+                size="lg"
             >
                 <div>
                     <BookingFormExample isOpen={isOpen} hide={hideForm} />

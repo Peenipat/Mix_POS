@@ -136,24 +136,36 @@ export const mockReviews = [
     },
 ];
 import { useState } from "react";
+
 export default function CustomerReview() {
     const [filterRating, setFilterRating] = useState<number | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const filteredReviews =
         filterRating === null
             ? mockReviews
             : mockReviews.filter((r) => r.rating === filterRating);
 
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(filteredReviews.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedReviews = filteredReviews.slice(startIndex, endIndex);
+
     return (
         <div className="space-y-4">
             <h2 className="text-xl font-bold mb-4">รีวิวจากลูกค้า</h2>
 
+            {/* ฟิลเตอร์ตามดาว */}
             <div className="flex gap-2 flex-wrap">
                 <button
-                    onClick={() => setFilterRating(null)}
+                    onClick={() => {
+                        setFilterRating(null);
+                        setCurrentPage(1);
+                    }}
                     className={`px-3 py-1 rounded ${filterRating === null
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-200"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200"
                         }`}
                 >
                     ทั้งหมด
@@ -161,10 +173,13 @@ export default function CustomerReview() {
                 {[5, 4, 3, 2, 1].map((rating) => (
                     <button
                         key={rating}
-                        onClick={() => setFilterRating(rating)}
+                        onClick={() => {
+                            setFilterRating(rating);
+                            setCurrentPage(1);
+                        }}
                         className={`px-3 py-1 rounded ${filterRating === rating
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-200"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200"
                             }`}
                     >
                         {rating} ดาว
@@ -172,28 +187,66 @@ export default function CustomerReview() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-                {filteredReviews.map((review) => (
-                    <div
-                        key={review.id}
-                        className="p-4 border rounded-lg bg-white shadow-sm space-y-1"
-                    >
-                        <div className="flex justify-between items-center">
-                            <span className="font-semibold">{review.customerName}</span>
-                            <span className="text-sm text-gray-500">{review.date}</span>
+            {/* รีวิว */}
+            {paginatedReviews.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                    {paginatedReviews.map((review) => (
+                        <div
+                            key={review.id}
+                            className="p-4 border rounded-lg bg-white shadow-sm space-y-1"
+                        >
+                            <div className="flex justify-between items-center">
+                                <span className="text-xl font-semibold">{review.customerName}</span>
+                                <span className="text-md text-gray-500">{review.date}</span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                เวลา: {review.appointmentTime} | บริการ: {review.serviceName}
+                            </div>
+                            <div className="text-yellow-500 text-sm">
+                                {Array.from({ length: 5 }).map((_, idx) => (
+                                    <span key={idx}>{idx < review.rating ? "★" : "☆"}</span>
+                                ))}
+                            </div>
+                            <div className="text-gray-700">{review.comment}</div>
                         </div>
-                        <div className="text-sm text-gray-600">
-                            เวลา: {review.appointmentTime} | บริการ: {review.serviceName}
+                    ))}
+                </div>
+            ) : (
+                <p className="text-gray-500">ไม่มีรีวิวในช่วงนี้</p>
+            )}
+
+            {/* Pagination */}
+            {filteredReviews.length > 0 && (
+                <div className="flex flex-col items-center mt-4 space-y-1">
+                    <p className="text-sm text-gray-600">
+                        รีวิวทั้งหมด {filteredReviews.length} รายการ | กำลังแสดง{" "}
+                        {filteredReviews.length === 0
+                            ? 0
+                            : `${startIndex + 1}–${Math.min(endIndex, filteredReviews.length)}`}
+                    </p>
+
+                    {totalPages > 1 && (
+                        <div className="flex gap-2">
+                            {Array.from({ length: totalPages }).map((_, idx) => {
+                                const page = idx + 1;
+                                return (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`px-3 py-1 rounded ${currentPage === page
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-gray-200"
+                                            }`}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <div className="text-yellow-500 text-sm">
-                            {Array.from({ length: 5 }).map((_, idx) => (
-                                <span key={idx}>{idx < review.rating ? "★" : "☆"}</span>
-                            ))}
-                        </div>
-                        <div className="text-gray-700">{review.comment}</div>
-                    </div>
-                ))}
-            </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
+ 

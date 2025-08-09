@@ -49,7 +49,7 @@ export default function Modal({
     xs: "max-w-xs",
     sm: "max-w-sm",
     md: "max-w-md",
-    lg: "max-w-3xl",
+    lg: "max-w-2xl",
     xl: "max-w-5xl",
   };
 
